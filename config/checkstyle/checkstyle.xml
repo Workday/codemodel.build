@@ -1,0 +1,72 @@
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC
+        "-//Puppy Crawl//DTD Check Configuration 1.3//EN"
+        "http://www.puppycrawl.com/dtds/configuration_1_3.dtd">
+<module name="Checker">
+    <module name="BeforeExecutionExclusionFileFilter">
+        <property name="fileNamePattern" value="module\-info\.java$"/>
+    </module>
+    <module name="FileTabCharacter"/>
+    <module name="SuppressWarningsFilter"/>
+    <module name="TreeWalker">
+        <module name="AvoidStarImport"/>
+        <module name="EmptyForInitializerPad"/>
+        <module name="EmptyForIteratorPad"/>
+        <module name="FallThrough"/>
+        <module name="FinalLocalVariable">
+            <property name="tokens" value="VARIABLE_DEF,PARAMETER_DEF"/>
+        </module>
+        <module name="HideUtilityClassConstructor"/>
+        <module name="IllegalInstantiation"/>
+        <module name="IllegalTokenText"/>
+        <module name="LeftCurly"/>
+        <module name="MethodParamPad"/>
+        <module name="MultipleVariableDeclarations"/>
+        <module name="NeedBraces"/>
+        <module name="NoFinalizer"/>
+        <module name="OneStatementPerLine"/>
+        <module name="OuterTypeFilename"/>
+        <module name="OuterTypeNumber"/>
+        <module name="PackageAnnotation"/>
+        <module name="PackageName"/>
+        <module name="RedundantImport"/>
+        <module name="RedundantModifier">
+            <property name="tokens"
+                      value="METHOD_DEF,RESOURCE,INTERFACE_DEF,VARIABLE_DEF,ANNOTATION_FIELD_DEF,CTOR_DEF,CLASS_DEF,ENUM_DEF"/>
+        </module>
+        <module name="RegexpSinglelineJava">
+            <property name="format" value="^\s*assert\s"/>
+            <property name="ignoreComments" value="true"/>
+            <property name="message" value="Java assertion statements are not allowed to be checked in!"/>
+        </module>
+        <module name="StringLiteralEquality"/>
+        <module name="SuperFinalize"/>
+        <module name="SuppressWarnings"/>
+        <module name="SuppressWarningsHolder"/>
+        <module name="TypeName"/>
+        <module name="TypecastParenPad"/>
+        <!--        <module name="com.workday.checks.WorkdayDeprecatedAPIsUsageCheck">
+            <property name="deprecatedAPIs" value="junit.framework.Assert, junit.framework.TestCase" />
+            </module>
+                <module name="com.workday.checks.WorkdayInternalImportCheck">
+                    <property name="ignoreClass" value="sun.reflect.generics.reflectiveObjects.ParameterizedTypeImpl sun.misc.Cleaner sun.nio.ch.DirectBuffer" />
+                    <property name="ignorePrefix" value="com.sun.management com.workday. com.sun.net.httpserver. org.mockito.internal. org.tmatesoft.svn.core.internal. com.jayway.restassured.internal." />
+                    <property name="internalPattern" value=".internal." />
+                    <property name="internalPrefix" value="sun. com.sun. org.jetbrains.annotations." />
+                </module>
+                <module name="com.workday.checks.WorkdayMemberVariableCheck" />
+                <module name="com.workday.checks.WorkdayMethodCallArgCheck">
+                    <property name="argumentValues" value="&quot;user.dir&quot;" />
+                    <property name="methodNames" value="System.setProperty" />
+                    <property name="severity" value="ignore" />
+                </module>
+                <module name="com.workday.checks.WorkdayMethodUnrequiredThisCheck" />
+                <module name="com.workday.checks.WorkdayRequireThisCheck" />
+                <module name="com.workday.checks.WorkdayUnusedImportsCheck" />
+                <module name="com.workday.checks.WorkdayUnusedLocalVariableCheck" />
+                <module name="com.workday.checks.WorkdayUnusedMemberVariableCheck" />
+                <module name="com.workday.checks.WorkdayWhitespaceAfterCheck" />
+            </module>
+            -->
+    </module>
+</module>
