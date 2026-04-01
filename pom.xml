@@ -57,7 +57,7 @@
         <!-- Module Dependency Versions -->
         <assertj.version>3.27.7</assertj.version>
         <auto-service.version>1.1.1</auto-service.version>
-        <base.version>0.21.0-SNAPSHOT</base.version>
+        <base.version>0.21.5</base.version>
         <byte-buddy.version>1.18.4</byte-buddy.version>
         <compile-testing.version>0.23.0</compile-testing.version>
         <junit.version>6.0.1</junit.version>
