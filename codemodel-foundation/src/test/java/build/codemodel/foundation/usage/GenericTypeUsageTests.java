@@ -61,6 +61,42 @@ class GenericTypeUsageTests {
     }
 
     /**
+     * Ensure two {@link GenericTypeUsage}s with different type parameters are not equal.
+     * Previously equals() returned true regardless of parameters (bug).
+     */
+    @Test
+    void shouldNotBeEqualWhenParametersAreDifferent() {
+        final var codeModel = new ConceptualCodeModel(this.naming);
+
+        final var listTypeName = this.naming.getTypeName(java.util.List.class);
+        final var stringTypeName = this.naming.getTypeName(String.class);
+        final var integerTypeName = this.naming.getTypeName(Integer.class);
+
+        final var listOfString = GenericTypeUsage.of(codeModel, listTypeName,
+            SpecificTypeUsage.of(codeModel, stringTypeName));
+        final var listOfInteger = GenericTypeUsage.of(codeModel, listTypeName,
+            SpecificTypeUsage.of(codeModel, integerTypeName));
+
+        assertThat(listOfString).isNotEqualTo(listOfInteger);
+        assertThat(listOfInteger).isNotEqualTo(listOfString);
+    }
+
+    /**
+     * Ensure two {@link GenericTypeUsage}s with the same raw type but no parameters are equal.
+     */
+    @Test
+    void shouldBeEqualWhenBothHaveNoParameters() {
+        final var codeModel = new ConceptualCodeModel(this.naming);
+
+        final var listTypeName = this.naming.getTypeName(java.util.List.class);
+
+        final var rawList1 = GenericTypeUsage.of(codeModel, listTypeName);
+        final var rawList2 = GenericTypeUsage.of(codeModel, listTypeName);
+
+        assertThat(rawList1).isEqualTo(rawList2);
+    }
+
+    /**
      * Ensure a {@link TypeName} can be established for a nested generic {@link Class}.
      */
     @Test

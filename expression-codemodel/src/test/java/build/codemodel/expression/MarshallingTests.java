@@ -24,6 +24,7 @@ import build.codemodel.foundation.transport.TypeNameTransformer;
 import build.codemodel.foundation.usage.UnknownTypeUsage;
 import build.codemodel.foundation.usage.VoidTypeUsage;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.io.StringReader;
@@ -476,6 +477,59 @@ class MarshallingTests {
         throws IOException {
 
         marshallAndTransportAndUnMarshalAndAssert(EmptyExpression.of(codeModel));
+    }
+
+    /**
+     * Ensures that logical expressions retain their {@code Boolean} type after a marshalling round-trip.
+     * Previously the {@code @Unmarshal} constructor did not re-derive the type when absent,
+     * causing {@code type()} to return {@code Optional.empty()} after deserialization.
+     *
+     * @throws IOException if an error occurs during marshalling, transport or unmarshalling
+     */
+    @Test
+    void shouldPreserveBooleanTypeAfterMarshallingLogicalExpressions()
+        throws IOException {
+
+        final var booleanTypeName = nameProvider.getTypeName(Boolean.class);
+
+        for (final var expression : new Expression[] {
+            Conjunction.of(BooleanLiteral.of(codeModel, true), BooleanLiteral.of(codeModel, false)),
+            Disjunction.of(BooleanLiteral.of(codeModel, true), BooleanLiteral.of(codeModel, false)),
+            ExclusiveDisjunction.of(BooleanLiteral.of(codeModel, true), BooleanLiteral.of(codeModel, false)),
+            Negation.of(BooleanLiteral.of(codeModel, true)),
+            EqualTo.of(BooleanLiteral.of(codeModel, true), BooleanLiteral.of(codeModel, false)),
+            LessThan.of(NumericLiteral.of(codeModel, 1), NumericLiteral.of(codeModel, 2))
+        }) {
+            final var marshaller = Marshalling.newMarshaller();
+            final var marshalled = marshaller.marshal(expression);
+
+            final var transport = new build.base.transport.json.JsonTransport();
+            transport.register(new build.codemodel.foundation.transport.IrreducibleNameTransformer(nameProvider));
+            transport.register(new build.codemodel.foundation.transport.ModuleNameTransformer(nameProvider));
+            transport.register(new build.codemodel.foundation.transport.NamespaceTransformer(nameProvider));
+            transport.register(new build.codemodel.foundation.transport.TypeNameTransformer(nameProvider));
+
+            final var factory = com.fasterxml.jackson.core.JsonFactory.builder()
+                .enable(com.fasterxml.jackson.core.StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION)
+                .build();
+            final var writer = new java.io.StringWriter();
+            final var generator = factory.createGenerator(writer);
+            transport.write(marshalled, generator);
+            generator.close();
+
+            final var otherCodeModel = new build.codemodel.foundation.ConceptualCodeModel(nameProvider);
+            marshaller.bind(build.codemodel.foundation.CodeModel.class).to(otherCodeModel);
+
+            final var parser = factory.createParser(new java.io.StringReader(writer.toString()));
+            final build.base.marshalling.Marshalled<Expression> transported = transport.read(parser, marshaller);
+            final var unmarshalled = marshaller.unmarshal(transported);
+
+            final var typeName = expression.getClass().getSimpleName();
+            assertTrue(unmarshalled.type().isPresent(),
+                "type() must be present after round-trip for " + typeName);
+            assertTrue(unmarshalled.type().orElseThrow().toString().contains(booleanTypeName.toString()),
+                "type() must be Boolean after round-trip for " + typeName);
+        }
     }
 
     private <T> void marshallAndTransportAndUnMarshalAndAssert(T original)

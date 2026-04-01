@@ -80,9 +80,16 @@ public abstract class AbstractLogicalExpression
 
         super(codeModel, marshaller, traits);
 
-        this.typeUsage = typeUsage == null
+        final Optional<TypeUsage> unmarshalled = typeUsage == null
             ? Optional.empty()
             : typeUsage.map(marshaller::unmarshal);
+
+        if (unmarshalled.isEmpty()) {
+            final var typeName = codeModel().getNameProvider().getTypeName(Boolean.class);
+            this.typeUsage = Optional.of(SpecificTypeUsage.of(codeModel(), typeName));
+        } else {
+            this.typeUsage = unmarshalled;
+        }
     }
 
     /**
