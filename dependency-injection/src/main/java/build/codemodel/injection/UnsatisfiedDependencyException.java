@@ -82,7 +82,7 @@ public class UnsatisfiedDependencyException
                                           final String message,
                                           final Throwable cause) {
 
-        super(String.format("Unable to resolve %s: %s", dependency, message));
+        super(String.format("Unable to resolve %s: %s", dependency, message), cause);
         this.dependency = dependency;
     }
 

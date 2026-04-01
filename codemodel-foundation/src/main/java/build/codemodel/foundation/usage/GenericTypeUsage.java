@@ -145,11 +145,9 @@ public class GenericTypeUsage
             return true;
         }
         else if (object instanceof GenericTypeUsage other) {
-            if (Objects.equals(typeName(), other.typeName()) && super.equals(other)) {
-                return true;
-                // TODO: compare the parameters (but we have to be careful as they may be defined recursively)
-                //Streams.equals(parameters(), other.parameters());
-            }
+            return Objects.equals(typeName(), other.typeName())
+                && super.equals(other)
+                && Streams.equals(parameters(), other.parameters());
         }
 
         return false;

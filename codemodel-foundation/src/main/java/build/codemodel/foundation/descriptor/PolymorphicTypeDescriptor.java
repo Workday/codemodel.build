@@ -102,11 +102,6 @@ public class PolymorphicTypeDescriptor
     }
 
     static {
-        // register this type to be usable for marshalling
-        Marshalling.register(PolymorphicTypeDescriptor.class, MethodHandles.lookup());
-    }
-
-    static {
         Marshalling.register(PolymorphicTypeDescriptor.class, MethodHandles.lookup());
     }
 }
