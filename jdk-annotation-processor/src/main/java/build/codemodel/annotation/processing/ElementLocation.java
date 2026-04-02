@@ -27,7 +27,6 @@ import build.codemodel.foundation.descriptor.Trait;
 import java.net.URI;
 import java.util.Objects;
 import java.util.Optional;
-
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 

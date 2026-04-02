@@ -2,17 +2,16 @@ package build.codemodel.annotation.processing;
 
 import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
-import static org.assertj.core.api.Assertions.assertThat;
+import com.google.testing.compile.Compilation;
+import com.google.testing.compile.Compiler;
+import com.google.testing.compile.JavaFileObjects;
+import org.junit.jupiter.api.Test;
 
 import java.nio.file.FileSystems;
 import java.util.Arrays;
 import java.util.Optional;
 
-import org.junit.jupiter.api.Test;
-
-import com.google.testing.compile.Compilation;
-import com.google.testing.compile.Compiler;
-import com.google.testing.compile.JavaFileObjects;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Unit tests to ensure discovery of recursively defined types using the {@link AnnotationProcessor}.

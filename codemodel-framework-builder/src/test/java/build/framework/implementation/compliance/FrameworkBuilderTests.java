@@ -4,11 +4,11 @@ import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.naming.NonCachingNameProvider;
 import build.codemodel.framework.Framework;
 import build.codemodel.framework.builder.FrameworkBuilder;
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Test;
 
 import java.nio.file.FileSystems;
 
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * {@link FrameworkBuilder} compliance tests.

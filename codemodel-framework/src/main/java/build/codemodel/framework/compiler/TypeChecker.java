@@ -20,13 +20,13 @@ package build.codemodel.framework.compiler;
  * #L%
  */
 
-import build.codemodel.framework.Framework;
-import build.codemodel.framework.Plugin;
-import build.codemodel.framework.Targetable;
 import build.base.telemetry.TelemetryRecorder;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.descriptor.Traitable;
+import build.codemodel.framework.Framework;
+import build.codemodel.framework.Plugin;
+import build.codemodel.framework.Targetable;
 
 import java.util.Optional;
 

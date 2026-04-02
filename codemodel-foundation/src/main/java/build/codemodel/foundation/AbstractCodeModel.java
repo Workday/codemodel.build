@@ -39,7 +39,6 @@ import build.codemodel.foundation.naming.ModuleName;
 import build.codemodel.foundation.naming.NameProvider;
 import build.codemodel.foundation.naming.Namespace;
 import build.codemodel.foundation.naming.TypeName;
-import static build.base.foundation.iterator.Iterators.concat;
 
 import java.util.Iterator;
 import java.util.Objects;
@@ -48,6 +47,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Stream;
+
+import static build.base.foundation.iterator.Iterators.concat;
 
 /**
  * An abstract {@link CodeModel} implementation.

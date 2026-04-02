@@ -27,8 +27,8 @@ import build.base.marshalling.Marshaller;
 import build.base.marshalling.Marshalling;
 import build.base.marshalling.Out;
 import build.base.marshalling.Unmarshal;
-import build.codemodel.foundation.Dependent;
 import build.codemodel.foundation.CodeModel;
+import build.codemodel.foundation.Dependent;
 import build.codemodel.foundation.usage.TypeUsage;
 
 import java.lang.invoke.MethodHandles;

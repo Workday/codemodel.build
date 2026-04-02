@@ -20,10 +20,10 @@ package build.codemodel.annotation.discovery;
  * #L%
  */
 
+import com.google.auto.service.AutoService;
+
 import java.lang.annotation.Annotation;
 import java.util.stream.Stream;
-
-import com.google.auto.service.AutoService;
 
 /**
  * An {@link AnnotationDiscovery} for the {@link Discoverable}.

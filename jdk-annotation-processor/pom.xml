@@ -72,6 +72,18 @@
 
         <dependency>
             <groupId>build.codemodel</groupId>
+            <artifactId>hierarchical-codemodel</artifactId>
+            <version>${revision}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>build.codemodel</groupId>
+            <artifactId>objectoriented-codemodel</artifactId>
+            <version>${revision}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>build.codemodel</groupId>
             <artifactId>jdk-codemodel</artifactId>
             <version>${revision}</version>
         </dependency>
@@ -102,22 +114,15 @@
 
         <!-- Test Dependencies -->
         <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>${guava.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
-            <version>${junit.version}</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-params</artifactId>
-            <version>${junit.version}</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-engine</artifactId>
             <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
@@ -139,6 +144,30 @@
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <configuration>
+                    <ignoredUnusedDeclaredDependencies>
+                        <!-- required in module-info.java but no direct class imports -->
+                        <ignoredUnusedDeclaredDependency>jakarta.inject:jakarta.inject-api</ignoredUnusedDeclaredDependency>
+                        <ignoredUnusedDeclaredDependency>com.google.auto.service:auto-service-annotations</ignoredUnusedDeclaredDependency>
+                        <ignoredUnusedDeclaredDependency>build.base:base-marshalling</ignoredUnusedDeclaredDependency>
+                        <ignoredUnusedDeclaredDependency>build.base:base-query</ignoredUnusedDeclaredDependency>
+                    </ignoredUnusedDeclaredDependencies>
+                    <ignoredUsedUndeclaredDependencies>
+                        <!-- transitive via objectoriented-codemodel; referenced in method signatures picked up by bytecode analysis -->
+                        <ignoredUsedUndeclaredDependency>build.codemodel:expression-codemodel</ignoredUsedUndeclaredDependency>
+                    </ignoredUsedUndeclaredDependencies>
+                    <ignoredNonTestScopedDependencies>
+                        <!-- required in module-info.java but no direct class imports in main code -->
+                        <ignoredNonTestScopedDependency>build.base:base-mereology</ignoredNonTestScopedDependency>
+                        <!-- transitive via objectoriented-codemodel; referenced in method signatures picked up by bytecode analysis -->
+                        <ignoredNonTestScopedDependency>build.codemodel:expression-codemodel</ignoredNonTestScopedDependency>
+                    </ignoredNonTestScopedDependencies>
+                </configuration>
+            </plugin>
+
             <plugin>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>

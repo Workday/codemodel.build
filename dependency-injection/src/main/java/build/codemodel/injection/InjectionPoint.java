@@ -20,8 +20,8 @@ package build.codemodel.injection;
  * #L%
  */
 
-import build.codemodel.jdk.descriptor.JDKTypeDescriptor;
 import build.codemodel.foundation.usage.TypeUsage;
+import build.codemodel.jdk.descriptor.JDKTypeDescriptor;
 
 import java.util.stream.Stream;
 

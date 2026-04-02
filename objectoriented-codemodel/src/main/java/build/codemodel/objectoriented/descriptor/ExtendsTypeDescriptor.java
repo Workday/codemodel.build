@@ -20,9 +20,6 @@ package build.codemodel.objectoriented.descriptor;
  * #L%
  */
 
-import java.lang.invoke.MethodHandles;
-import java.util.stream.Stream;
-
 import build.base.marshalling.Bound;
 import build.base.marshalling.Marshal;
 import build.base.marshalling.Marshalled;
@@ -35,6 +32,9 @@ import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.descriptor.TypeDescriptor;
 import build.codemodel.foundation.usage.NamedTypeUsage;
 import build.codemodel.hierarchical.descriptor.AbstractParentTypeDescriptor;
+
+import java.lang.invoke.MethodHandles;
+import java.util.stream.Stream;
 
 /**
  * A {@link Trait} representing that a {@link TypeDescriptor} {@code extends} or {@code inherits} from another

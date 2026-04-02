@@ -20,10 +20,6 @@ package build.codemodel.expression;
  * #L%
  */
 
-import java.lang.invoke.MethodHandles;
-import java.util.Optional;
-import java.util.stream.Stream;
-
 import build.base.marshalling.Bound;
 import build.base.marshalling.Marshal;
 import build.base.marshalling.Marshalled;
@@ -34,6 +30,10 @@ import build.base.marshalling.Unmarshal;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.usage.TypeUsage;
+
+import java.lang.invoke.MethodHandles;
+import java.util.Optional;
+import java.util.stream.Stream;
 
 /**
  * Defines the negated equality {@link LogicalExpression} between two {@link Expression}s.

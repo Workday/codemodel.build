@@ -21,8 +21,8 @@ package build.codemodel.injection;
  */
 
 import build.codemodel.foundation.descriptor.Trait;
-import build.codemodel.objectoriented.descriptor.MethodDescriptor;
 import build.codemodel.jdk.descriptor.JDKTypeDescriptor;
+import build.codemodel.objectoriented.descriptor.MethodDescriptor;
 
 import java.util.ArrayList;
 import java.util.Objects;

@@ -20,8 +20,8 @@ package build.codemodel.hierarchical.descriptor;
  * #L%
  */
 
-import build.codemodel.foundation.Dependent;
 import build.codemodel.foundation.CodeModel;
+import build.codemodel.foundation.Dependent;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.descriptor.Traitable;
 import build.codemodel.foundation.descriptor.TypeDescriptor;

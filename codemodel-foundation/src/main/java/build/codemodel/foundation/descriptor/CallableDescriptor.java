@@ -21,8 +21,8 @@ package build.codemodel.foundation.descriptor;
  */
 
 import build.base.foundation.stream.Streams;
-import build.codemodel.foundation.Dependent;
 import build.codemodel.foundation.CodeModel;
+import build.codemodel.foundation.Dependent;
 import build.codemodel.foundation.naming.CallableName;
 import build.codemodel.foundation.usage.TypeUsage;
 

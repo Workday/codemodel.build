@@ -1,9 +1,8 @@
 package build.codemodel.foundation.naming;
 
-import build.codemodel.foundation.naming.IrreducibleName;
-import static org.assertj.core.api.Assertions.assertThat;
-
 import org.junit.jupiter.api.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Unit tests for {@link IrreducibleName}s.

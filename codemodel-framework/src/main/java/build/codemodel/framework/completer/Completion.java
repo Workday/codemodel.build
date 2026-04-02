@@ -20,8 +20,8 @@ package build.codemodel.framework.completer;
  * #L%
  */
 
-import build.codemodel.framework.compiler.Compilation;
 import build.codemodel.foundation.CodeModel;
+import build.codemodel.framework.compiler.Compilation;
 
 /**
  * Represent a successfully completed {@link CodeModel} {@link Compilation}.

@@ -1,14 +1,14 @@
 package build.framework.builder;
 
-import build.codemodel.framework.initialization.Enricher;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.descriptor.Traitable;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import build.codemodel.framework.initialization.Enricher;
+import org.junit.jupiter.api.Test;
 
 import java.util.stream.Stream;
 
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Unit tests for {@link Enricher}s.

@@ -15,18 +15,17 @@ import build.codemodel.foundation.transport.ModuleNameTransformer;
 import build.codemodel.foundation.transport.NamespaceTransformer;
 import build.codemodel.foundation.transport.TypeNameTransformer;
 import build.codemodel.objectoriented.ObjectOrientedCodeModel;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.StreamReadFeature;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.util.Optional;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.StreamReadFeature;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Marshalling tests for various {@link Marshal}able classes in the objectoriented-codemodel naming package.

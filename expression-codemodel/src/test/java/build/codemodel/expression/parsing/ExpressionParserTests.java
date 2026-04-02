@@ -1,10 +1,34 @@
 package build.codemodel.expression.parsing;
 
-import build.codemodel.expression.*;
+import build.codemodel.expression.Addition;
+import build.codemodel.expression.AnyInCommon;
+import build.codemodel.expression.Conjunction;
+import build.codemodel.expression.Disjunction;
+import build.codemodel.expression.Division;
+import build.codemodel.expression.EqualTo;
+import build.codemodel.expression.ExclusiveDisjunction;
+import build.codemodel.expression.Exponent;
+import build.codemodel.expression.Expression;
+import build.codemodel.expression.FunctionUsage;
+import build.codemodel.expression.GreaterThan;
+import build.codemodel.expression.GreaterThanOrEqualTo;
+import build.codemodel.expression.LessThan;
+import build.codemodel.expression.LessThanOrEqualTo;
+import build.codemodel.expression.Literal;
+import build.codemodel.expression.Modulo;
+import build.codemodel.expression.Multiplication;
+import build.codemodel.expression.Negation;
+import build.codemodel.expression.Negative;
+import build.codemodel.expression.NoneInCommon;
+import build.codemodel.expression.NotEqualTo;
+import build.codemodel.expression.NumericLiteral;
+import build.codemodel.expression.Subtraction;
+import build.codemodel.expression.Then;
+import build.codemodel.expression.VariableUsage;
 import build.codemodel.expression.naming.FunctionName;
 import build.codemodel.expression.naming.VariableName;
-import build.codemodel.foundation.ConceptualCodeModel;
 import build.codemodel.foundation.CodeModel;
+import build.codemodel.foundation.ConceptualCodeModel;
 import build.codemodel.foundation.naming.CachingNameProvider;
 import build.codemodel.foundation.naming.IrreducibleName;
 import build.codemodel.foundation.naming.NonCachingNameProvider;
@@ -20,7 +44,10 @@ import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Tests for {@link ExpressionParser}.

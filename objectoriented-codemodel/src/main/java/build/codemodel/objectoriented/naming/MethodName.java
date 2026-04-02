@@ -28,12 +28,12 @@ import build.base.marshalling.Out;
 import build.base.marshalling.Unmarshal;
 import build.codemodel.expression.naming.AbstractCallableName;
 import build.codemodel.expression.naming.FunctionName;
+import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.naming.CallableName;
 import build.codemodel.foundation.naming.IrreducibleName;
 import build.codemodel.foundation.naming.ModuleName;
 import build.codemodel.foundation.naming.Namespace;
 import build.codemodel.foundation.naming.TypeName;
-import build.codemodel.foundation.CodeModel;
 
 import java.lang.invoke.MethodHandles;
 import java.util.Optional;

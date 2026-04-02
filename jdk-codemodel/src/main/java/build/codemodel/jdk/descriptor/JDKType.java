@@ -20,12 +20,12 @@ package build.codemodel.jdk.descriptor;
  * #L%
  */
 
+import build.codemodel.foundation.descriptor.Singular;
+import build.codemodel.foundation.descriptor.Trait;
+
 import java.lang.reflect.Field;
 import java.lang.reflect.Type;
 import java.util.Objects;
-
-import build.codemodel.foundation.descriptor.Singular;
-import build.codemodel.foundation.descriptor.Trait;
 
 /**
  * A {@link Singular} {@link Trait} that captures a JDK {@link Type}.

@@ -20,8 +20,8 @@ package build.codemodel.framework.compiler;
  * #L%
  */
 
-import build.codemodel.framework.completer.Completer;
 import build.codemodel.foundation.CodeModel;
+import build.codemodel.framework.completer.Completer;
 
 /**
  * Provides access to the successfully compiled {@link CodeModel}, including the ability to <i>complete</i> it with

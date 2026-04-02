@@ -20,8 +20,8 @@ package build.codemodel.framework.initialization;
  * #L%
  */
 
-import build.codemodel.framework.Plugin;
 import build.codemodel.foundation.CodeModel;
+import build.codemodel.framework.Plugin;
 
 /**
  * A {@link Plugin} to initialize {@link CodeModel}s.

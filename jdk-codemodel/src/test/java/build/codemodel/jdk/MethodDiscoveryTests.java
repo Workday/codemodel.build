@@ -5,14 +5,13 @@ import build.codemodel.jdk.descriptor.MethodImplementationDescriptor;
 import build.codemodel.objectoriented.descriptor.Classification;
 import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
-import static org.assertj.core.api.Assertions.assertThat;
+import com.google.testing.compile.JavaFileObjects;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Optional;
 
-import org.junit.jupiter.api.Test;
-
-import com.google.testing.compile.JavaFileObjects;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Tests for discovering methods via {@link JdkInitializer}.

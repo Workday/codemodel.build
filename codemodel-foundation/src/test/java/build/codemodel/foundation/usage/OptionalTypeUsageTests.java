@@ -5,12 +5,12 @@ import build.codemodel.foundation.naming.NameProvider;
 import build.codemodel.foundation.naming.NonCachingNameProvider;
 import build.codemodel.foundation.usage.pattern.NamedTypeUsagePattern;
 import build.codemodel.foundation.usage.pattern.OptionalTypeUsagePattern;
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Unit tests for {@link GenericTypeUsage}s with {@link Optional} types.

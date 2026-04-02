@@ -5,11 +5,11 @@ import build.codemodel.foundation.naming.NonCachingNameProvider;
 import build.codemodel.foundation.usage.ArrayTypeUsage;
 import build.codemodel.foundation.usage.GenericTypeUsage;
 import build.codemodel.foundation.usage.TypeUsage;
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
 
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Tests for {@link TypeUsages}.

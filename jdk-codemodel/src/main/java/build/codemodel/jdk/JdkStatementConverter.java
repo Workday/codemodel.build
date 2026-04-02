@@ -38,17 +38,11 @@ import build.codemodel.jdk.statement.ExpressionStatement;
 import build.codemodel.jdk.statement.For;
 import build.codemodel.jdk.statement.Labeled;
 import build.codemodel.jdk.statement.LocalVariableDeclaration;
-import build.codemodel.jdk.statement.Synchronized;
 import build.codemodel.jdk.statement.SwitchCase;
 import build.codemodel.jdk.statement.SwitchStatement;
+import build.codemodel.jdk.statement.Synchronized;
 import build.codemodel.jdk.statement.Throw;
 import build.codemodel.jdk.statement.Try;
-
-import java.util.List;
-import java.util.Optional;
-
-import javax.lang.model.element.Modifier;
-
 import com.sun.source.tree.AssertTree;
 import com.sun.source.tree.BlockTree;
 import com.sun.source.tree.BreakTree;
@@ -73,6 +67,10 @@ import com.sun.source.tree.TryTree;
 import com.sun.source.tree.VariableTree;
 import com.sun.source.tree.WhileLoopTree;
 import com.sun.source.util.SimpleTreeVisitor;
+
+import java.util.List;
+import java.util.Optional;
+import javax.lang.model.element.Modifier;
 
 /**
  * Converts {@link StatementTree} nodes from the javac tree API to model {@link Statement} nodes.

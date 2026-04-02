@@ -22,9 +22,9 @@ package build.codemodel.injection;
 
 import build.codemodel.foundation.descriptor.Traitable;
 import build.codemodel.foundation.usage.AnnotationTypeUsage;
-import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 import build.codemodel.jdk.descriptor.FieldType;
 import build.codemodel.jdk.descriptor.JDKTypeDescriptor;
+import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 import jakarta.inject.Qualifier;
 
 import java.util.Arrays;

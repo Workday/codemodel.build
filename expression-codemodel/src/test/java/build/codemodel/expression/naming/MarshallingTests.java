@@ -4,8 +4,8 @@ import build.base.marshalling.Marshal;
 import build.base.marshalling.Marshalled;
 import build.base.marshalling.Marshalling;
 import build.base.transport.json.JsonTransport;
-import build.codemodel.foundation.ConceptualCodeModel;
 import build.codemodel.foundation.CodeModel;
+import build.codemodel.foundation.ConceptualCodeModel;
 import build.codemodel.foundation.naming.IrreducibleName;
 import build.codemodel.foundation.naming.ModuleName;
 import build.codemodel.foundation.naming.NameProvider;
@@ -15,18 +15,17 @@ import build.codemodel.foundation.transport.IrreducibleNameTransformer;
 import build.codemodel.foundation.transport.ModuleNameTransformer;
 import build.codemodel.foundation.transport.NamespaceTransformer;
 import build.codemodel.foundation.transport.TypeNameTransformer;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.StreamReadFeature;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.util.Optional;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.StreamReadFeature;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Marshalling tests for various {@link Marshal}able classes.

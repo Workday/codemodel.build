@@ -20,10 +20,6 @@ package build.codemodel.expression;
  * #L%
  */
 
-import java.lang.invoke.MethodHandles;
-import java.util.Optional;
-import java.util.stream.Stream;
-
 import build.base.marshalling.Bound;
 import build.base.marshalling.Marshal;
 import build.base.marshalling.Marshalled;
@@ -32,10 +28,13 @@ import build.base.marshalling.Marshalling;
 import build.base.marshalling.Out;
 import build.base.marshalling.Unmarshal;
 import build.codemodel.foundation.CodeModel;
-import build.codemodel.foundation.descriptor.AbstractTraitable;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.usage.SpecificTypeUsage;
 import build.codemodel.foundation.usage.TypeUsage;
+
+import java.lang.invoke.MethodHandles;
+import java.util.Optional;
+import java.util.stream.Stream;
 
 /**
  * Describes {@link Boolean}-based {@link Literal}.

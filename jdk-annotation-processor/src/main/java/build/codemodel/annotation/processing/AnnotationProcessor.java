@@ -74,6 +74,7 @@ import build.codemodel.objectoriented.descriptor.ImplementsTypeDescriptor;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
 import build.codemodel.objectoriented.descriptor.ParameterizedTypeDescriptor;
 import build.codemodel.objectoriented.naming.MethodName;
+import com.google.auto.service.AutoService;
 
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
@@ -90,7 +91,6 @@ import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Filer;
 import javax.annotation.processing.Messager;
@@ -120,8 +120,6 @@ import javax.lang.model.type.TypeVariable;
 import javax.lang.model.type.TypeVisitor;
 import javax.lang.model.type.UnionType;
 import javax.lang.model.type.WildcardType;
-
-import com.google.auto.service.AutoService;
 
 /**
  * A {@link Processor} to discover, reverse-engineer and process discoverable annotations from source and byte code.

@@ -7,13 +7,13 @@ import build.codemodel.foundation.naming.TypeName;
 import build.codemodel.foundation.usage.pattern.GenericTypeUsagePattern;
 import build.codemodel.foundation.usage.pattern.NamedTypeUsagePattern;
 import build.codemodel.foundation.usage.pattern.TypeUsagePattern;
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
 import java.util.Spliterator;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Unit tests for {@link GenericTypeUsage}s.

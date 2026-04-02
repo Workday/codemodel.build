@@ -20,9 +20,6 @@ package build.codemodel.expression;
  * #L%
  */
 
-import build.codemodel.foundation.CodeModel;
-import build.codemodel.foundation.descriptor.AbstractTraitable;
-import build.codemodel.foundation.descriptor.Trait;
 import build.base.marshalling.Bound;
 import build.base.marshalling.Marshal;
 import build.base.marshalling.Marshalled;
@@ -31,7 +28,8 @@ import build.base.marshalling.Marshalling;
 import build.base.marshalling.Out;
 import build.base.marshalling.Unmarshal;
 import build.codemodel.expression.naming.FunctionName;
-import build.codemodel.expression.naming.VariableName;
+import build.codemodel.foundation.CodeModel;
+import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.usage.TypeUsage;
 
 import java.lang.invoke.MethodHandles;

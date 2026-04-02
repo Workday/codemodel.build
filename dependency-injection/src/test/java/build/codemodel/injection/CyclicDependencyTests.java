@@ -1,10 +1,10 @@
 package build.codemodel.injection;
 
 import jakarta.inject.Inject;
+import org.junit.jupiter.api.Test;
+
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-
-import org.junit.jupiter.api.Test;
 
 /**
  * Tests for Injection Cyclic Dependencies.

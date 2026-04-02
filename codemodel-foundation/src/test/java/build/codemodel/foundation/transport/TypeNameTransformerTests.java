@@ -4,9 +4,9 @@ import build.codemodel.foundation.naming.ModuleName;
 import build.codemodel.foundation.naming.Namespace;
 import build.codemodel.foundation.naming.NonCachingNameProvider;
 import build.codemodel.foundation.naming.TypeName;
-import static org.assertj.core.api.Assertions.assertThat;
-
 import org.junit.jupiter.api.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Tests for {@link TypeNameTransformer}s.

@@ -60,14 +60,19 @@
         <base.version>0.21.5</base.version>
         <byte-buddy.version>1.18.4</byte-buddy.version>
         <compile-testing.version>0.23.0</compile-testing.version>
-        <junit.version>6.0.1</junit.version>
+        <guava.version>33.4.8-jre</guava.version>
+        <jackson.version>2.21.2</jackson.version>
+        <junit.version>6.0.3</junit.version>
         <jakarta-inject.version>2.0.1</jakarta-inject.version>
-        <mockito.version>5.18.0</mockito.version>
+        <mockito.version>5.23.0</mockito.version>
 
         <!-- Plugin Dependency Versions -->
-        <maven-compiler-plugin.version>3.14.1</maven-compiler-plugin.version>
+        <maven-compiler-plugin.version>3.15.0</maven-compiler-plugin.version>
         <maven-central-publishing-plugin.version>0.10.0</maven-central-publishing-plugin.version>
         <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
+        <checkstyle.version>13.3.0</checkstyle.version>
+        <maven.version>3.9.14</maven.version>
+        <maven-dependency-plugin.version>3.10.0</maven-dependency-plugin.version>
         <maven-enforcer-plugin.version>3.6.2</maven-enforcer-plugin.version>
         <maven-flatten-plugin.version>1.7.3</maven-flatten-plugin.version>
         <maven-gpg-plugin.version>3.2.8</maven-gpg-plugin.version>
@@ -119,8 +124,6 @@
                     <source>${java.version}</source>
                     <target>${java.version}</target>
                     <release>${java.version}</release>
-                    <fork>true</fork>
-                    <enablePreview>true</enablePreview>
                     <parameters>true</parameters>
                     <testCompilerArgument>-parameters</testCompilerArgument>
                 </configuration>
@@ -130,9 +133,6 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>${maven-surefire-plugin.version}</version>
-                <configuration>
-                    <argLine>--enable-preview</argLine>
-                </configuration>
             </plugin>
 
             <plugin>
@@ -205,6 +205,13 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-checkstyle-plugin</artifactId>
                 <version>${maven-checkstyle-plugin.version}</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>com.puppycrawl.tools</groupId>
+                        <artifactId>checkstyle</artifactId>
+                        <version>${checkstyle.version}</version>
+                    </dependency>
+                </dependencies>
                 <configuration>
                     <configLocation>${maven.multiModuleProjectDirectory}/config/checkstyle/checkstyle.xml
                     </configLocation>
@@ -232,7 +239,6 @@
                     <sourceFileExcludes>module-info.java</sourceFileExcludes>
                     <attach>true</attach>
                     <release>${java.version}</release>
-                    <additionalOptions>--enable-preview</additionalOptions>
                 </configuration>
                 <executions>
                     <execution>
@@ -251,6 +257,19 @@
                 <version>${maven-enforcer-plugin.version}</version>
                 <executions>
                     <execution>
+                        <id>enforce-maven-version</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <requireMavenVersion>
+                                    <version>${maven.version}</version>
+                                </requireMavenVersion>
+                            </rules>
+                        </configuration>
+                    </execution>
+                    <execution>
                         <id>enforce-no-snapshots</id>
                         <goals>
                             <goal>enforce</goal>
@@ -264,6 +283,24 @@
                                 </requireReleaseDeps>
                             </rules>
                             <fail>true</fail>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>${maven-dependency-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>analyze-dependencies</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>analyze-only</goal>
+                        </goals>
+                        <configuration>
+                            <failOnWarning>true</failOnWarning>
                         </configuration>
                     </execution>
                 </executions>

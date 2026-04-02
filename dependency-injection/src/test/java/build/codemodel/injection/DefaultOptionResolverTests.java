@@ -4,9 +4,9 @@ import build.base.configuration.AbstractValueOption;
 import build.base.configuration.Default;
 import build.base.configuration.Option;
 import jakarta.inject.Inject;
-import static org.assertj.core.api.Assertions.assertThat;
-
 import org.junit.jupiter.api.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Tests for {@link DefaultOptionResolver}.

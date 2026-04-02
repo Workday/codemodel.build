@@ -20,10 +20,10 @@ package build.codemodel.framework.initialization;
  * #L%
  */
 
-import build.codemodel.framework.Plugin;
-import build.codemodel.framework.Targetable;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.descriptor.Traitable;
+import build.codemodel.framework.Plugin;
+import build.codemodel.framework.Targetable;
 
 import java.lang.reflect.ParameterizedType;
 import java.util.Arrays;
