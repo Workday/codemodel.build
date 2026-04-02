@@ -29,9 +29,9 @@
         </dependency>
 
         <dependency>
-            <groupId>build.base</groupId>
-            <artifactId>base-transport</artifactId>
-            <version>${base.version}</version>
+            <groupId>jakarta.inject</groupId>
+            <artifactId>jakarta.inject-api</artifactId>
+            <version>${jakarta-inject.version}</version>
         </dependency>
 
         <dependency>
@@ -61,7 +61,7 @@
         <!-- Test Dependencies -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-engine</artifactId>
+            <artifactId>junit-jupiter-api</artifactId>
             <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
@@ -74,10 +74,39 @@
         </dependency>
 
         <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <version>${jackson.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>build.base</groupId>
+            <artifactId>base-transport</artifactId>
+            <version>${base.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
             <groupId>build.base</groupId>
             <artifactId>base-transport-json</artifactId>
             <version>${base.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <configuration>
+                    <ignoredUnusedDeclaredDependencies>
+                        <!-- required in module-info.java but no direct class imports -->
+                        <ignoredUnusedDeclaredDependency>build.codemodel:imperative-codemodel</ignoredUnusedDeclaredDependency>
+                    </ignoredUnusedDeclaredDependencies>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>

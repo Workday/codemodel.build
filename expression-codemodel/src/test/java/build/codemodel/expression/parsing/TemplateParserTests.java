@@ -1,9 +1,11 @@
 package build.codemodel.expression.parsing;
 
-import build.codemodel.expression.*;
+import build.codemodel.expression.Expression;
+import build.codemodel.expression.StringLiteral;
+import build.codemodel.expression.VariableUsage;
 import build.codemodel.expression.naming.VariableName;
-import build.codemodel.foundation.ConceptualCodeModel;
 import build.codemodel.foundation.CodeModel;
+import build.codemodel.foundation.ConceptualCodeModel;
 import build.codemodel.foundation.naming.CachingNameProvider;
 import build.codemodel.foundation.naming.IrreducibleName;
 import build.codemodel.foundation.naming.NonCachingNameProvider;
@@ -15,7 +17,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 import java.util.List;
 import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class TemplateParserTests {
 

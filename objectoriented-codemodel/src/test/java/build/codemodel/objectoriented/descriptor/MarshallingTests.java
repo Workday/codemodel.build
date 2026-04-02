@@ -25,7 +25,10 @@ import build.codemodel.foundation.usage.UnknownTypeUsage;
 import build.codemodel.foundation.usage.VoidTypeUsage;
 import build.codemodel.objectoriented.ObjectOrientedCodeModel;
 import build.codemodel.objectoriented.naming.MethodName;
-import static org.assertj.core.api.Assertions.assertThat;
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.StreamReadFeature;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.StringReader;
@@ -33,11 +36,7 @@ import java.io.StringWriter;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.StreamReadFeature;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Marshalling tests for various {@link Marshal}able classes in the objectoriented-codemodel descriptor package.

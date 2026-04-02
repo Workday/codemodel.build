@@ -7,9 +7,7 @@ import build.codemodel.jdk.descriptor.MethodBodyDescriptor;
 import build.codemodel.objectoriented.descriptor.ConstructorDescriptor;
 import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
-
 import com.google.testing.compile.JavaFileObjects;
-
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

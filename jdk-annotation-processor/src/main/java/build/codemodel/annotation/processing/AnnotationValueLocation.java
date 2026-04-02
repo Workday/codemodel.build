@@ -24,7 +24,6 @@ import build.base.telemetry.Location;
 
 import java.util.Objects;
 import java.util.Optional;
-
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;

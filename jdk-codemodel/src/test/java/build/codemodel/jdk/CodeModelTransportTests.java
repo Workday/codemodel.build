@@ -11,16 +11,15 @@ import build.codemodel.foundation.naming.TypeName;
 import build.codemodel.foundation.transport.ModuleNameTransformer;
 import build.codemodel.foundation.transport.NamespaceTransformer;
 import build.codemodel.foundation.transport.TypeNameTransformer;
-import static org.assertj.core.api.Assertions.assertThat;
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.StreamReadFeature;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
 
-import org.junit.jupiter.api.Test;
-
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.StreamReadFeature;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Tests to transport {@link CodeModel}s.

@@ -21,11 +21,11 @@ package build.codemodel.framework.completer;
  */
 
 import build.base.telemetry.TelemetryRecorder;
+import build.codemodel.foundation.CodeModel;
 import build.codemodel.framework.Plugin;
 import build.codemodel.framework.Targetable;
 import build.codemodel.framework.compiler.Compilation;
 import build.codemodel.framework.compiler.Compiler;
-import build.codemodel.foundation.CodeModel;
 
 import java.util.Optional;
 

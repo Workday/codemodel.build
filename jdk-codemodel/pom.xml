@@ -29,8 +29,32 @@
         </dependency>
 
         <dependency>
+            <groupId>build.base</groupId>
+            <artifactId>base-marshalling</artifactId>
+            <version>${base.version}</version>
+        </dependency>
+
+        <dependency>
             <groupId>build.codemodel</groupId>
             <artifactId>codemodel-foundation</artifactId>
+            <version>${revision}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>build.codemodel</groupId>
+            <artifactId>expression-codemodel</artifactId>
+            <version>${revision}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>build.codemodel</groupId>
+            <artifactId>hierarchical-codemodel</artifactId>
+            <version>${revision}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>build.codemodel</groupId>
+            <artifactId>imperative-codemodel</artifactId>
             <version>${revision}</version>
         </dependency>
 
@@ -51,12 +75,6 @@
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
             <version>${junit.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-engine</artifactId>
-            <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
 
@@ -68,8 +86,15 @@
         </dependency>
 
         <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <version>${jackson.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
             <groupId>build.base</groupId>
-            <artifactId>base-transport-json</artifactId>
+            <artifactId>base-transport</artifactId>
             <version>${base.version}</version>
             <scope>test</scope>
         </dependency>
@@ -81,10 +106,32 @@
         </dependency>
 
         <dependency>
+            <groupId>build.base</groupId>
+            <artifactId>base-transport-json</artifactId>
+            <version>${base.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
             <groupId>com.google.testing.compile</groupId>
             <artifactId>compile-testing</artifactId>
             <version>${compile-testing.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <configuration>
+                    <ignoredUnusedDeclaredDependencies>
+                        <!-- required in module-info.java but no direct class imports -->
+                        <ignoredUnusedDeclaredDependency>build.base:base-telemetry-foundation</ignoredUnusedDeclaredDependency>
+                    </ignoredUnusedDeclaredDependencies>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>

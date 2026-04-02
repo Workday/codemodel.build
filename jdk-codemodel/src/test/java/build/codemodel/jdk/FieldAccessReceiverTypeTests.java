@@ -5,9 +5,7 @@ import build.codemodel.jdk.descriptor.MethodBodyDescriptor;
 import build.codemodel.jdk.expression.FieldAccess;
 import build.codemodel.jdk.statement.LocalVariableDeclaration;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
-
 import com.google.testing.compile.JavaFileObjects;
-
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

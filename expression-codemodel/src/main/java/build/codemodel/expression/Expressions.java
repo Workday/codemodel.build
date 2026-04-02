@@ -20,9 +20,9 @@ package build.codemodel.expression;
  * #L%
  */
 
-import build.codemodel.foundation.CodeModel;
 import build.codemodel.expression.naming.FunctionName;
 import build.codemodel.expression.naming.VariableName;
+import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.usage.TypeUsage;
 
 import java.util.Objects;

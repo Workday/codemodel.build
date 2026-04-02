@@ -20,8 +20,8 @@ package build.codemodel.foundation.usage;
  * #L%
  */
 
-import build.codemodel.foundation.Dependent;
 import build.codemodel.foundation.CodeModel;
+import build.codemodel.foundation.Dependent;
 import build.codemodel.foundation.descriptor.Traitable;
 import build.codemodel.foundation.descriptor.TypeDescriptor;
 

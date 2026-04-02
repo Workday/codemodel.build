@@ -9,9 +9,7 @@ import build.codemodel.jdk.expression.MethodInvocation;
 import build.codemodel.jdk.statement.ExpressionStatement;
 import build.codemodel.jdk.statement.LocalVariableDeclaration;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
-
 import com.google.testing.compile.JavaFileObjects;
-
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

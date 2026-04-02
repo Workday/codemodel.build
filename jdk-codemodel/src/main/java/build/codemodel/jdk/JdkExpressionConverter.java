@@ -22,13 +22,13 @@ package build.codemodel.jdk;
 
 import build.codemodel.expression.Addition;
 import build.codemodel.expression.BooleanLiteral;
-import build.codemodel.expression.ExpressionType;
 import build.codemodel.expression.Cast;
 import build.codemodel.expression.Conjunction;
 import build.codemodel.expression.Disjunction;
 import build.codemodel.expression.Division;
 import build.codemodel.expression.EqualTo;
 import build.codemodel.expression.Expression;
+import build.codemodel.expression.ExpressionType;
 import build.codemodel.expression.GreaterThan;
 import build.codemodel.expression.GreaterThanOrEqualTo;
 import build.codemodel.expression.LessThan;
@@ -66,11 +66,9 @@ import build.codemodel.jdk.expression.SwitchExpression;
 import build.codemodel.jdk.expression.Ternary;
 import build.codemodel.jdk.expression.UnknownExpression;
 import build.codemodel.jdk.statement.ExpressionStatement;
-
 import com.sun.source.tree.ArrayAccessTree;
 import com.sun.source.tree.AssignmentTree;
 import com.sun.source.tree.BinaryTree;
-import com.sun.source.tree.CaseTree;
 import com.sun.source.tree.CompilationUnitTree;
 import com.sun.source.tree.CompoundAssignmentTree;
 import com.sun.source.tree.ConditionalExpressionTree;
@@ -97,7 +95,6 @@ import com.sun.source.util.Trees;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
-
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 

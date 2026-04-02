@@ -36,6 +36,18 @@
 
         <dependency>
             <groupId>build.codemodel</groupId>
+            <artifactId>codemodel-foundation</artifactId>
+            <version>${revision}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>build.codemodel</groupId>
+            <artifactId>objectoriented-codemodel</artifactId>
+            <version>${revision}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>build.codemodel</groupId>
             <artifactId>jdk-codemodel</artifactId>
             <version>${revision}</version>
         </dependency>
@@ -44,12 +56,6 @@
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
-            <version>${junit.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-engine</artifactId>
             <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>

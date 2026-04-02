@@ -7,8 +7,8 @@ import build.base.transport.json.JsonTransport;
 import build.codemodel.expression.naming.FunctionName;
 import build.codemodel.expression.naming.VariableName;
 import build.codemodel.expression.parsing.EmptyExpression;
-import build.codemodel.foundation.ConceptualCodeModel;
 import build.codemodel.foundation.CodeModel;
+import build.codemodel.foundation.ConceptualCodeModel;
 import build.codemodel.foundation.descriptor.FormalParameterDescriptor;
 import build.codemodel.foundation.descriptor.PolymorphicTypeDescriptor;
 import build.codemodel.foundation.descriptor.TypeDescriptor;
@@ -23,7 +23,10 @@ import build.codemodel.foundation.transport.NamespaceTransformer;
 import build.codemodel.foundation.transport.TypeNameTransformer;
 import build.codemodel.foundation.usage.UnknownTypeUsage;
 import build.codemodel.foundation.usage.VoidTypeUsage;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.StreamReadFeature;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
@@ -33,11 +36,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.StreamReadFeature;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Marshalling tests for various {@link Marshal}able classes.

@@ -6,14 +6,14 @@ import build.codemodel.injection.ProviderResolver;
 import build.codemodel.injection.compatibility.accessories.Cupholder;
 import build.codemodel.injection.compatibility.accessories.RoundThing;
 import build.codemodel.injection.compatibility.accessories.SpareTire;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 
 /**
  * Quark Injection Jakarta Dependency Injection Compatibility Tests.

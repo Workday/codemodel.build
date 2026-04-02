@@ -9,14 +9,14 @@ import build.codemodel.foundation.naming.TypeName;
 import build.codemodel.foundation.usage.NamedTypeUsage;
 import build.codemodel.foundation.usage.SpecificTypeUsage;
 import build.codemodel.hierarchical.descriptor.HierarchicalTypeDescriptor;
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Test;
 
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Tests for {@link HierarchicalCodeModel}s.

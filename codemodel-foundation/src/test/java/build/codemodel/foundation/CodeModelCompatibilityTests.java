@@ -12,13 +12,13 @@ import build.codemodel.foundation.descriptor.TypeDescriptor;
 import build.codemodel.foundation.naming.ModuleName;
 import build.codemodel.foundation.naming.Namespace;
 import build.codemodel.foundation.naming.TypeName;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import org.junit.jupiter.api.Test;
 
 import java.util.Objects;
 import java.util.function.Function;
 
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * {@link CodeModel} compatibility tests.

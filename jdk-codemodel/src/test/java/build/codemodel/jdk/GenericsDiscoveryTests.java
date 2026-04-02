@@ -8,14 +8,13 @@ import build.codemodel.foundation.usage.WildcardTypeUsage;
 import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
 import build.codemodel.objectoriented.descriptor.ParameterizedTypeDescriptor;
-import static org.assertj.core.api.Assertions.assertThat;
+import com.google.testing.compile.JavaFileObjects;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Optional;
 
-import org.junit.jupiter.api.Test;
-
-import com.google.testing.compile.JavaFileObjects;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Tests for generic type discovery via {@link JdkInitializer}.

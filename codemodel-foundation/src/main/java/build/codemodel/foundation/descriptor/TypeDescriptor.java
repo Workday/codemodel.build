@@ -20,11 +20,11 @@ package build.codemodel.foundation.descriptor;
  * #L%
  */
 
-import java.util.stream.Stream;
-
 import build.codemodel.foundation.Dependent;
 import build.codemodel.foundation.naming.TypeName;
 import build.codemodel.foundation.usage.TypeUsage;
+
+import java.util.stream.Stream;
 
 /**
  * Provides type information concerning the <i>definition</i> of a type.

@@ -17,6 +17,7 @@
  * limitations under the License.
  * #L%
  */
+
 import build.codemodel.annotation.discovery.AnnotationDiscovery;
 import build.codemodel.framework.Plugin;
 import build.codemodel.framework.compiler.Compiler;
@@ -25,7 +26,6 @@ import build.codemodel.framework.completer.Completer;
 import build.codemodel.framework.initialization.Enricher;
 
 import java.lang.reflect.Type;
-
 import javax.annotation.processing.Processor;
 
 /**
@@ -52,7 +52,6 @@ module build.codemodel.jdk.annotation.processor {
     requires build.base.telemetry.foundation;
 
     requires build.codemodel.foundation;
-    requires build.codemodel.expression;
     requires build.codemodel.imperative;
     requires build.codemodel.objectoriented;
     requires build.codemodel.jdk;

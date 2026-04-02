@@ -28,7 +28,6 @@ import build.codemodel.foundation.descriptor.AbstractTraitable;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.usage.TypeUsage;
 
-import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
 

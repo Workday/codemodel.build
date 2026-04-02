@@ -1,5 +1,7 @@
 package build.codemodel.injection;
 
+import build.codemodel.foundation.usage.AnnotationTypeUsage;
+import build.codemodel.foundation.usage.AnnotationValue;
 import build.codemodel.injection.example.AbstractPerson;
 import build.codemodel.injection.example.ConstructorInjectablePerson;
 import build.codemodel.injection.example.FieldInjectablePerson;
@@ -8,15 +10,13 @@ import build.codemodel.injection.example.FieldInjectablePersonWithInjectAnnotate
 import build.codemodel.injection.example.MultipleConstructorPerson;
 import build.codemodel.injection.example.NonAbstractPerson;
 import build.codemodel.injection.example.SetterInjectablePerson;
-import build.codemodel.foundation.usage.AnnotationTypeUsage;
-import build.codemodel.foundation.usage.AnnotationValue;
 import jakarta.inject.Named;
 import jakarta.inject.Qualifier;
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Test;
 
 import java.util.Objects;
 
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Tests for discovering {@link InjectionPoint}s using the {@link InjectionFramework}.

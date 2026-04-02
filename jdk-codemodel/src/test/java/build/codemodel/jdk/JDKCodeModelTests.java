@@ -5,6 +5,11 @@ import build.codemodel.foundation.naming.NonCachingNameProvider;
 import build.codemodel.foundation.usage.AnnotationTypeUsage;
 import build.codemodel.foundation.usage.GenericTypeUsage;
 import build.codemodel.hierarchical.descriptor.HierarchicalTypeDescriptor;
+import build.codemodel.jdk.descriptor.JDKTypeDescriptor;
+import build.codemodel.jdk.example.AbstractPerson;
+import build.codemodel.jdk.example.Container;
+import build.codemodel.jdk.example.Description;
+import build.codemodel.jdk.example.NonAbstractPerson;
 import build.codemodel.objectoriented.descriptor.AccessModifier;
 import build.codemodel.objectoriented.descriptor.Classification;
 import build.codemodel.objectoriented.descriptor.ConstructorDescriptor;
@@ -12,14 +17,9 @@ import build.codemodel.objectoriented.descriptor.ExtendsTypeDescriptor;
 import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 import build.codemodel.objectoriented.descriptor.ImplementsTypeDescriptor;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
-import build.codemodel.jdk.descriptor.JDKTypeDescriptor;
-import build.codemodel.jdk.example.AbstractPerson;
-import build.codemodel.jdk.example.Container;
-import build.codemodel.jdk.example.Description;
-import build.codemodel.jdk.example.NonAbstractPerson;
-import static org.assertj.core.api.Assertions.assertThat;
-
 import org.junit.jupiter.api.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Tests for {@link JDKCodeModel}.

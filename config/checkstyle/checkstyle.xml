@@ -10,6 +10,11 @@
     <module name="SuppressWarningsFilter"/>
     <module name="TreeWalker">
         <module name="AvoidStarImport"/>
+        <module name="CustomImportOrder">
+            <property name="customImportOrderRules" value="THIRD_PARTY_PACKAGE###STANDARD_JAVA_PACKAGE###STATIC"/>
+            <property name="sortImportsInGroupAlphabetically" value="true"/>
+            <property name="separateLineBetweenGroups" value="true"/>
+        </module>
         <module name="EmptyForInitializerPad"/>
         <module name="EmptyForIteratorPad"/>
         <module name="FallThrough"/>
@@ -17,6 +22,7 @@
             <property name="tokens" value="VARIABLE_DEF,PARAMETER_DEF"/>
         </module>
         <module name="HideUtilityClassConstructor"/>
+        <module name="FinalParameters"/>
         <module name="IllegalInstantiation"/>
         <module name="IllegalTokenText"/>
         <module name="LeftCurly"/>
@@ -45,28 +51,6 @@
         <module name="SuppressWarningsHolder"/>
         <module name="TypeName"/>
         <module name="TypecastParenPad"/>
-        <!--        <module name="com.workday.checks.WorkdayDeprecatedAPIsUsageCheck">
-            <property name="deprecatedAPIs" value="junit.framework.Assert, junit.framework.TestCase" />
-            </module>
-                <module name="com.workday.checks.WorkdayInternalImportCheck">
-                    <property name="ignoreClass" value="sun.reflect.generics.reflectiveObjects.ParameterizedTypeImpl sun.misc.Cleaner sun.nio.ch.DirectBuffer" />
-                    <property name="ignorePrefix" value="com.sun.management com.workday. com.sun.net.httpserver. org.mockito.internal. org.tmatesoft.svn.core.internal. com.jayway.restassured.internal." />
-                    <property name="internalPattern" value=".internal." />
-                    <property name="internalPrefix" value="sun. com.sun. org.jetbrains.annotations." />
-                </module>
-                <module name="com.workday.checks.WorkdayMemberVariableCheck" />
-                <module name="com.workday.checks.WorkdayMethodCallArgCheck">
-                    <property name="argumentValues" value="&quot;user.dir&quot;" />
-                    <property name="methodNames" value="System.setProperty" />
-                    <property name="severity" value="ignore" />
-                </module>
-                <module name="com.workday.checks.WorkdayMethodUnrequiredThisCheck" />
-                <module name="com.workday.checks.WorkdayRequireThisCheck" />
-                <module name="com.workday.checks.WorkdayUnusedImportsCheck" />
-                <module name="com.workday.checks.WorkdayUnusedLocalVariableCheck" />
-                <module name="com.workday.checks.WorkdayUnusedMemberVariableCheck" />
-                <module name="com.workday.checks.WorkdayWhitespaceAfterCheck" />
-            </module>
-            -->
+        <module name="UnusedImportsCheck"/>
     </module>
 </module>

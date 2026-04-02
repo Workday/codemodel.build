@@ -2,9 +2,9 @@ package build.codemodel.foundation.transport;
 
 import build.codemodel.foundation.naming.ModuleName;
 import build.codemodel.foundation.naming.NonCachingNameProvider;
-import static org.assertj.core.api.Assertions.assertThat;
-
 import org.junit.jupiter.api.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Tests for {@link ModuleNameTransformer}s.

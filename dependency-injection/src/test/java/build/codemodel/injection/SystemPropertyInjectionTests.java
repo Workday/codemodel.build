@@ -2,11 +2,11 @@ package build.codemodel.injection;
 
 import build.codemodel.injection.example.SystemPropertyInjectablePerson;
 import jakarta.inject.Inject;
+import org.junit.jupiter.api.Test;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Fail.fail;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-
-import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link SystemProperty} injection.

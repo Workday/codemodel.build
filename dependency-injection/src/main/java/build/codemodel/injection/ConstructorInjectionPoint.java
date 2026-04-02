@@ -23,9 +23,9 @@ package build.codemodel.injection;
 import build.codemodel.foundation.descriptor.FormalParameterDescriptor;
 import build.codemodel.foundation.descriptor.Traitable;
 import build.codemodel.foundation.usage.AnnotationTypeUsage;
-import build.codemodel.objectoriented.descriptor.ConstructorDescriptor;
 import build.codemodel.jdk.descriptor.ConstructorType;
 import build.codemodel.jdk.descriptor.JDKTypeDescriptor;
+import build.codemodel.objectoriented.descriptor.ConstructorDescriptor;
 import jakarta.inject.Qualifier;
 
 import java.lang.reflect.InvocationTargetException;

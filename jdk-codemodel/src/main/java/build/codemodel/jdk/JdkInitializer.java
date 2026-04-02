@@ -22,6 +22,8 @@ package build.codemodel.jdk;
 
 import build.base.foundation.Lazy;
 import build.codemodel.foundation.CodeModel;
+import build.codemodel.foundation.descriptor.FormalParameterDescriptor;
+import build.codemodel.foundation.descriptor.ThrowableDescriptor;
 import build.codemodel.foundation.naming.NameProvider;
 import build.codemodel.foundation.usage.AnnotationTypeUsage;
 import build.codemodel.foundation.usage.AnnotationValue;
@@ -43,12 +45,12 @@ import build.codemodel.jdk.descriptor.EnclosingTypeDescriptor;
 import build.codemodel.jdk.descriptor.EnumConstantDescriptor;
 import build.codemodel.jdk.descriptor.EnumType;
 import build.codemodel.jdk.descriptor.FieldInitializerDescriptor;
+import build.codemodel.jdk.descriptor.Final;
 import build.codemodel.jdk.descriptor.JDKClassTypeDescriptor;
 import build.codemodel.jdk.descriptor.JDKInterfaceTypeDescriptor;
 import build.codemodel.jdk.descriptor.JDKTypeDescriptor;
 import build.codemodel.jdk.descriptor.MethodBodyDescriptor;
 import build.codemodel.jdk.descriptor.MethodImplementationDescriptor;
-import build.codemodel.jdk.descriptor.Final;
 import build.codemodel.jdk.descriptor.RecordComponentDescriptor;
 import build.codemodel.jdk.descriptor.RecordType;
 import build.codemodel.jdk.descriptor.Static;
@@ -60,9 +62,15 @@ import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 import build.codemodel.objectoriented.descriptor.ImplementsTypeDescriptor;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
 import build.codemodel.objectoriented.descriptor.ParameterizedTypeDescriptor;
-import build.codemodel.foundation.descriptor.FormalParameterDescriptor;
-import build.codemodel.foundation.descriptor.ThrowableDescriptor;
 import build.codemodel.objectoriented.naming.MethodName;
+import com.sun.source.tree.ClassTree;
+import com.sun.source.tree.CompilationUnitTree;
+import com.sun.source.tree.MethodTree;
+import com.sun.source.tree.VariableTree;
+import com.sun.source.util.JavacTask;
+import com.sun.source.util.TreePath;
+import com.sun.source.util.TreeScanner;
+import com.sun.source.util.Trees;
 
 import java.io.File;
 import java.io.IOException;
@@ -75,15 +83,14 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
-
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
+import javax.lang.model.element.RecordComponentElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
-import javax.lang.model.element.RecordComponentElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.ArrayType;
 import javax.lang.model.type.DeclaredType;
@@ -103,15 +110,6 @@ import javax.tools.JavaCompiler;
 import javax.tools.JavaFileObject;
 import javax.tools.StandardJavaFileManager;
 import javax.tools.ToolProvider;
-
-import com.sun.source.tree.ClassTree;
-import com.sun.source.tree.CompilationUnitTree;
-import com.sun.source.tree.MethodTree;
-import com.sun.source.tree.VariableTree;
-import com.sun.source.util.JavacTask;
-import com.sun.source.util.TreePath;
-import com.sun.source.util.TreeScanner;
-import com.sun.source.util.Trees;
 
 /**
  * Initializes a {@link build.codemodel.foundation.CodeModel} by parsing Java source files using
