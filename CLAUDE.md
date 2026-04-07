@@ -4,7 +4,7 @@
 
 `codemodel.build` is a language-agnostic Java code model framework (Workday, Inc.) that provides a structured, serializable representation of software systems. A `CodeModel` can be populated from compiled classes (via reflection) or `.java` source files (via javac), then enriched, validated, and compiled through a plugin pipeline. It is the foundation for annotation processors and code generation tools.
 
-**Stack:** Java 25 (preview features required), Maven multi-module, Jakarta Inject, custom marshalling framework, Pratt-parser expression engine, JSR-330 DI implementation.
+**Stack:** Java 25, Maven multi-module, Jakarta Inject, custom marshalling framework, Pratt-parser expression engine, JSR-330 DI implementation.
 
 **Structure:**
 - `codemodel-foundation` — core `TypeDescriptor`/`TypeUsage`/`Trait` system + naming + marshalling

@@ -387,7 +387,6 @@
                     <doclint>all,-missing</doclint>
                     <sourceFileExcludes>module-info.java</sourceFileExcludes>
                     <source>${java.version}</source>
-                    <additionalOptions>--enable-preview</additionalOptions>
                 </configuration>
                 <reportSets>
                     <reportSet>
