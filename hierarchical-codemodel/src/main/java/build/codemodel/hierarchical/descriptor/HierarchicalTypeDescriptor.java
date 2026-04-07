@@ -26,8 +26,10 @@ import build.codemodel.foundation.naming.TypeName;
 import build.codemodel.foundation.usage.NamedTypeUsage;
 import build.codemodel.hierarchical.HierarchicalCodeModel;
 
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -129,10 +131,10 @@ public interface HierarchicalTypeDescriptor
      * @return the level of the {@link HierarchicalTypeDescriptor}
      */
     default int level() {
-        return level(new java.util.HashSet<>());
+        return level(new HashSet<>());
     }
 
-    private int level(final java.util.Set<TypeName> visited) {
+    private int level(final Set<TypeName> visited) {
         if (!visited.add(typeName())) {
             throw new IllegalStateException("Cycle detected in type hierarchy at: " + typeName());
         }
@@ -211,11 +213,11 @@ public interface HierarchicalTypeDescriptor
      * @return the {@link Optional}ly found <i>first</i> <i>ancestor</i>, otherwise {@link Optional#empty()}
      */
     default Optional<HierarchicalTypeDescriptor> getAncestor(final Predicate<? super HierarchicalTypeDescriptor> predicate) {
-        return getAncestor(predicate, new java.util.HashSet<>());
+        return getAncestor(predicate, new HashSet<>());
     }
 
     private Optional<HierarchicalTypeDescriptor> getAncestor(final Predicate<? super HierarchicalTypeDescriptor> predicate,
-                                                              final java.util.Set<TypeName> visited) {
+                                                             final Set<TypeName> visited) {
         if (!hasParents()) {
             return Optional.empty();
         }
