@@ -33,7 +33,9 @@ import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.imperative.Statement;
 
 import java.lang.invoke.MethodHandles;
+import java.util.List;
 import java.util.Objects;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 /**
@@ -48,12 +50,20 @@ public final class Lambda
     extends AbstractExpression {
 
     /**
+     * The lambda parameters (may be empty for zero-arg or implicitly-typed lambdas).
+     */
+    private final List<LambdaParameter> parameters;
+
+    /**
      * The lambda body statement.
      */
     private final Statement body;
 
-    private Lambda(final CodeModel codeModel, final Statement body) {
+    private Lambda(final CodeModel codeModel,
+                   final List<LambdaParameter> parameters,
+                   final Statement body) {
         super(codeModel);
+        this.parameters = parameters == null ? List.of() : List.copyOf(parameters);
         this.body = Objects.requireNonNull(body, "body must not be null");
     }
 
@@ -61,17 +71,37 @@ public final class Lambda
     public Lambda(@Bound final CodeModel codeModel,
                   final Marshaller marshaller,
                   final Stream<Marshalled<Trait>> traits,
+                  final Stream<String> paramTypeNames,
+                  final Stream<String> paramNames,
                   final Marshalled<Statement> body) {
         super(codeModel, marshaller, traits);
+        final var typeNameList = paramTypeNames == null ? List.<String>of() : paramTypeNames.toList();
+        final var nameList = paramNames == null ? List.<String>of() : paramNames.toList();
+        this.parameters = IntStream.range(0, Math.min(typeNameList.size(), nameList.size()))
+            .mapToObj(i -> new LambdaParameter(typeNameList.get(i), nameList.get(i)))
+            .toList();
         this.body = marshaller.unmarshal(body);
     }
 
     @Marshal
     public void destructor(final Marshaller marshaller,
                            final Out<Stream<Marshalled<Trait>>> traits,
+                           final Out<Stream<String>> paramTypeNames,
+                           final Out<Stream<String>> paramNames,
                            final Out<Marshalled<Statement>> body) {
         super.destructor(marshaller, traits);
+        paramTypeNames.set(this.parameters.stream().map(LambdaParameter::typeName));
+        paramNames.set(this.parameters.stream().map(LambdaParameter::name));
         body.set(marshaller.marshal(this.body));
+    }
+
+    /**
+     * Obtains the lambda parameters.
+     *
+     * @return a {@link Stream} of {@link LambdaParameter}s
+     */
+    public Stream<LambdaParameter> parameters() {
+        return this.parameters.stream();
     }
 
     /**
@@ -86,6 +116,7 @@ public final class Lambda
     @Override
     public boolean equals(final Object object) {
         return object instanceof Lambda other
+            && Objects.equals(this.parameters, other.parameters)
             && Objects.equals(this.body, other.body)
             && super.equals(other);
     }
@@ -93,12 +124,26 @@ public final class Lambda
     /**
      * Creates a {@link Lambda} expression.
      *
+     * @param codeModel  the {@link CodeModel}
+     * @param parameters the lambda parameters
+     * @param body       the body {@link Statement}
+     * @return a new {@link Lambda}
+     */
+    public static Lambda of(final CodeModel codeModel,
+                            final List<LambdaParameter> parameters,
+                            final Statement body) {
+        return new Lambda(Objects.requireNonNull(codeModel, "codeModel must not be null"), parameters, body);
+    }
+
+    /**
+     * Creates a {@link Lambda} expression with no parameters.
+     *
      * @param codeModel the {@link CodeModel}
      * @param body       the body {@link Statement}
      * @return a new {@link Lambda}
      */
     public static Lambda of(final CodeModel codeModel, final Statement body) {
-        return new Lambda(Objects.requireNonNull(codeModel, "codeModel must not be null"), body);
+        return new Lambda(Objects.requireNonNull(codeModel, "codeModel must not be null"), List.of(), body);
     }
 
     static {

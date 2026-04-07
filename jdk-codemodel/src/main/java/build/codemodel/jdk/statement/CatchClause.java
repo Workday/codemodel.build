@@ -33,6 +33,7 @@ import build.codemodel.imperative.AbstractStatement;
 import build.codemodel.imperative.Block;
 
 import java.lang.invoke.MethodHandles;
+import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
 
@@ -46,9 +47,10 @@ public final class CatchClause
     extends AbstractStatement {
 
     /**
-     * The source-form type name of the caught exception.
+     * The source-form type names of the caught exception(s).
+     * Has more than one element for multi-catch clauses (e.g. {@code catch (IOException | RuntimeException e)}).
      */
-    private final String exceptionTypeName;
+    private final List<String> exceptionTypeNames;
 
     /**
      * The name of the exception parameter.
@@ -61,11 +63,11 @@ public final class CatchClause
     private final Block body;
 
     private CatchClause(final CodeModel codeModel,
-                        final String exceptionTypeName,
+                        final List<String> exceptionTypeNames,
                         final String paramName,
                         final Block body) {
         super(codeModel);
-        this.exceptionTypeName = Objects.requireNonNull(exceptionTypeName, "exceptionTypeName must not be null");
+        this.exceptionTypeNames = Objects.requireNonNull(exceptionTypeNames, "exceptionTypeNames must not be null");
         this.paramName = Objects.requireNonNull(paramName, "paramName must not be null");
         this.body = Objects.requireNonNull(body, "body must not be null");
     }
@@ -74,11 +76,11 @@ public final class CatchClause
     public CatchClause(@Bound final CodeModel codeModel,
                        final Marshaller marshaller,
                        final Stream<Marshalled<Trait>> traits,
-                       final String exceptionTypeName,
+                       final Stream<String> exceptionTypeNames,
                        final String paramName,
                        final Marshalled<Block> body) {
         super(codeModel, marshaller, traits);
-        this.exceptionTypeName = exceptionTypeName;
+        this.exceptionTypeNames = exceptionTypeNames == null ? List.of() : exceptionTypeNames.toList();
         this.paramName = paramName;
         this.body = marshaller.unmarshal(body);
     }
@@ -86,22 +88,23 @@ public final class CatchClause
     @Marshal
     public void destructor(final Marshaller marshaller,
                            final Out<Stream<Marshalled<Trait>>> traits,
-                           final Out<String> exceptionTypeName,
+                           final Out<Stream<String>> exceptionTypeNames,
                            final Out<String> paramName,
                            final Out<Marshalled<Block>> body) {
         super.destructor(marshaller, traits);
-        exceptionTypeName.set(this.exceptionTypeName);
+        exceptionTypeNames.set(this.exceptionTypeNames.stream());
         paramName.set(this.paramName);
         body.set(marshaller.marshal(this.body));
     }
 
     /**
-     * Obtains the source-form type name of the caught exception.
+     * Obtains the source-form type names of the caught exception(s).
+     * Returns more than one element for multi-catch clauses.
      *
-     * @return the exception type name
+     * @return a {@link Stream} of exception type names
      */
-    public String exceptionTypeName() {
-        return this.exceptionTypeName;
+    public Stream<String> exceptionTypeNames() {
+        return this.exceptionTypeNames.stream();
     }
 
     /**
@@ -125,7 +128,7 @@ public final class CatchClause
     @Override
     public boolean equals(final Object object) {
         return object instanceof CatchClause other
-            && Objects.equals(this.exceptionTypeName, other.exceptionTypeName)
+            && Objects.equals(this.exceptionTypeNames, other.exceptionTypeNames)
             && Objects.equals(this.paramName, other.paramName)
             && Objects.equals(this.body, other.body)
             && super.equals(other);
@@ -134,17 +137,17 @@ public final class CatchClause
     /**
      * Creates a {@link CatchClause}.
      *
-     * @param codeModel        the {@link CodeModel}
-     * @param exceptionTypeName the source-form type name of the caught exception
-     * @param paramName         the name of the exception parameter
-     * @param body              the catch body {@link Block}
+     * @param codeModel          the {@link CodeModel}
+     * @param exceptionTypeNames the source-form type names of the caught exception(s)
+     * @param paramName          the name of the exception parameter
+     * @param body               the catch body {@link Block}
      * @return a new {@link CatchClause}
      */
     public static CatchClause of(final CodeModel codeModel,
-                                 final String exceptionTypeName,
+                                 final List<String> exceptionTypeNames,
                                  final String paramName,
                                  final Block body) {
-        return new CatchClause(codeModel, exceptionTypeName, paramName, body);
+        return new CatchClause(codeModel, exceptionTypeNames, paramName, body);
     }
 
     static {

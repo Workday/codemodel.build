@@ -129,11 +129,22 @@ public interface HierarchicalTypeDescriptor
      * @return the level of the {@link HierarchicalTypeDescriptor}
      */
     default int level() {
-        return parents()
-            .map(HierarchicalTypeDescriptor::level)
-            .max(Integer::compareTo)
-            .map(level -> level + 1)
-            .orElse(0);
+        return level(new java.util.HashSet<>());
+    }
+
+    private int level(final java.util.Set<TypeName> visited) {
+        if (!visited.add(typeName())) {
+            throw new IllegalStateException("Cycle detected in type hierarchy at: " + typeName());
+        }
+        try {
+            return parents()
+                .map(p -> p.level(visited))
+                .max(Integer::compareTo)
+                .map(level -> level + 1)
+                .orElse(0);
+        } finally {
+            visited.remove(typeName());
+        }
     }
 
     /**
@@ -200,26 +211,37 @@ public interface HierarchicalTypeDescriptor
      * @return the {@link Optional}ly found <i>first</i> <i>ancestor</i>, otherwise {@link Optional#empty()}
      */
     default Optional<HierarchicalTypeDescriptor> getAncestor(final Predicate<? super HierarchicalTypeDescriptor> predicate) {
+        return getAncestor(predicate, new java.util.HashSet<>());
+    }
 
+    private Optional<HierarchicalTypeDescriptor> getAncestor(final Predicate<? super HierarchicalTypeDescriptor> predicate,
+                                                              final java.util.Set<TypeName> visited) {
         if (!hasParents()) {
             return Optional.empty();
         }
 
-        // first attempt to locate a parent that satisfies the Predicate
-        final var optional = parents()
-            .filter(predicate)
-            .findFirst();
-
-        if (optional.isPresent()) {
-            return optional;
+        if (!visited.add(typeName())) {
+            throw new IllegalStateException("Cycle detected in type hierarchy at: " + typeName());
         }
+        try {
+            // first attempt to locate a parent that satisfies the Predicate
+            final var optional = parents()
+                .filter(predicate)
+                .findFirst();
 
-        // now attempt to locate a parent of the parent that satisfies the Predicate
-        return parents()
-            .map(parent -> parent.getAncestor(predicate))
-            .filter(Optional::isPresent)
-            .map(Optional::orElseThrow)
-            .findFirst();
+            if (optional.isPresent()) {
+                return optional;
+            }
+
+            // now attempt to locate a parent of the parent that satisfies the Predicate
+            return parents()
+                .map(parent -> parent.getAncestor(predicate, visited))
+                .filter(Optional::isPresent)
+                .map(Optional::orElseThrow)
+                .findFirst();
+        } finally {
+            visited.remove(typeName());
+        }
     }
 
     /**

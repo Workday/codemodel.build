@@ -250,10 +250,19 @@ public class JDKCodeModel
             typeUsage = TypeVariableUsage.of(this, typeName, Optional.empty(), upperBound);
         }
         else if (type instanceof WildcardType wildcardType) {
+            final java.lang.reflect.Type[] lowers = wildcardType.getLowerBounds();
+            final java.lang.reflect.Type[] uppers = wildcardType.getUpperBounds();
 
-            // TODO: determine lower and upper bounds from the WildcardType?
+            final Optional<Lazy<TypeUsage>> optLower = lowers.length > 0
+                ? Optional.of(Lazy.of(getTypeUsage(lowers[0])))
+                : Optional.empty();
 
-            typeUsage = WildcardTypeUsage.create(this);
+            // getUpperBounds() returns [Object] for unbounded `?` — treat that as no explicit upper bound
+            final Optional<Lazy<TypeUsage>> optUpper = uppers.length > 0 && !uppers[0].equals(Object.class)
+                ? Optional.of(Lazy.of(getTypeUsage(uppers[0])))
+                : Optional.empty();
+
+            typeUsage = WildcardTypeUsage.of(this, optLower, optUpper);
         }
         else if (type instanceof GenericArrayType genericArrayType) {
             typeUsage = ArrayTypeUsage.of(

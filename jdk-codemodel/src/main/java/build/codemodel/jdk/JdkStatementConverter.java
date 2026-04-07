@@ -64,6 +64,7 @@ import com.sun.source.tree.SynchronizedTree;
 import com.sun.source.tree.ThrowTree;
 import com.sun.source.tree.Tree;
 import com.sun.source.tree.TryTree;
+import com.sun.source.tree.UnionTypeTree;
 import com.sun.source.tree.VariableTree;
 import com.sun.source.tree.WhileLoopTree;
 import com.sun.source.util.SimpleTreeVisitor;
@@ -204,21 +205,31 @@ public class JdkStatementConverter
 
     @Override
     public Statement visitTry(final TryTree t, final Void v) {
+        final var resources = t.getResources().stream()
+            .map(r -> (build.codemodel.imperative.Statement) convert((StatementTree) r))
+            .toList();
         final var catches = t.getCatches().stream()
             .map(this::convertCatch)
             .toList();
         return Try.of(codeModel,
+            resources.stream(),
             convertBlock(t.getBlock()),
             catches.stream(),
             Optional.ofNullable(t.getFinallyBlock()).map(this::convertBlock));
     }
 
     private CatchClause convertCatch(final CatchTree c) {
-        final String paramTypeName = c.getParameter().getType() != null
-            ? c.getParameter().getType().toString()
-            : "Throwable";
+        final var typeTree = c.getParameter().getType();
+        final List<String> typeNames;
+        if (typeTree instanceof UnionTypeTree unionType) {
+            typeNames = unionType.getTypeAlternatives().stream()
+                .map(Object::toString)
+                .toList();
+        } else {
+            typeNames = List.of(typeTree != null ? typeTree.toString() : "Throwable");
+        }
         return CatchClause.of(codeModel,
-            paramTypeName,
+            typeNames,
             c.getParameter().getName().toString(),
             convertBlock(c.getBlock()));
     }

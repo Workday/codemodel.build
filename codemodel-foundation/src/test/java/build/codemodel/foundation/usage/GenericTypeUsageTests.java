@@ -10,6 +10,7 @@ import build.codemodel.foundation.usage.pattern.TypeUsagePattern;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.Spliterator;
 
@@ -68,7 +69,7 @@ class GenericTypeUsageTests {
     void shouldNotBeEqualWhenParametersAreDifferent() {
         final var codeModel = new ConceptualCodeModel(this.naming);
 
-        final var listTypeName = this.naming.getTypeName(java.util.List.class);
+        final var listTypeName = this.naming.getTypeName(List.class);
         final var stringTypeName = this.naming.getTypeName(String.class);
         final var integerTypeName = this.naming.getTypeName(Integer.class);
 
@@ -88,7 +89,7 @@ class GenericTypeUsageTests {
     void shouldBeEqualWhenBothHaveNoParameters() {
         final var codeModel = new ConceptualCodeModel(this.naming);
 
-        final var listTypeName = this.naming.getTypeName(java.util.List.class);
+        final var listTypeName = this.naming.getTypeName(List.class);
 
         final var rawList1 = GenericTypeUsage.of(codeModel, listTypeName);
         final var rawList2 = GenericTypeUsage.of(codeModel, listTypeName);

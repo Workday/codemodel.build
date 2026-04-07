@@ -4,6 +4,9 @@ import build.codemodel.foundation.descriptor.TypeDescriptor;
 import build.codemodel.foundation.naming.NonCachingNameProvider;
 import build.codemodel.foundation.usage.AnnotationTypeUsage;
 import build.codemodel.foundation.usage.GenericTypeUsage;
+import build.codemodel.foundation.usage.NamedTypeUsage;
+import build.codemodel.foundation.usage.WildcardTypeUsage;
+import build.codemodel.jdk.example.WildcardContainer;
 import build.codemodel.hierarchical.descriptor.HierarchicalTypeDescriptor;
 import build.codemodel.jdk.descriptor.JDKTypeDescriptor;
 import build.codemodel.jdk.example.AbstractPerson;
@@ -368,5 +371,42 @@ class JDKCodeModelTests {
 
         assertThat(typeDescriptor.orElseThrow().typeName().canonicalName())
             .isEqualTo("java.lang.Enum");
+    }
+
+    @Test
+    void shouldDiscoverWildcardBoundsViaReflection() {
+        final var codeModel = createCodeModel();
+        final var descriptor = codeModel.getJDKTypeDescriptor(WildcardContainer.class).orElseThrow();
+
+        final var upperField = descriptor.traits(FieldDescriptor.class)
+            .filter(f -> f.fieldName().toString().equals("upper"))
+            .findFirst().orElseThrow();
+        final var upperParam = ((GenericTypeUsage) upperField.type()).parameters().findFirst().orElseThrow();
+        assertThat(upperParam).isInstanceOf(WildcardTypeUsage.class);
+        final var upperWildcard = (WildcardTypeUsage) upperParam;
+        assertThat(upperWildcard.upperBound()).isPresent();
+        assertThat(upperWildcard.lowerBound()).isEmpty();
+        assertThat(((NamedTypeUsage) upperWildcard.upperBound().orElseThrow()).typeName().toString())
+            .contains("Number");
+
+        final var lowerField = descriptor.traits(FieldDescriptor.class)
+            .filter(f -> f.fieldName().toString().equals("lower"))
+            .findFirst().orElseThrow();
+        final var lowerParam = ((GenericTypeUsage) lowerField.type()).parameters().findFirst().orElseThrow();
+        assertThat(lowerParam).isInstanceOf(WildcardTypeUsage.class);
+        final var lowerWildcard = (WildcardTypeUsage) lowerParam;
+        assertThat(lowerWildcard.lowerBound()).isPresent();
+        assertThat(lowerWildcard.upperBound()).isEmpty();
+        assertThat(((NamedTypeUsage) lowerWildcard.lowerBound().orElseThrow()).typeName().toString())
+            .contains("Integer");
+
+        final var unboundedField = descriptor.traits(FieldDescriptor.class)
+            .filter(f -> f.fieldName().toString().equals("unbounded"))
+            .findFirst().orElseThrow();
+        final var unboundedParam = ((GenericTypeUsage) unboundedField.type()).parameters().findFirst().orElseThrow();
+        assertThat(unboundedParam).isInstanceOf(WildcardTypeUsage.class);
+        final var unboundedWildcard = (WildcardTypeUsage) unboundedParam;
+        assertThat(unboundedWildcard.upperBound()).isEmpty();
+        assertThat(unboundedWildcard.lowerBound()).isEmpty();
     }
 }

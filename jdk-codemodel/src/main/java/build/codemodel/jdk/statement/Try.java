@@ -31,6 +31,7 @@ import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.imperative.AbstractStatement;
 import build.codemodel.imperative.Block;
+import build.codemodel.imperative.Statement;
 
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
@@ -49,6 +50,11 @@ public final class Try
     extends AbstractStatement {
 
     /**
+     * The try-with-resources declarations, in order.
+     */
+    private final ArrayList<Statement> resources;
+
+    /**
      * The try block body.
      */
     private final Block body;
@@ -64,10 +70,14 @@ public final class Try
     private final Optional<Block> finallyBlock;
 
     private Try(final CodeModel codeModel,
+                final Stream<Statement> resources,
                 final Block body,
                 final Stream<CatchClause> catches,
                 final Optional<Block> finallyBlock) {
         super(codeModel);
+        this.resources = resources == null
+            ? new ArrayList<>()
+            : resources.collect(Collectors.toCollection(ArrayList::new));
         this.body = Objects.requireNonNull(body, "body must not be null");
         this.catches = catches == null
             ? new ArrayList<>()
@@ -79,10 +89,14 @@ public final class Try
     public Try(@Bound final CodeModel codeModel,
                final Marshaller marshaller,
                final Stream<Marshalled<Trait>> traits,
+               final Stream<Marshalled<Statement>> resources,
                final Marshalled<Block> body,
                final Stream<Marshalled<CatchClause>> catches,
                final Optional<Marshalled<Block>> finallyBlock) {
         super(codeModel, marshaller, traits);
+        this.resources = resources == null
+            ? new ArrayList<>()
+            : resources.map(marshaller::unmarshal).collect(Collectors.toCollection(ArrayList::new));
         this.body = marshaller.unmarshal(body);
         this.catches = catches == null
             ? new ArrayList<>()
@@ -93,13 +107,24 @@ public final class Try
     @Marshal
     public void destructor(final Marshaller marshaller,
                            final Out<Stream<Marshalled<Trait>>> traits,
+                           final Out<Stream<Marshalled<Statement>>> resources,
                            final Out<Marshalled<Block>> body,
                            final Out<Stream<Marshalled<CatchClause>>> catches,
                            final Out<Optional<Marshalled<Block>>> finallyBlock) {
         super.destructor(marshaller, traits);
+        resources.set(this.resources.stream().map(marshaller::marshal));
         body.set(marshaller.marshal(this.body));
         catches.set(this.catches.stream().map(marshaller::marshal));
         finallyBlock.set(this.finallyBlock.map(marshaller::marshal));
+    }
+
+    /**
+     * Obtains the try-with-resources declarations.
+     *
+     * @return a {@link Stream} of resource {@link Statement}s
+     */
+    public Stream<Statement> resources() {
+        return this.resources.stream();
     }
 
     /**
@@ -132,6 +157,7 @@ public final class Try
     @Override
     public boolean equals(final Object object) {
         return object instanceof Try other
+            && Objects.equals(this.resources, other.resources)
             && Objects.equals(this.body, other.body)
             && Objects.equals(this.catches, other.catches)
             && Objects.equals(this.finallyBlock, other.finallyBlock)
@@ -140,6 +166,24 @@ public final class Try
 
     /**
      * Creates a {@link Try} statement.
+     *
+     * @param codeModel   the {@link CodeModel}
+     * @param resources    the try-with-resources {@link Statement}s
+     * @param body         the try body {@link Block}
+     * @param catches      the {@link CatchClause}s
+     * @param finallyBlock the optional {@code finally} {@link Block}
+     * @return a new {@link Try}
+     */
+    public static Try of(final CodeModel codeModel,
+                         final Stream<Statement> resources,
+                         final Block body,
+                         final Stream<CatchClause> catches,
+                         final Optional<Block> finallyBlock) {
+        return new Try(codeModel, resources, body, catches, finallyBlock);
+    }
+
+    /**
+     * Creates a {@link Try} statement with no resources.
      *
      * @param codeModel   the {@link CodeModel}
      * @param body         the try body {@link Block}
@@ -151,7 +195,7 @@ public final class Try
                          final Block body,
                          final Stream<CatchClause> catches,
                          final Optional<Block> finallyBlock) {
-        return new Try(codeModel, body, catches, finallyBlock);
+        return new Try(codeModel, null, body, catches, finallyBlock);
     }
 
     static {
