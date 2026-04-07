@@ -70,6 +70,7 @@ import build.codemodel.jdk.statement.ExpressionStatement;
 import com.sun.source.tree.ArrayAccessTree;
 import com.sun.source.tree.AssignmentTree;
 import com.sun.source.tree.BinaryTree;
+import com.sun.source.tree.BindingPatternTree;
 import com.sun.source.tree.CompilationUnitTree;
 import com.sun.source.tree.CompoundAssignmentTree;
 import com.sun.source.tree.ConditionalExpressionTree;
@@ -83,6 +84,7 @@ import com.sun.source.tree.MemberSelectTree;
 import com.sun.source.tree.MethodInvocationTree;
 import com.sun.source.tree.NewArrayTree;
 import com.sun.source.tree.NewClassTree;
+import com.sun.source.tree.ParameterizedTypeTree;
 import com.sun.source.tree.ParenthesizedTree;
 import com.sun.source.tree.StatementTree;
 import com.sun.source.tree.SwitchExpressionTree;
@@ -261,9 +263,18 @@ public class JdkExpressionConverter
         final var args = t.getArguments().stream()
             .map(this::convert)
             .toList();
-        return NewObject.of(codeModel,
-            Identifier.of(codeModel, t.getIdentifier().toString()),
-            args.stream());
+        final Expression typeExpr;
+        final List<Expression> typeArgs;
+        if (t.getIdentifier() instanceof ParameterizedTypeTree pt) {
+            typeExpr = Identifier.of(codeModel, pt.getType().toString());
+            typeArgs = pt.getTypeArguments().stream()
+                .map(typeArg -> (Expression) Identifier.of(codeModel, typeArg.toString()))
+                .toList();
+        } else {
+            typeExpr = Identifier.of(codeModel, t.getIdentifier().toString());
+            typeArgs = List.of();
+        }
+        return NewObject.of(codeModel, typeExpr, args.stream(), typeArgs.stream());
     }
 
     @Override
@@ -352,14 +363,44 @@ public class JdkExpressionConverter
 
     @Override
     public Expression visitTypeCast(final TypeCastTree t, final Void v) {
-        return Cast.of(UnknownTypeUsage.create(codeModel), convert(t.getExpression()));
+        final TypeUsage targetType;
+        if (trees != null && compilationUnit != null && typeResolver != null) {
+            try {
+                final var path = TreePath.getPath(compilationUnit, t.getType());
+                if (path != null) {
+                    final var typeMirror = trees.getTypeMirror(path);
+                    if (typeMirror != null
+                            && typeMirror.getKind() != TypeKind.ERROR
+                            && typeMirror.getKind() != TypeKind.NONE
+                            && typeMirror.getKind() != TypeKind.OTHER) {
+                        targetType = typeResolver.apply(typeMirror);
+                    } else {
+                        targetType = UnknownTypeUsage.create(codeModel);
+                    }
+                } else {
+                    targetType = UnknownTypeUsage.create(codeModel);
+                }
+            } catch (final Exception e) {
+                return Cast.of(UnknownTypeUsage.create(codeModel), convert(t.getExpression()));
+            }
+        } else {
+            targetType = UnknownTypeUsage.create(codeModel);
+        }
+        return Cast.of(targetType, convert(t.getExpression()));
     }
 
     @Override
     public Expression visitInstanceOf(final InstanceOfTree t, final Void v) {
+        final Optional<String> bindingVariable;
+        if (t.getPattern() instanceof BindingPatternTree bp) {
+            bindingVariable = Optional.of(bp.getVariable().getName().toString());
+        } else {
+            bindingVariable = Optional.empty();
+        }
         return InstanceOf.of(
             convert(t.getExpression()),
-            Identifier.of(codeModel, t.getType().toString()));
+            Identifier.of(codeModel, t.getType().toString()),
+            bindingVariable);
     }
 
     @Override

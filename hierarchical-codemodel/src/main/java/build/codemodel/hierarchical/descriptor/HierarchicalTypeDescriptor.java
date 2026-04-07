@@ -257,29 +257,30 @@ public interface HierarchicalTypeDescriptor
      */
     default boolean formsDiamondPattern(final Predicate<? super HierarchicalTypeDescriptor> exclusionPredicate) {
 
-        if (parents().count() < 2) {
+        final var filteredParents = parents()
+            .filter(parent -> exclusionPredicate == null || !exclusionPredicate.test(parent))
+            .collect(Collectors.toCollection(LinkedHashSet::new));
+
+        if (filteredParents.size() < 2) {
             // only when there are multiple parent types may a diamond be formed
             return false;
         }
 
-        // initially use the first parent ancestors
-        final var ancestors = parents()
-            .filter(parent -> exclusionPredicate == null || !exclusionPredicate.test(parent))
-            .findFirst()
-            .orElseThrow()
+        final var iter = filteredParents.iterator();
+
+        // initially use the first parent's ancestors
+        final var ancestors = iter.next()
             .ancestors()
             .filter(ancestor -> exclusionPredicate == null || !exclusionPredicate.test(ancestor))
             .collect(Collectors.toCollection(LinkedHashSet::new));
 
-        // determine the intersection of the ancestors of parents
-        parents()
-            .skip(1)
-            .forEach(parent -> {
-                ancestors.retainAll(parent
-                    .ancestors()
-                    .filter(ancestor -> exclusionPredicate == null || !exclusionPredicate.test(ancestor))
-                    .collect(Collectors.toCollection(LinkedHashSet::new)));
-            });
+        // determine the intersection of the ancestors of remaining parents
+        while (iter.hasNext()) {
+            ancestors.retainAll(iter.next()
+                .ancestors()
+                .filter(ancestor -> exclusionPredicate == null || !exclusionPredicate.test(ancestor))
+                .collect(Collectors.toCollection(LinkedHashSet::new)));
+        }
 
         return !ancestors.isEmpty();
     }

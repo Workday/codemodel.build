@@ -34,6 +34,7 @@ import build.codemodel.foundation.descriptor.Trait;
 
 import java.lang.invoke.MethodHandles;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 /**
@@ -55,10 +56,18 @@ public final class InstanceOf
      */
     private final Expression typeExpression;
 
-    private InstanceOf(final Expression expression, final Expression typeExpression) {
+    /**
+     * The optional pattern-binding variable name (Java 16+ pattern matching).
+     */
+    private final Optional<String> bindingVariable;
+
+    private InstanceOf(final Expression expression,
+                       final Expression typeExpression,
+                       final Optional<String> bindingVariable) {
         super(Objects.requireNonNull(expression, "expression must not be null").codeModel());
         this.expression = expression;
         this.typeExpression = Objects.requireNonNull(typeExpression, "typeExpression must not be null");
+        this.bindingVariable = bindingVariable == null ? Optional.empty() : bindingVariable;
     }
 
     @Unmarshal
@@ -66,20 +75,24 @@ public final class InstanceOf
                       final Marshaller marshaller,
                       final Stream<Marshalled<Trait>> traits,
                       final Marshalled<Expression> expression,
-                      final Marshalled<Expression> typeExpression) {
+                      final Marshalled<Expression> typeExpression,
+                      final Optional<String> bindingVariable) {
         super(codeModel, marshaller, traits);
         this.expression = marshaller.unmarshal(expression);
         this.typeExpression = marshaller.unmarshal(typeExpression);
+        this.bindingVariable = bindingVariable == null ? Optional.empty() : bindingVariable;
     }
 
     @Marshal
     public void destructor(final Marshaller marshaller,
                            final Out<Stream<Marshalled<Trait>>> traits,
                            final Out<Marshalled<Expression>> expression,
-                           final Out<Marshalled<Expression>> typeExpression) {
+                           final Out<Marshalled<Expression>> typeExpression,
+                           final Out<Optional<String>> bindingVariable) {
         super.destructor(marshaller, traits);
         expression.set(marshaller.marshal(this.expression));
         typeExpression.set(marshaller.marshal(this.typeExpression));
+        bindingVariable.set(this.bindingVariable);
     }
 
     /**
@@ -100,23 +113,47 @@ public final class InstanceOf
         return this.typeExpression;
     }
 
+    /**
+     * Obtains the optional pattern-binding variable name (Java 16+ pattern matching).
+     *
+     * @return an {@link Optional} binding variable name, or {@link Optional#empty()} for classic {@code instanceof}
+     */
+    public Optional<String> bindingVariable() {
+        return this.bindingVariable;
+    }
+
     @Override
     public boolean equals(final Object object) {
         return object instanceof InstanceOf other
             && Objects.equals(this.expression, other.expression)
             && Objects.equals(this.typeExpression, other.typeExpression)
+            && Objects.equals(this.bindingVariable, other.bindingVariable)
             && super.equals(other);
     }
 
     /**
      * Creates an {@link InstanceOf} expression.
      *
+     * @param expression      the expression being tested
+     * @param typeExpression  the type expression on the right-hand side
+     * @param bindingVariable the optional pattern-binding variable name
+     * @return a new {@link InstanceOf}
+     */
+    public static InstanceOf of(final Expression expression,
+                                final Expression typeExpression,
+                                final Optional<String> bindingVariable) {
+        return new InstanceOf(expression, typeExpression, bindingVariable);
+    }
+
+    /**
+     * Creates a classic (non-pattern) {@link InstanceOf} expression.
+     *
      * @param expression     the expression being tested
      * @param typeExpression the type expression on the right-hand side
      * @return a new {@link InstanceOf}
      */
     public static InstanceOf of(final Expression expression, final Expression typeExpression) {
-        return new InstanceOf(expression, typeExpression);
+        return new InstanceOf(expression, typeExpression, Optional.empty());
     }
 
     static {
