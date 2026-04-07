@@ -6,6 +6,9 @@ import build.base.configuration.Option;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 
+import java.util.Optional;
+import java.util.stream.Stream;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -74,7 +77,7 @@ class DefaultOptionResolverTests
         final var resolver = DefaultOptionResolver.of(framework);
 
         final var typeUsage = framework.codeModel().getTypeUsage(OptionWithNoDefault.class);
-        final var dependency = IndependentDependency.of(typeUsage, _ -> java.util.stream.Stream.empty());
+        final var dependency = IndependentDependency.of(typeUsage, _ -> Stream.empty());
 
         assertThat(resolver.resolve(dependency)).isEmpty();
     }
@@ -89,7 +92,7 @@ class DefaultOptionResolverTests
         // add a fallback for String so creation doesn't fail
         final var context = framework.newContext(
             DefaultOptionResolver.of(framework),
-            dep -> java.util.Optional.of(new ValueBinding<Object>() {
+            dep -> Optional.of(new ValueBinding<Object>() {
                 @Override public Object value() { return "fallback"; }
                 @Override public Dependency dependency() { return dep; }
             }));

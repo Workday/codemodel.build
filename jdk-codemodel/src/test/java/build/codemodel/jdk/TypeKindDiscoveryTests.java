@@ -6,6 +6,9 @@ import build.codemodel.jdk.descriptor.EnumType;
 import build.codemodel.jdk.descriptor.RecordType;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+import java.util.Optional;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -25,10 +28,10 @@ class TypeKindDiscoveryTests {
             public enum Color { RED, GREEN, BLUE }
             """);
         final var codeModel = new JDKCodeModel(new NonCachingNameProvider());
-        new JdkInitializer(java.util.List.of(), java.util.List.of(), java.util.List.of(source))
+        new JdkInitializer(List.of(), List.of(), List.of(source))
             .initialize(codeModel);
         final var typeName = codeModel.getNameProvider()
-            .getTypeName(java.util.Optional.empty(), "com.example.Color");
+            .getTypeName(Optional.empty(), "com.example.Color");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
         assertThat(descriptor.hasTrait(EnumType.class)).isTrue();
     }
@@ -42,10 +45,10 @@ class TypeKindDiscoveryTests {
             public record Point(int x, int y) {}
             """);
         final var codeModel = new JDKCodeModel(new NonCachingNameProvider());
-        new JdkInitializer(java.util.List.of(), java.util.List.of(), java.util.List.of(source))
+        new JdkInitializer(List.of(), List.of(), List.of(source))
             .initialize(codeModel);
         final var typeName = codeModel.getNameProvider()
-            .getTypeName(java.util.Optional.empty(), "com.example.Point");
+            .getTypeName(Optional.empty(), "com.example.Point");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
         assertThat(descriptor.hasTrait(RecordType.class)).isTrue();
     }
@@ -59,10 +62,10 @@ class TypeKindDiscoveryTests {
             public @interface Marker {}
             """);
         final var codeModel = new JDKCodeModel(new NonCachingNameProvider());
-        new JdkInitializer(java.util.List.of(), java.util.List.of(), java.util.List.of(source))
+        new JdkInitializer(List.of(), List.of(), List.of(source))
             .initialize(codeModel);
         final var typeName = codeModel.getNameProvider()
-            .getTypeName(java.util.Optional.empty(), "com.example.Marker");
+            .getTypeName(Optional.empty(), "com.example.Marker");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
         assertThat(descriptor.hasTrait(AnnotationType.class)).isTrue();
     }
@@ -76,10 +79,10 @@ class TypeKindDiscoveryTests {
             public enum Color { RED, GREEN, BLUE }
             """);
         final var codeModel = new JDKCodeModel(new NonCachingNameProvider());
-        new JdkInitializer(java.util.List.of(), java.util.List.of(), java.util.List.of(source))
+        new JdkInitializer(List.of(), List.of(), List.of(source))
             .initialize(codeModel);
         final var typeName = codeModel.getNameProvider()
-            .getTypeName(java.util.Optional.empty(), "com.example.Color");
+            .getTypeName(Optional.empty(), "com.example.Color");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
         final var constants = descriptor.traits(build.codemodel.jdk.descriptor.EnumConstantDescriptor.class)
             .map(c -> c.name().toString())
@@ -96,10 +99,10 @@ class TypeKindDiscoveryTests {
             public record Point(int x, int y) {}
             """);
         final var codeModel = new JDKCodeModel(new NonCachingNameProvider());
-        new JdkInitializer(java.util.List.of(), java.util.List.of(), java.util.List.of(source))
+        new JdkInitializer(List.of(), List.of(), List.of(source))
             .initialize(codeModel);
         final var typeName = codeModel.getNameProvider()
-            .getTypeName(java.util.Optional.empty(), "com.example.Point");
+            .getTypeName(Optional.empty(), "com.example.Point");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
         final var components = descriptor.traits(build.codemodel.jdk.descriptor.RecordComponentDescriptor.class)
             .toList();
@@ -120,10 +123,10 @@ class TypeKindDiscoveryTests {
             }
             """);
         final var codeModel = new JDKCodeModel(new NonCachingNameProvider());
-        new JdkInitializer(java.util.List.of(), java.util.List.of(), java.util.List.of(source))
+        new JdkInitializer(List.of(), List.of(), List.of(source))
             .initialize(codeModel);
         final var typeName = codeModel.getNameProvider()
-            .getTypeName(java.util.Optional.empty(), "com.example.Marker");
+            .getTypeName(Optional.empty(), "com.example.Marker");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
 
         final var valueMethod = descriptor.traits(build.codemodel.objectoriented.descriptor.MethodDescriptor.class)
@@ -154,12 +157,12 @@ class TypeKindDiscoveryTests {
             }
             """);
         final var codeModel = new JDKCodeModel(new NonCachingNameProvider());
-        new JdkInitializer(java.util.List.of(), java.util.List.of(), java.util.List.of(source))
+        new JdkInitializer(List.of(), List.of(), List.of(source))
             .initialize(codeModel);
 
         // Nested classes are registered under their canonical name (dot separator)
         final var innerName = codeModel.getNameProvider()
-            .getTypeName(java.util.Optional.empty(), "com.example.Outer.Inner");
+            .getTypeName(Optional.empty(), "com.example.Outer.Inner");
         final var innerDescriptor = codeModel.getTypeDescriptor(innerName).orElseThrow();
         assertThat(innerDescriptor.hasTrait(build.codemodel.jdk.descriptor.EnclosingTypeDescriptor.class))
             .isTrue();

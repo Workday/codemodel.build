@@ -4,6 +4,7 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -57,7 +58,7 @@ class ProvidesResolverTests
         // EmptyProvider has no @Provides for String
         final var dependency = IndependentDependency.of(
             framework.codeModel().getTypeUsage(String.class),
-            _ -> java.util.stream.Stream.empty());
+            _ -> Stream.empty());
 
         final Optional<?> result = resolver.resolve(dependency);
         assertThat(result).isEmpty();
@@ -77,7 +78,7 @@ class ProvidesResolverTests
         // nothing should be registered, so any dependency comes back empty
         final var dependency = IndependentDependency.of(
             framework.codeModel().getTypeUsage(String.class),
-            _ -> java.util.stream.Stream.empty());
+            _ -> Stream.empty());
 
         assertThat(resolver.resolve(dependency)).isEmpty();
     }

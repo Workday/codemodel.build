@@ -27,7 +27,7 @@ package build.codemodel.expression;
  * @since Sep-2024
  */
 public interface BinaryArithmeticExpression
-    extends LogicalExpression {
+    extends ArithmeticExpression {
 
     /**
      * Obtains the left-hand-side of the {@link Expression} for the <i>Arithmetic Operand</i>.

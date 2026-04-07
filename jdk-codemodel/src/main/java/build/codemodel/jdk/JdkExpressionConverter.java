@@ -54,6 +54,7 @@ import build.codemodel.jdk.expression.FieldAccess;
 import build.codemodel.jdk.expression.Identifier;
 import build.codemodel.jdk.expression.InstanceOf;
 import build.codemodel.jdk.expression.Lambda;
+import build.codemodel.jdk.expression.LambdaParameter;
 import build.codemodel.jdk.expression.MethodInvocation;
 import build.codemodel.jdk.expression.MethodReference;
 import build.codemodel.jdk.expression.NewArray;
@@ -371,7 +372,10 @@ public class JdkExpressionConverter
         } else {
             body = Block.empty(codeModel);
         }
-        return Lambda.of(codeModel, body);
+        final var params = t.getParameters().stream()
+            .map(p -> new LambdaParameter(p.getType().toString(), p.getName().toString()))
+            .toList();
+        return Lambda.of(codeModel, params, body);
     }
 
     @Override

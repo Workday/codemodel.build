@@ -33,6 +33,7 @@ import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.naming.TypeName;
 
 import java.lang.invoke.MethodHandles;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -135,7 +136,7 @@ public class WildcardTypeUsage
 
     @Override
     public int hashCode() {
-        return java.util.Objects.hash(lowerBound(), upperBound());
+        return Objects.hash(lowerBound(), upperBound());
     }
 
     /**

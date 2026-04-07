@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -70,10 +71,10 @@ class JdkInitializerTests {
 
         // Look up type names using the same convention as JdkInitializer (Optional.empty(), fqn)
         final var abstractPersonName =
-            nameProvider.getTypeName(java.util.Optional.empty(),
+            nameProvider.getTypeName(Optional.empty(),
                 "build.codemodel.jdk.example.AbstractPerson");
         final var nonAbstractPersonName =
-            nameProvider.getTypeName(java.util.Optional.empty(),
+            nameProvider.getTypeName(Optional.empty(),
                 "build.codemodel.jdk.example.NonAbstractPerson");
 
         final var abstractPersonDescriptor =
@@ -129,7 +130,7 @@ class JdkInitializerTests {
             "com.example.Foo",
             "package com.example; public class Foo { public void bar(final int x, int y) {} }");
         final var codeModel = runInternal(new JdkInitializer(List.of(), List.of(), List.of(source)));
-        final var typeName = codeModel.getNameProvider().getTypeName(java.util.Optional.empty(), "com.example.Foo");
+        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
         final var method = descriptor.traits(MethodDescriptor.class)
             .filter(m -> m.methodName().name().toString().equals("bar"))
@@ -152,7 +153,7 @@ class JdkInitializerTests {
             }
             """);
         final var codeModel = runInternal(new JdkInitializer(List.of(), List.of(), List.of(source)));
-        final var typeName = codeModel.getNameProvider().getTypeName(java.util.Optional.empty(), "com.example.Foo");
+        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
         final var method = descriptor.traits(MethodDescriptor.class)
             .filter(m -> m.methodName().name().toString().equals("bar"))

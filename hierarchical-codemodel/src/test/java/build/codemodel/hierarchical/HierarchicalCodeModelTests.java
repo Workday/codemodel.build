@@ -17,6 +17,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Tests for {@link HierarchicalCodeModel}s.
@@ -695,5 +696,58 @@ class HierarchicalCodeModelTests {
                 .withFailMessage(
                     () -> "Type: " + fromEncodedTypeName + " is assignable to type: " + toTypeName)
                 .isFalse());
+    }
+
+    /**
+     * Ensure that {@link HierarchicalTypeDescriptor#level()} throws {@link IllegalStateException}
+     * when a cycle exists in the type hierarchy instead of causing a {@link StackOverflowError}.
+     */
+    @Test
+    void levelShouldThrowOnCyclicHierarchy() {
+        final var codeModel = createEmptyCodeModel();
+        final var nameProvider = codeModel.getNameProvider();
+
+        final var nameA = nameProvider.getTypeName("CycleA");
+        final var nameB = nameProvider.getTypeName("CycleB");
+
+        final var usageA = SpecificTypeUsage.of(codeModel, nameA);
+        final var usageB = SpecificTypeUsage.of(codeModel, nameB);
+
+        final var descriptorA = codeModel.createTypeDescriptor(nameA, (_, n) -> new ClassTypeDescriptor(codeModel, n));
+        final var descriptorB = codeModel.createTypeDescriptor(nameB, (_, n) -> new ClassTypeDescriptor(codeModel, n));
+
+        // A extends B and B extends A — a direct cycle
+        descriptorA.addTrait(Extends.of(usageB));
+        descriptorB.addTrait(Extends.of(usageA));
+
+        assertThatThrownBy(descriptorA::level)
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("Cycle");
+    }
+
+    /**
+     * Ensure that {@link HierarchicalTypeDescriptor#getAncestor} throws {@link IllegalStateException}
+     * when a cycle exists in the type hierarchy instead of causing a {@link StackOverflowError}.
+     */
+    @Test
+    void getAncestorShouldThrowOnCyclicHierarchy() {
+        final var codeModel = createEmptyCodeModel();
+        final var nameProvider = codeModel.getNameProvider();
+
+        final var nameA = nameProvider.getTypeName("AncCycleA");
+        final var nameB = nameProvider.getTypeName("AncCycleB");
+
+        final var usageA = SpecificTypeUsage.of(codeModel, nameA);
+        final var usageB = SpecificTypeUsage.of(codeModel, nameB);
+
+        final var descriptorA = codeModel.createTypeDescriptor(nameA, (_, n) -> new ClassTypeDescriptor(codeModel, n));
+        final var descriptorB = codeModel.createTypeDescriptor(nameB, (_, n) -> new ClassTypeDescriptor(codeModel, n));
+
+        descriptorA.addTrait(Extends.of(usageB));
+        descriptorB.addTrait(Extends.of(usageA));
+
+        assertThatThrownBy(() -> descriptorA.getAncestor(_ -> false))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("Cycle");
     }
 }

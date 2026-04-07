@@ -1,17 +1,17 @@
-package build.codemodel.expression;
+package build.codemodel.jdk.example;
 
 /*-
  * #%L
- * Expression Code Model
+ * JDK Code Model
  * %%
  * Copyright (C) 2026 Workday, Inc.
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,19 +20,13 @@ package build.codemodel.expression;
  * #L%
  */
 
-/**
- * An {@link Expression} using a single <i>Arithmetic Operand</i>.
- *
- * @author brian.oliver
- * @since Sep-2024
- */
-public interface UnaryArithmeticExpression
-    extends ArithmeticExpression {
+import java.util.List;
 
-    /**
-     * Obtains the {@link Expression} for the <i>ArithmeticOperand</i>.
-     *
-     * @return the {@link Expression}
-     */
-    Expression expression();
+/**
+ * A test fixture for wildcard type discovery via reflection.
+ */
+public class WildcardContainer {
+    public List<? extends Number> upper;
+    public List<? super Integer> lower;
+    public List<?> unbounded;
 }
