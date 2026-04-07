@@ -12,7 +12,7 @@ total_modules: 11
 
 `codemodel.build` is a **language-agnostic, paradigm-neutral Java code model framework** built by Workday, Inc. It provides a structured, serializable representation of software systems that can be inspected, enriched, and transformed. The framework can populate a code model from either compiled classes (via reflection) or `.java` source files (via javac). Downstream consumers use it to build annotation processors, code generators, and static analysis tools.
 
-**Stack:** Java 25 (preview features enabled), Jakarta Inject, Maven, custom marshalling framework, Pratt-parser, JSR-330 DI
+**Stack:** Java 25, Jakarta Inject, Maven, custom marshalling framework, Pratt-parser, JSR-330 DI
 
 ```mermaid
 graph TB
@@ -562,7 +562,7 @@ All model types use `static Type.of(...)` factories with private constructors. N
 | `UnsatisfiedDependencyException(Dependency, String, Throwable)` silently drops the `cause` arg | `dependency-injection` |
 | Trait class registration metadata is JVM-global static and never cleared | `codemodel-foundation` |
 | `level()` on `HierarchicalTypeDescriptor` has no cycle detection — circular hierarchies → `StackOverflowError` | `hierarchical-codemodel` |
-| Java 25 + `--enable-preview` required — build fails on JDK < 25 | all modules |
+| Java 25 — build fails on JDK < 25 | all modules |
 | `AnnotationProcessor.getSupportedAnnotationTypes()` returns empty set before `init()` | `jdk-annotation-processor` |
 
 ---

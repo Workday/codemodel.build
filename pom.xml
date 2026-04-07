@@ -12,6 +12,8 @@
     <packaging>pom</packaging>
 
     <name>Code Model Project</name>
+    <description>A Java-based multi-module project providing a language-agnostic, serializable code model for representing, enriching, and compiling software systems.</description>
+    <url>https://github.com/Workday/codemodel.build</url>
 
     <organization>
         <name>Workday, Inc.</name>
@@ -31,6 +33,15 @@
         <developer>
             <name>Brian Oliver</name>
             <email>brian.oliver@workday.com</email>
+            <roles>
+                <role>architect</role>
+                <role>developer</role>
+            </roles>
+        </developer>
+
+        <developer>
+            <name>Reed von Redwitz</name>
+            <email>reed.vonredwitz@workday.com</email>
             <roles>
                 <role>architect</role>
                 <role>developer</role>
@@ -61,7 +72,7 @@
         <byte-buddy.version>1.18.4</byte-buddy.version>
         <compile-testing.version>0.23.0</compile-testing.version>
         <guava.version>33.4.8-jre</guava.version>
-        <jackson.version>2.21.2</jackson.version>
+        <jackson-core.version>2.21.2</jackson-core.version>
         <junit.version>6.0.3</junit.version>
         <jakarta-inject.version>2.0.1</jakarta-inject.version>
         <mockito.version>5.23.0</mockito.version>
@@ -123,16 +134,9 @@
                 <configuration>
                     <source>${java.version}</source>
                     <target>${java.version}</target>
-                    <release>${java.version}</release>
                     <parameters>true</parameters>
                     <testCompilerArgument>-parameters</testCompilerArgument>
                 </configuration>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <version>${maven-surefire-plugin.version}</version>
             </plugin>
 
             <plugin>
@@ -181,6 +185,7 @@
                 <artifactId>flatten-maven-plugin</artifactId>
                 <version>${maven-flatten-plugin.version}</version>
                 <configuration>
+                    <flattenMode>ossrh</flattenMode>
                     <updatePomFile>true</updatePomFile>
                 </configuration>
                 <executions>
@@ -238,7 +243,6 @@
                     <doclint>all,-missing</doclint>
                     <sourceFileExcludes>module-info.java</sourceFileExcludes>
                     <attach>true</attach>
-                    <release>${java.version}</release>
                 </configuration>
                 <executions>
                     <execution>
@@ -340,29 +344,54 @@
 
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-gpg-plugin</artifactId>
-                <version>${maven-gpg-plugin.version}</version>
-                <executions>
-                    <execution>
-                        <id>sign-artifacts</id>
-                        <phase>verify</phase>
-                        <goals><goal>sign</goal></goals>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <plugin>
-                <groupId>org.sonatype.central</groupId>
-                <artifactId>central-publishing-maven-plugin</artifactId>
-                <version>${maven-central-publishing-plugin.version}</version>
-                <extensions>true</extensions>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${maven-surefire-plugin.version}</version>
                 <configuration>
-                    <publishingServerId>central</publishingServerId>
-                    <autoPublish>true</autoPublish>
+                    <useModulePath>false</useModulePath>
                 </configuration>
             </plugin>
+
         </plugins>
     </build>
+
+    <profiles>
+        <profile>
+            <id>deploy</id>
+            <activation>
+                <property>
+                    <name>env.MAVEN_PUBLISH</name>
+                    <value>true</value>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>${maven-gpg-plugin.version}</version>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals><goal>sign</goal></goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <plugin>
+                        <groupId>org.sonatype.central</groupId>
+                        <artifactId>central-publishing-maven-plugin</artifactId>
+                        <version>${maven-central-publishing-plugin.version}</version>
+                        <extensions>true</extensions>
+                        <configuration>
+                            <publishingServerId>central</publishingServerId>
+                            <autoPublish>true</autoPublish>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
     <reporting>
         <plugins>
@@ -386,8 +415,6 @@
                 <configuration>
                     <doclint>all,-missing</doclint>
                     <sourceFileExcludes>module-info.java</sourceFileExcludes>
-                    <source>${java.version}</source>
-                    <additionalOptions>--enable-preview</additionalOptions>
                 </configuration>
                 <reportSets>
                     <reportSet>
