@@ -57,14 +57,23 @@ public final class NewObject
      */
     private final ArrayList<Expression> args;
 
+    /**
+     * The type argument expressions (e.g. {@code <String>} in {@code new ArrayList<String>()}).
+     */
+    private final ArrayList<Expression> typeArguments;
+
     private NewObject(final CodeModel codeModel,
                       final Expression typeExpression,
-                      final Stream<Expression> args) {
+                      final Stream<Expression> args,
+                      final Stream<Expression> typeArguments) {
         super(codeModel);
         this.typeExpression = Objects.requireNonNull(typeExpression, "typeExpression must not be null");
         this.args = args == null
             ? new ArrayList<>()
             : args.collect(Collectors.toCollection(ArrayList::new));
+        this.typeArguments = typeArguments == null
+            ? new ArrayList<>()
+            : typeArguments.collect(Collectors.toCollection(ArrayList::new));
     }
 
     @Unmarshal
@@ -72,22 +81,28 @@ public final class NewObject
                      final Marshaller marshaller,
                      final Stream<Marshalled<Trait>> traits,
                      final Marshalled<Expression> typeExpression,
-                     final Stream<Marshalled<Expression>> args) {
+                     final Stream<Marshalled<Expression>> args,
+                     final Stream<Marshalled<Expression>> typeArguments) {
         super(codeModel, marshaller, traits);
         this.typeExpression = marshaller.unmarshal(typeExpression);
         this.args = args == null
             ? new ArrayList<>()
             : args.map(marshaller::unmarshal).collect(Collectors.toCollection(ArrayList::new));
+        this.typeArguments = typeArguments == null
+            ? new ArrayList<>()
+            : typeArguments.map(marshaller::unmarshal).collect(Collectors.toCollection(ArrayList::new));
     }
 
     @Marshal
     public void destructor(final Marshaller marshaller,
                            final Out<Stream<Marshalled<Trait>>> traits,
                            final Out<Marshalled<Expression>> typeExpression,
-                           final Out<Stream<Marshalled<Expression>>> args) {
+                           final Out<Stream<Marshalled<Expression>>> args,
+                           final Out<Stream<Marshalled<Expression>>> typeArguments) {
         super.destructor(marshaller, traits);
         typeExpression.set(marshaller.marshal(this.typeExpression));
         args.set(this.args.stream().map(marshaller::marshal));
+        typeArguments.set(this.typeArguments.stream().map(marshaller::marshal));
     }
 
     /**
@@ -108,18 +123,44 @@ public final class NewObject
         return this.args.stream();
     }
 
+    /**
+     * Obtains the type argument expressions (e.g. {@code <String>} in {@code new ArrayList<String>()}).
+     *
+     * @return a {@link Stream} of type argument {@link Expression}s
+     */
+    public Stream<Expression> typeArguments() {
+        return this.typeArguments.stream();
+    }
+
     @Override
     public boolean equals(final Object object) {
         return object instanceof NewObject other
             && Objects.equals(this.typeExpression, other.typeExpression)
             && Objects.equals(this.args, other.args)
+            && Objects.equals(this.typeArguments, other.typeArguments)
             && super.equals(other);
     }
 
     /**
-     * Creates a {@link NewObject} expression.
+     * Creates a {@link NewObject} expression with type arguments.
      *
-     * @param codeModel     the {@link CodeModel}
+     * @param codeModel      the {@link CodeModel}
+     * @param typeExpression the type {@link Expression}
+     * @param args           the constructor argument {@link Expression}s
+     * @param typeArguments  the type argument {@link Expression}s
+     * @return a new {@link NewObject}
+     */
+    public static NewObject of(final CodeModel codeModel,
+                               final Expression typeExpression,
+                               final Stream<Expression> args,
+                               final Stream<Expression> typeArguments) {
+        return new NewObject(codeModel, typeExpression, args, typeArguments);
+    }
+
+    /**
+     * Creates a {@link NewObject} expression without type arguments.
+     *
+     * @param codeModel      the {@link CodeModel}
      * @param typeExpression the type {@link Expression}
      * @param args           the constructor argument {@link Expression}s
      * @return a new {@link NewObject}
@@ -127,7 +168,7 @@ public final class NewObject
     public static NewObject of(final CodeModel codeModel,
                                final Expression typeExpression,
                                final Stream<Expression> args) {
-        return new NewObject(codeModel, typeExpression, args);
+        return new NewObject(codeModel, typeExpression, args, null);
     }
 
     static {
