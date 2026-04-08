@@ -65,6 +65,7 @@ import build.codemodel.objectoriented.descriptor.ExtendsTypeDescriptor;
 import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 import build.codemodel.objectoriented.descriptor.ImplementsTypeDescriptor;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
+import build.codemodel.objectoriented.descriptor.ParameterizedTypeDescriptor;
 import build.codemodel.objectoriented.naming.MethodName;
 import jakarta.inject.Inject;
 
@@ -407,7 +408,14 @@ public class JDKCodeModel
         // include the Classification
         typeDescriptor.addTrait(getClassification(classModifier));
 
-        // TODO: include the generic parameter declarations on the type itself!
+        // include the generic parameter declarations on the type itself
+        final TypeVariable<?>[] typeParameters = classType.getTypeParameters();
+        if (typeParameters.length > 0) {
+            final var typeVars = Arrays.stream(typeParameters)
+                .map(tp -> (TypeVariableUsage) getTypeUsage(tp))
+                .toList();
+            typeDescriptor.addTrait(ParameterizedTypeDescriptor.of(this, typeVars.stream()));
+        }
 
         // include the ExtendsTypeDescriptor (should a super-class be defined)
         final var superType = classType.getAnnotatedSuperclass();
