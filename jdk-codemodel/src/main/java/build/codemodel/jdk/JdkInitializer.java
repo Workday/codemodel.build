@@ -214,6 +214,7 @@ public class JdkInitializer
                         final var typeElement = (TypeElement) trees.getElement(classPath);
                         if (typeElement != null
                                 && !typeElement.getQualifiedName().toString().isEmpty()) {
+                            exprConverter.setEnclosingType(resolveTypeUsage(typeElement.asType(), null));
                             processTypeElement(typeElement, classTree, cut);
                         }
                         return super.visitClass(classTree, unused);

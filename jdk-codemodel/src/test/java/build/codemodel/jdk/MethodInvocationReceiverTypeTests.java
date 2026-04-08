@@ -91,7 +91,7 @@ class MethodInvocationReceiverTypeTests {
     }
 
     @Test
-    void shouldReturnEmptyReceiverTypeForUnqualifiedCall() {
+    void shouldResolveReceiverTypeForUnqualifiedCallToEnclosingClass() {
         final var source = JavaFileObjects.forSourceString(
             "build.codemodel.jdk.example.Caller", """
                 package build.codemodel.jdk.example;
@@ -119,6 +119,46 @@ class MethodInvocationReceiverTypeTests {
         final var invocation = (MethodInvocation) stmt.expression();
 
         assertThat(invocation.methodName()).isEqualTo("bar");
-        assertThat(invocation.receiverType()).isEmpty();
+        assertThat(invocation.receiverType()).isPresent();
+        assertThat(invocation.receiverType().get()).isInstanceOf(NamedTypeUsage.class);
+        final var receiverTypeName = ((NamedTypeUsage) invocation.receiverType().get()).typeName();
+        assertThat(receiverTypeName.name().toString()).isEqualTo("Caller");
+    }
+
+    @Test
+    void shouldResolveReceiverTypeForUnqualifiedCallInInnerClass() {
+        final var source = JavaFileObjects.forSourceString(
+            "build.codemodel.jdk.example.Outer", """
+                package build.codemodel.jdk.example;
+                public class Outer {
+                    public class Inner {
+                        public void helper() {}
+                        public void run() {
+                            helper();
+                        }
+                    }
+                }
+                """);
+
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var innerTypeName = codeModel.getNameProvider()
+            .getTypeName(Optional.empty(), "build.codemodel.jdk.example.Outer.Inner");
+        final var innerDescriptor = codeModel.getTypeDescriptor(innerTypeName).orElseThrow();
+
+        final var run = innerDescriptor.traits(MethodDescriptor.class)
+            .filter(m -> m.methodName().name().toString().equals("run"))
+            .findFirst().orElseThrow();
+
+        final var body = run.getTrait(MethodBodyDescriptor.class).orElseThrow().body();
+        final var stmt = (ExpressionStatement) body.statements().findFirst().orElseThrow();
+        final var invocation = (MethodInvocation) stmt.expression();
+
+        assertThat(invocation.methodName()).isEqualTo("helper");
+        assertThat(invocation.receiverType()).isPresent();
+        assertThat(invocation.receiverType().get()).isInstanceOf(NamedTypeUsage.class);
+        final var receiverTypeName = ((NamedTypeUsage) invocation.receiverType().get()).typeName();
+        assertThat(receiverTypeName.name().toString()).isEqualTo("Inner");
     }
 }

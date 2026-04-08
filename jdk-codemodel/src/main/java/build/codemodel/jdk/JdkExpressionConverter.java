@@ -119,6 +119,7 @@ public class JdkExpressionConverter
     private Trees trees;
     private CompilationUnitTree compilationUnit;
     private Function<TypeMirror, TypeUsage> typeResolver;
+    private TypeUsage enclosingType;
 
     /**
      * Creates a {@link JdkExpressionConverter}.
@@ -153,6 +154,16 @@ public class JdkExpressionConverter
         this.trees = trees;
         this.compilationUnit = compilationUnit;
         this.typeResolver = typeResolver;
+    }
+
+    /**
+     * Sets the type of the class currently being processed, used as the implicit receiver type for
+     * unqualified method calls (e.g. {@code foo()} where the receiver is {@code this}).
+     *
+     * @param enclosingType the {@link TypeUsage} of the enclosing class
+     */
+    public void setEnclosingType(final TypeUsage enclosingType) {
+        this.enclosingType = enclosingType;
     }
 
     /**
@@ -223,6 +234,7 @@ public class JdkExpressionConverter
         } else {
             target = null;
             methodName = t.getMethodSelect().toString();
+            receiverType = Optional.ofNullable(enclosingType);
         }
         final var args = t.getArguments().stream()
             .map(this::convert)
