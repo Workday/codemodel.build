@@ -9,9 +9,9 @@ package build.codemodel.jdk;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,6 +22,8 @@ package build.codemodel.jdk;
 
 import build.codemodel.expression.Expression;
 import build.codemodel.foundation.CodeModel;
+import build.codemodel.foundation.usage.TypeUsage;
+import build.codemodel.foundation.usage.UnknownTypeUsage;
 import build.codemodel.imperative.Block;
 import build.codemodel.imperative.If;
 import build.codemodel.imperative.Return;
@@ -48,6 +50,7 @@ import com.sun.source.tree.BlockTree;
 import com.sun.source.tree.BreakTree;
 import com.sun.source.tree.CaseTree;
 import com.sun.source.tree.CatchTree;
+import com.sun.source.tree.CompilationUnitTree;
 import com.sun.source.tree.ContinueTree;
 import com.sun.source.tree.DoWhileLoopTree;
 import com.sun.source.tree.EmptyStatementTree;
@@ -68,10 +71,15 @@ import com.sun.source.tree.UnionTypeTree;
 import com.sun.source.tree.VariableTree;
 import com.sun.source.tree.WhileLoopTree;
 import com.sun.source.util.SimpleTreeVisitor;
+import com.sun.source.util.TreePath;
+import com.sun.source.util.Trees;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
 import javax.lang.model.element.Modifier;
+import javax.lang.model.type.TypeKind;
+import javax.lang.model.type.TypeMirror;
 
 /**
  * Converts {@link StatementTree} nodes from the javac tree API to model {@link Statement} nodes.
@@ -84,6 +92,9 @@ public class JdkStatementConverter
 
     private final CodeModel codeModel;
     private final JdkExpressionConverter exprConverter;
+    private Trees trees;
+    private CompilationUnitTree compilationUnit;
+    private Function<TypeMirror, TypeUsage> typeResolver;
 
     /**
      * Creates a {@link JdkStatementConverter}.
@@ -95,6 +106,21 @@ public class JdkStatementConverter
                                  final JdkExpressionConverter exprConverter) {
         this.codeModel = codeModel;
         this.exprConverter = exprConverter;
+    }
+
+    /**
+     * Provides the type-resolution context required to resolve declared variable and parameter types.
+     *
+     * @param trees           the javac {@link Trees} utility
+     * @param compilationUnit the {@link CompilationUnitTree} being processed
+     * @param typeResolver    a function mapping a {@link TypeMirror} to a {@link TypeUsage}
+     */
+    public void setTypeContext(final Trees trees,
+                               final CompilationUnitTree compilationUnit,
+                               final Function<TypeMirror, TypeUsage> typeResolver) {
+        this.trees = trees;
+        this.compilationUnit = compilationUnit;
+        this.typeResolver = typeResolver;
     }
 
     /**
@@ -165,10 +191,10 @@ public class JdkStatementConverter
     public Statement visitVariable(final VariableTree t, final Void v) {
         final boolean isFinal = t.getModifiers() != null
             && t.getModifiers().getFlags().contains(Modifier.FINAL);
-        final String typeName = t.getType() != null ? t.getType().toString() : "var";
+        final TypeUsage type = resolveTypeUsage(t.getType());
         return LocalVariableDeclaration.of(codeModel,
             isFinal,
-            typeName,
+            type,
             t.getName().toString(),
             Optional.ofNullable(t.getInitializer()).map(exprConverter::convert));
     }
@@ -192,12 +218,10 @@ public class JdkStatementConverter
     public Statement visitEnhancedForLoop(final EnhancedForLoopTree t, final Void v) {
         final boolean isFinal = t.getVariable().getModifiers() != null
             && t.getVariable().getModifiers().getFlags().contains(Modifier.FINAL);
-        final String typeName = t.getVariable().getType() != null
-            ? t.getVariable().getType().toString()
-            : "var";
+        final TypeUsage type = resolveTypeUsage(t.getVariable().getType());
         return EnhancedFor.of(codeModel,
             isFinal,
-            typeName,
+            type,
             t.getVariable().getName().toString(),
             exprConverter.convert(t.getExpression()),
             convert(t.getStatement()));
@@ -220,16 +244,16 @@ public class JdkStatementConverter
 
     private CatchClause convertCatch(final CatchTree c) {
         final var typeTree = c.getParameter().getType();
-        final List<String> typeNames;
+        final List<TypeUsage> types;
         if (typeTree instanceof UnionTypeTree unionType) {
-            typeNames = unionType.getTypeAlternatives().stream()
-                .map(Object::toString)
+            types = unionType.getTypeAlternatives().stream()
+                .map(this::resolveTypeUsage)
                 .toList();
         } else {
-            typeNames = List.of(typeTree != null ? typeTree.toString() : "Throwable");
+            types = List.of(resolveTypeUsage(typeTree));
         }
         return CatchClause.of(codeModel,
-            typeNames,
+            types,
             c.getParameter().getName().toString(),
             convertBlock(c.getBlock()));
     }
@@ -296,5 +320,27 @@ public class JdkStatementConverter
     @Override
     protected Statement defaultAction(final Tree node, final Void v) {
         return Block.empty(codeModel);
+    }
+
+    private TypeUsage resolveTypeUsage(final Tree typeTree) {
+        if (typeTree == null || trees == null || compilationUnit == null || typeResolver == null) {
+            return UnknownTypeUsage.create(codeModel);
+        }
+        try {
+            final var path = TreePath.getPath(compilationUnit, typeTree);
+            if (path == null) {
+                return UnknownTypeUsage.create(codeModel);
+            }
+            final var mirror = trees.getTypeMirror(path);
+            if (mirror == null
+                    || mirror.getKind() == TypeKind.ERROR
+                    || mirror.getKind() == TypeKind.NONE
+                    || mirror.getKind() == TypeKind.OTHER) {
+                return UnknownTypeUsage.create(codeModel);
+            }
+            return typeResolver.apply(mirror);
+        } catch (final Exception e) {
+            return UnknownTypeUsage.create(codeModel);
+        }
     }
 }

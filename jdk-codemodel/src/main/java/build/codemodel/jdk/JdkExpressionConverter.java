@@ -227,6 +227,28 @@ public class JdkExpressionConverter
             receiverType);
     }
 
+    TypeUsage resolveTypeUsage(final Tree typeTree) {
+        if (typeTree == null || trees == null || compilationUnit == null || typeResolver == null) {
+            return UnknownTypeUsage.create(codeModel);
+        }
+        try {
+            final var path = TreePath.getPath(compilationUnit, typeTree);
+            if (path == null) {
+                return UnknownTypeUsage.create(codeModel);
+            }
+            final var mirror = trees.getTypeMirror(path);
+            if (mirror == null
+                    || mirror.getKind() == TypeKind.ERROR
+                    || mirror.getKind() == TypeKind.NONE
+                    || mirror.getKind() == TypeKind.OTHER) {
+                return UnknownTypeUsage.create(codeModel);
+            }
+            return typeResolver.apply(mirror);
+        } catch (final Exception e) {
+            return UnknownTypeUsage.create(codeModel);
+        }
+    }
+
     private Optional<TypeUsage> resolveReceiverType(final ExpressionTree receiverExpr) {
         if (trees == null || compilationUnit == null || typeResolver == null) {
             return Optional.empty();
@@ -414,7 +436,7 @@ public class JdkExpressionConverter
             body = Block.empty(codeModel);
         }
         final var params = t.getParameters().stream()
-            .map(p -> new LambdaParameter(p.getType().toString(), p.getName().toString()))
+            .map(p -> new LambdaParameter(resolveTypeUsage(p.getType()), p.getName().toString()))
             .toList();
         return Lambda.of(codeModel, params, body);
     }

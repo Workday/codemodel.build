@@ -9,9 +9,9 @@ package build.codemodel.jdk.statement;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -30,6 +30,7 @@ import build.base.marshalling.Unmarshal;
 import build.codemodel.expression.Expression;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.Trait;
+import build.codemodel.foundation.usage.TypeUsage;
 import build.codemodel.imperative.AbstractStatement;
 import build.codemodel.imperative.Statement;
 
@@ -52,9 +53,9 @@ public final class EnhancedFor
     private final boolean isFinal;
 
     /**
-     * The source-form type name of the loop variable.
+     * The resolved type of the loop variable.
      */
-    private final String typeName;
+    private final TypeUsage type;
 
     /**
      * The name of the loop variable.
@@ -73,13 +74,13 @@ public final class EnhancedFor
 
     private EnhancedFor(final CodeModel codeModel,
                         final boolean isFinal,
-                        final String typeName,
+                        final TypeUsage type,
                         final String variable,
                         final Expression iterable,
                         final Statement body) {
         super(codeModel);
         this.isFinal = isFinal;
-        this.typeName = Objects.requireNonNull(typeName, "typeName must not be null");
+        this.type = Objects.requireNonNull(type, "type must not be null");
         this.variable = Objects.requireNonNull(variable, "variable must not be null");
         this.iterable = Objects.requireNonNull(iterable, "iterable must not be null");
         this.body = Objects.requireNonNull(body, "body must not be null");
@@ -90,13 +91,13 @@ public final class EnhancedFor
                        final Marshaller marshaller,
                        final Stream<Marshalled<Trait>> traits,
                        final Boolean isFinal,
-                       final String typeName,
+                       final Marshalled<TypeUsage> type,
                        final String variable,
                        final Marshalled<Expression> iterable,
                        final Marshalled<Statement> body) {
         super(codeModel, marshaller, traits);
         this.isFinal = isFinal != null && isFinal;
-        this.typeName = typeName;
+        this.type = marshaller.unmarshal(type);
         this.variable = variable;
         this.iterable = marshaller.unmarshal(iterable);
         this.body = marshaller.unmarshal(body);
@@ -106,13 +107,13 @@ public final class EnhancedFor
     public void destructor(final Marshaller marshaller,
                            final Out<Stream<Marshalled<Trait>>> traits,
                            final Out<Boolean> isFinal,
-                           final Out<String> typeName,
+                           final Out<Marshalled<TypeUsage>> type,
                            final Out<String> variable,
                            final Out<Marshalled<Expression>> iterable,
                            final Out<Marshalled<Statement>> body) {
         super.destructor(marshaller, traits);
         isFinal.set(this.isFinal);
-        typeName.set(this.typeName);
+        type.set(marshaller.marshal(this.type));
         variable.set(this.variable);
         iterable.set(marshaller.marshal(this.iterable));
         body.set(marshaller.marshal(this.body));
@@ -128,12 +129,12 @@ public final class EnhancedFor
     }
 
     /**
-     * Obtains the source-form type name of the loop variable.
+     * Obtains the resolved type of the loop variable.
      *
-     * @return the type name
+     * @return the {@link TypeUsage}
      */
-    public String typeName() {
-        return this.typeName;
+    public TypeUsage type() {
+        return this.type;
     }
 
     /**
@@ -167,7 +168,7 @@ public final class EnhancedFor
     public boolean equals(final Object object) {
         return object instanceof EnhancedFor other
             && this.isFinal == other.isFinal
-            && Objects.equals(this.typeName, other.typeName)
+            && Objects.equals(this.type, other.type)
             && Objects.equals(this.variable, other.variable)
             && Objects.equals(this.iterable, other.iterable)
             && Objects.equals(this.body, other.body)
@@ -178,20 +179,20 @@ public final class EnhancedFor
      * Creates an {@link EnhancedFor} statement.
      *
      * @param codeModel the {@link CodeModel}
-     * @param isFinal    whether the loop variable is {@code final}
-     * @param typeName   the source-form type name of the loop variable
-     * @param variable   the name of the loop variable
-     * @param iterable   the iterable {@link Expression}
-     * @param body       the loop body {@link Statement}
+     * @param isFinal   whether the loop variable is {@code final}
+     * @param type      the resolved {@link TypeUsage} of the loop variable
+     * @param variable  the name of the loop variable
+     * @param iterable  the iterable {@link Expression}
+     * @param body      the loop body {@link Statement}
      * @return a new {@link EnhancedFor}
      */
     public static EnhancedFor of(final CodeModel codeModel,
                                  final boolean isFinal,
-                                 final String typeName,
+                                 final TypeUsage type,
                                  final String variable,
                                  final Expression iterable,
                                  final Statement body) {
-        return new EnhancedFor(codeModel, isFinal, typeName, variable, iterable, body);
+        return new EnhancedFor(codeModel, isFinal, type, variable, iterable, body);
     }
 
     static {

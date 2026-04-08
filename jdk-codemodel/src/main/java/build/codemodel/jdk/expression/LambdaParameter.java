@@ -20,13 +20,15 @@ package build.codemodel.jdk.expression;
  * #L%
  */
 
+import build.codemodel.foundation.usage.TypeUsage;
+
 /**
- * A parameter of a lambda expression, as a source-form type name and parameter name.
+ * A parameter of a lambda expression, with its resolved {@link TypeUsage} and parameter name.
  *
- * @param typeName the source-form type name (e.g. {@code "String"}, {@code "int"})
- * @param name     the parameter name
+ * @param type the resolved {@link TypeUsage} of the parameter
+ * @param name the parameter name
  * @author reed.vonredwitz
  * @since Apr-2026
  */
-public record LambdaParameter(String typeName, String name) {
+public record LambdaParameter(TypeUsage type, String name) {
 }

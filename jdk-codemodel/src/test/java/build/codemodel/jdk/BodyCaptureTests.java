@@ -2,6 +2,7 @@ package build.codemodel.jdk;
 
 import build.codemodel.expression.NumericLiteral;
 import build.codemodel.expression.StringLiteral;
+import build.codemodel.foundation.usage.NamedTypeUsage;
 import build.codemodel.imperative.Block;
 import build.codemodel.imperative.Return;
 import build.codemodel.jdk.descriptor.FieldInitializerDescriptor;
@@ -133,9 +134,11 @@ class BodyCaptureTests {
         final var params = lambda.parameters().toList();
         assertThat(params).hasSize(2);
         assertThat(params.get(0).name()).isEqualTo("a");
-        assertThat(params.get(0).typeName()).isEqualTo("String");
+        assertThat(params.get(0).type()).isInstanceOf(NamedTypeUsage.class);
+        assertThat(((NamedTypeUsage) params.get(0).type()).typeName().name().toString()).isEqualTo("String");
         assertThat(params.get(1).name()).isEqualTo("b");
-        assertThat(params.get(1).typeName()).isEqualTo("String");
+        assertThat(params.get(1).type()).isInstanceOf(NamedTypeUsage.class);
+        assertThat(((NamedTypeUsage) params.get(1).type()).typeName().name().toString()).isEqualTo("String");
     }
 
     @Test
@@ -211,7 +214,10 @@ class BodyCaptureTests {
             .findFirst().orElseThrow();
 
         final var catchClause = tryStmt.catches().findFirst().orElseThrow();
-        final var exTypeNames = catchClause.exceptionTypeNames().toList();
+        final var exTypeNames = catchClause.exceptionTypes()
+            .filter(t -> t instanceof NamedTypeUsage)
+            .map(t -> ((NamedTypeUsage) t).typeName().name().toString())
+            .toList();
         assertThat(exTypeNames).containsExactlyInAnyOrder("IOException", "RuntimeException");
     }
 }
