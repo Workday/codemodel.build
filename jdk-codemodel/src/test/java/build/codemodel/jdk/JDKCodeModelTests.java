@@ -6,6 +6,8 @@ import build.codemodel.foundation.usage.AnnotationTypeUsage;
 import build.codemodel.foundation.usage.GenericTypeUsage;
 import build.codemodel.foundation.usage.NamedTypeUsage;
 import build.codemodel.foundation.usage.WildcardTypeUsage;
+import build.codemodel.foundation.usage.TypeVariableUsage;
+import build.codemodel.jdk.example.BoundedContainer;
 import build.codemodel.jdk.example.WildcardContainer;
 import build.codemodel.hierarchical.descriptor.HierarchicalTypeDescriptor;
 import build.codemodel.jdk.descriptor.JDKTypeDescriptor;
@@ -20,6 +22,7 @@ import build.codemodel.objectoriented.descriptor.ExtendsTypeDescriptor;
 import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 import build.codemodel.objectoriented.descriptor.ImplementsTypeDescriptor;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
+import build.codemodel.objectoriented.descriptor.ParameterizedTypeDescriptor;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -408,5 +411,38 @@ class JDKCodeModelTests {
         final var unboundedWildcard = (WildcardTypeUsage) unboundedParam;
         assertThat(unboundedWildcard.upperBound()).isEmpty();
         assertThat(unboundedWildcard.lowerBound()).isEmpty();
+    }
+
+    @Test
+    void shouldDiscoverTypeParameterDeclarationViaReflection() {
+        final var codeModel = createCodeModel();
+        final var descriptor = codeModel.getJDKTypeDescriptor(Container.class).orElseThrow();
+
+        assertThat(descriptor.getTrait(ParameterizedTypeDescriptor.class)).isPresent();
+
+        final var typeVars = descriptor.getTrait(ParameterizedTypeDescriptor.class)
+            .orElseThrow()
+            .typeVariables()
+            .toList();
+        assertThat(typeVars).hasSize(1);
+        assertThat(typeVars.getFirst().typeName().name().toString()).isEqualTo("T");
+    }
+
+    @Test
+    void shouldDiscoverBoundedTypeParameterDeclarationViaReflection() {
+        final var codeModel = createCodeModel();
+        final var descriptor = codeModel.getJDKTypeDescriptor(BoundedContainer.class).orElseThrow();
+
+        assertThat(descriptor.getTrait(ParameterizedTypeDescriptor.class)).isPresent();
+
+        final var typeVar = descriptor.getTrait(ParameterizedTypeDescriptor.class)
+            .orElseThrow()
+            .typeVariables()
+            .findFirst()
+            .orElseThrow();
+        assertThat(typeVar).isInstanceOf(TypeVariableUsage.class);
+        assertThat(typeVar.typeName().name().toString()).isEqualTo("T");
+        assertThat(typeVar.upperBound()).isPresent();
+        assertThat(((NamedTypeUsage) typeVar.upperBound().get()).typeName().toString()).contains("Number");
     }
 }
