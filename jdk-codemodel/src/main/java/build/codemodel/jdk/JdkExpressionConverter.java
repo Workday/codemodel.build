@@ -47,7 +47,9 @@ import build.codemodel.foundation.usage.UnknownTypeUsage;
 import build.codemodel.imperative.Block;
 import build.codemodel.imperative.Statement;
 import build.codemodel.jdk.expression.ArrayAccess;
+import build.codemodel.jdk.expression.AssignmentOperator;
 import build.codemodel.jdk.expression.BitwiseBinary;
+import build.codemodel.jdk.expression.BitwiseOperator;
 import build.codemodel.jdk.expression.CharLiteral;
 import build.codemodel.jdk.expression.CompoundAssignment;
 import build.codemodel.jdk.expression.FieldAccess;
@@ -61,7 +63,9 @@ import build.codemodel.jdk.expression.NewArray;
 import build.codemodel.jdk.expression.NewObject;
 import build.codemodel.jdk.expression.NullLiteral;
 import build.codemodel.jdk.expression.Parenthesized;
+import build.codemodel.jdk.expression.PostfixOperator;
 import build.codemodel.jdk.expression.PostfixUnary;
+import build.codemodel.jdk.expression.PrefixOperator;
 import build.codemodel.jdk.expression.PrefixUnary;
 import build.codemodel.jdk.expression.SwitchExpression;
 import build.codemodel.jdk.expression.Ternary;
@@ -326,15 +330,28 @@ public class JdkExpressionConverter
 
     @Override
     public Expression visitAssignment(final AssignmentTree t, final Void v) {
-        return CompoundAssignment.of(codeModel, "ASSIGNMENT",
+        return CompoundAssignment.of(codeModel, AssignmentOperator.ASSIGN,
             convert(t.getVariable()),
             convert(t.getExpression()));
     }
 
     @Override
     public Expression visitCompoundAssignment(final CompoundAssignmentTree t, final Void v) {
-        return CompoundAssignment.of(codeModel,
-            t.getKind().toString(),
+        final var op = switch (t.getKind()) {
+            case PLUS_ASSIGNMENT -> AssignmentOperator.PLUS;
+            case MINUS_ASSIGNMENT -> AssignmentOperator.MINUS;
+            case MULTIPLY_ASSIGNMENT -> AssignmentOperator.MULTIPLY;
+            case DIVIDE_ASSIGNMENT -> AssignmentOperator.DIVIDE;
+            case REMAINDER_ASSIGNMENT -> AssignmentOperator.REMAINDER;
+            case AND_ASSIGNMENT -> AssignmentOperator.AND;
+            case OR_ASSIGNMENT -> AssignmentOperator.OR;
+            case XOR_ASSIGNMENT -> AssignmentOperator.XOR;
+            case LEFT_SHIFT_ASSIGNMENT -> AssignmentOperator.LEFT_SHIFT;
+            case RIGHT_SHIFT_ASSIGNMENT -> AssignmentOperator.RIGHT_SHIFT;
+            case UNSIGNED_RIGHT_SHIFT_ASSIGNMENT -> AssignmentOperator.UNSIGNED_RIGHT_SHIFT;
+            default -> throw new IllegalArgumentException("Unexpected compound assignment kind: " + t.getKind());
+        };
+        return CompoundAssignment.of(codeModel, op,
             convert(t.getVariable()),
             convert(t.getExpression()));
     }
@@ -357,8 +374,12 @@ public class JdkExpressionConverter
             case GREATER_THAN_EQUAL -> GreaterThanOrEqualTo.of(left, right);
             case CONDITIONAL_AND -> Conjunction.of(left, right);
             case CONDITIONAL_OR -> Disjunction.of(left, right);
-            case AND, OR, XOR, LEFT_SHIFT, RIGHT_SHIFT, UNSIGNED_RIGHT_SHIFT ->
-                BitwiseBinary.of(codeModel, t.getKind().toString(), left, right);
+            case AND -> BitwiseBinary.of(codeModel, BitwiseOperator.AND, left, right);
+            case OR -> BitwiseBinary.of(codeModel, BitwiseOperator.OR, left, right);
+            case XOR -> BitwiseBinary.of(codeModel, BitwiseOperator.XOR, left, right);
+            case LEFT_SHIFT -> BitwiseBinary.of(codeModel, BitwiseOperator.LEFT_SHIFT, left, right);
+            case RIGHT_SHIFT -> BitwiseBinary.of(codeModel, BitwiseOperator.RIGHT_SHIFT, left, right);
+            case UNSIGNED_RIGHT_SHIFT -> BitwiseBinary.of(codeModel, BitwiseOperator.UNSIGNED_RIGHT_SHIFT, left, right);
             default -> UnknownExpression.of(codeModel);
         };
     }
@@ -367,10 +388,12 @@ public class JdkExpressionConverter
     public Expression visitUnary(final UnaryTree t, final Void v) {
         final var operand = convert(t.getExpression());
         return switch (t.getKind()) {
-            case PREFIX_INCREMENT, PREFIX_DECREMENT, BITWISE_COMPLEMENT, UNARY_PLUS ->
-                PrefixUnary.of(codeModel, t.getKind().toString(), operand);
-            case POSTFIX_INCREMENT, POSTFIX_DECREMENT ->
-                PostfixUnary.of(codeModel, t.getKind().toString(), operand);
+            case PREFIX_INCREMENT -> PrefixUnary.of(codeModel, PrefixOperator.INCREMENT, operand);
+            case PREFIX_DECREMENT -> PrefixUnary.of(codeModel, PrefixOperator.DECREMENT, operand);
+            case BITWISE_COMPLEMENT -> PrefixUnary.of(codeModel, PrefixOperator.BITWISE_COMPLEMENT, operand);
+            case UNARY_PLUS -> PrefixUnary.of(codeModel, PrefixOperator.UNARY_PLUS, operand);
+            case POSTFIX_INCREMENT -> PostfixUnary.of(codeModel, PostfixOperator.INCREMENT, operand);
+            case POSTFIX_DECREMENT -> PostfixUnary.of(codeModel, PostfixOperator.DECREMENT, operand);
             case UNARY_MINUS -> Negative.of(operand);
             case LOGICAL_COMPLEMENT -> Negation.of(operand);
             default -> UnknownExpression.of(codeModel);

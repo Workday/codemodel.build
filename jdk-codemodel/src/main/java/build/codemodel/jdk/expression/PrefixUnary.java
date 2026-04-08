@@ -9,9 +9,9 @@ package build.codemodel.jdk.expression;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -46,9 +46,9 @@ public final class PrefixUnary
     extends AbstractExpression {
 
     /**
-     * The operator kind string (e.g. {@code "PREFIX_INCREMENT"}, {@code "BITWISE_COMPLEMENT"}).
+     * The operator.
      */
-    private final String operator;
+    private final PrefixOperator operator;
 
     /**
      * The operand expression.
@@ -56,7 +56,7 @@ public final class PrefixUnary
     private final Expression operand;
 
     private PrefixUnary(final CodeModel codeModel,
-                        final String operator,
+                        final PrefixOperator operator,
                         final Expression operand) {
         super(codeModel);
         this.operator = Objects.requireNonNull(operator, "operator must not be null");
@@ -70,7 +70,7 @@ public final class PrefixUnary
                        final String operator,
                        final Marshalled<Expression> operand) {
         super(codeModel, marshaller, traits);
-        this.operator = operator;
+        this.operator = PrefixOperator.valueOf(operator);
         this.operand = marshaller.unmarshal(operand);
     }
 
@@ -80,16 +80,16 @@ public final class PrefixUnary
                            final Out<String> operator,
                            final Out<Marshalled<Expression>> operand) {
         super.destructor(marshaller, traits);
-        operator.set(this.operator);
+        operator.set(this.operator.name());
         operand.set(marshaller.marshal(this.operand));
     }
 
     /**
-     * Obtains the operator kind string.
+     * Obtains the operator.
      *
-     * @return the operator kind string
+     * @return the {@link PrefixOperator}
      */
-    public String operator() {
+    public PrefixOperator operator() {
         return this.operator;
     }
 
@@ -105,7 +105,7 @@ public final class PrefixUnary
     @Override
     public boolean equals(final Object object) {
         return object instanceof PrefixUnary other
-            && Objects.equals(this.operator, other.operator)
+            && this.operator == other.operator
             && Objects.equals(this.operand, other.operand)
             && super.equals(other);
     }
@@ -114,12 +114,12 @@ public final class PrefixUnary
      * Creates a {@link PrefixUnary} expression.
      *
      * @param codeModel the {@link CodeModel}
-     * @param operator   the operator kind string
-     * @param operand    the operand {@link Expression}
+     * @param operator  the {@link PrefixOperator}
+     * @param operand   the operand {@link Expression}
      * @return a new {@link PrefixUnary}
      */
     public static PrefixUnary of(final CodeModel codeModel,
-                                 final String operator,
+                                 final PrefixOperator operator,
                                  final Expression operand) {
         return new PrefixUnary(codeModel, operator, operand);
     }

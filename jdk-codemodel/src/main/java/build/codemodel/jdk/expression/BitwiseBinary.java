@@ -9,9 +9,9 @@ package build.codemodel.jdk.expression;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -47,9 +47,9 @@ public final class BitwiseBinary
     extends AbstractExpression {
 
     /**
-     * The operator kind string (e.g. {@code "AND"}, {@code "LEFT_SHIFT"}).
+     * The operator.
      */
-    private final String operator;
+    private final BitwiseOperator operator;
 
     /**
      * The left-hand-side operand.
@@ -62,7 +62,7 @@ public final class BitwiseBinary
     private final Expression right;
 
     private BitwiseBinary(final CodeModel codeModel,
-                          final String operator,
+                          final BitwiseOperator operator,
                           final Expression left,
                           final Expression right) {
         super(codeModel);
@@ -79,7 +79,7 @@ public final class BitwiseBinary
                          final Marshalled<Expression> left,
                          final Marshalled<Expression> right) {
         super(codeModel, marshaller, traits);
-        this.operator = operator;
+        this.operator = BitwiseOperator.valueOf(operator);
         this.left = marshaller.unmarshal(left);
         this.right = marshaller.unmarshal(right);
     }
@@ -91,17 +91,17 @@ public final class BitwiseBinary
                            final Out<Marshalled<Expression>> left,
                            final Out<Marshalled<Expression>> right) {
         super.destructor(marshaller, traits);
-        operator.set(this.operator);
+        operator.set(this.operator.name());
         left.set(marshaller.marshal(this.left));
         right.set(marshaller.marshal(this.right));
     }
 
     /**
-     * Obtains the operator kind string.
+     * Obtains the operator.
      *
-     * @return the operator kind string
+     * @return the {@link BitwiseOperator}
      */
-    public String operator() {
+    public BitwiseOperator operator() {
         return this.operator;
     }
 
@@ -126,7 +126,7 @@ public final class BitwiseBinary
     @Override
     public boolean equals(final Object object) {
         return object instanceof BitwiseBinary other
-            && Objects.equals(this.operator, other.operator)
+            && this.operator == other.operator
             && Objects.equals(this.left, other.left)
             && Objects.equals(this.right, other.right)
             && super.equals(other);
@@ -136,13 +136,13 @@ public final class BitwiseBinary
      * Creates a {@link BitwiseBinary} expression.
      *
      * @param codeModel the {@link CodeModel}
-     * @param operator   the operator kind string
-     * @param left       the left-hand-side {@link Expression}
-     * @param right      the right-hand-side {@link Expression}
+     * @param operator  the {@link BitwiseOperator}
+     * @param left      the left-hand-side {@link Expression}
+     * @param right     the right-hand-side {@link Expression}
      * @return a new {@link BitwiseBinary}
      */
     public static BitwiseBinary of(final CodeModel codeModel,
-                                   final String operator,
+                                   final BitwiseOperator operator,
                                    final Expression left,
                                    final Expression right) {
         return new BitwiseBinary(codeModel, operator, left, right);
