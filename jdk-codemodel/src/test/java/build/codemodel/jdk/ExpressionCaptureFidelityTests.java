@@ -24,8 +24,8 @@ import build.codemodel.expression.Cast;
 import build.codemodel.foundation.usage.NamedTypeUsage;
 import build.codemodel.imperative.Return;
 import build.codemodel.jdk.descriptor.MethodBodyDescriptor;
-import build.codemodel.jdk.expression.Identifier;
 import build.codemodel.jdk.expression.InstanceOf;
+import build.codemodel.jdk.expression.NewArray;
 import build.codemodel.jdk.expression.NewObject;
 import build.codemodel.jdk.statement.LocalVariableDeclaration;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
@@ -71,8 +71,8 @@ class ExpressionCaptureFidelityTests {
         final var cast = (Cast) decl.initializer().orElseThrow();
 
         assertThat(cast.targetType()).isInstanceOf(NamedTypeUsage.class);
-        assertThat(((NamedTypeUsage) cast.targetType()).typeName().name().toString())
-            .isEqualTo("String");
+        assertThat(((NamedTypeUsage) cast.targetType()).typeName().canonicalName())
+            .isEqualTo("java.lang.String");
     }
 
     @Test
@@ -100,6 +100,8 @@ class ExpressionCaptureFidelityTests {
         final var returnStmt = (Return) body.statements().findFirst().orElseThrow();
         final var instanceOf = (InstanceOf) returnStmt.expression();
 
+        assertThat(instanceOf.checkedType()).isInstanceOf(NamedTypeUsage.class);
+        assertThat(((NamedTypeUsage) instanceOf.checkedType()).typeName().canonicalName()).isEqualTo("java.lang.String");
         assertThat(instanceOf.bindingVariable()).isEqualTo(Optional.of("s"));
     }
 
@@ -129,9 +131,41 @@ class ExpressionCaptureFidelityTests {
         final var returnStmt = (Return) body.statements().findFirst().orElseThrow();
         final var newObject = (NewObject) returnStmt.expression();
 
+        assertThat(newObject.instantiatedType()).isInstanceOf(NamedTypeUsage.class);
+        assertThat(((NamedTypeUsage) newObject.instantiatedType()).typeName().canonicalName()).isEqualTo("java.util.ArrayList");
+
         final var typeArgs = newObject.typeArguments().toList();
         assertThat(typeArgs).hasSize(1);
-        assertThat(typeArgs.getFirst()).isInstanceOf(Identifier.class);
-        assertThat(((Identifier) typeArgs.getFirst()).name()).isEqualTo("String");
+        assertThat(typeArgs.getFirst()).isInstanceOf(NamedTypeUsage.class);
+        assertThat(((NamedTypeUsage) typeArgs.getFirst()).typeName().canonicalName()).isEqualTo("java.lang.String");
+    }
+
+    @Test
+    void shouldCaptureNewArrayElementType() {
+        final var source = JavaFileObjects.forSourceString(
+            "build.codemodel.jdk.example.ArrayFactory", """
+                package build.codemodel.jdk.example;
+                public class ArrayFactory {
+                    public String[] create(int n) {
+                        return new String[n];
+                    }
+                }
+                """);
+
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getNameProvider()
+            .getTypeName(Optional.empty(), "build.codemodel.jdk.example.ArrayFactory");
+        final var create = codeModel.getTypeDescriptor(typeName).orElseThrow()
+            .traits(MethodDescriptor.class)
+            .filter(m -> m.methodName().name().toString().equals("create"))
+            .findFirst().orElseThrow();
+        final var body = create.getTrait(MethodBodyDescriptor.class).orElseThrow().body();
+        final var returnStmt = (Return) body.statements().findFirst().orElseThrow();
+        final var newArray = (NewArray) returnStmt.expression();
+
+        assertThat(newArray.elementType()).isInstanceOf(NamedTypeUsage.class);
+        assertThat(((NamedTypeUsage) newArray.elementType()).typeName().canonicalName()).isEqualTo("java.lang.String");
     }
 }

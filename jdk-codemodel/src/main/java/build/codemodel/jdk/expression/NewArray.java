@@ -9,9 +9,9 @@ package build.codemodel.jdk.expression;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -31,6 +31,7 @@ import build.codemodel.expression.AbstractExpression;
 import build.codemodel.expression.Expression;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.Trait;
+import build.codemodel.foundation.usage.TypeUsage;
 
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
@@ -48,9 +49,9 @@ public final class NewArray
     extends AbstractExpression {
 
     /**
-     * The element type expression.
+     * The resolved element type.
      */
-    private final Expression elementType;
+    private final TypeUsage elementType;
 
     /**
      * The dimension expressions.
@@ -58,7 +59,7 @@ public final class NewArray
     private final ArrayList<Expression> dimensions;
 
     private NewArray(final CodeModel codeModel,
-                     final Expression elementType,
+                     final TypeUsage elementType,
                      final Stream<Expression> dimensions) {
         super(codeModel);
         this.elementType = Objects.requireNonNull(elementType, "elementType must not be null");
@@ -71,7 +72,7 @@ public final class NewArray
     public NewArray(@Bound final CodeModel codeModel,
                     final Marshaller marshaller,
                     final Stream<Marshalled<Trait>> traits,
-                    final Marshalled<Expression> elementType,
+                    final Marshalled<TypeUsage> elementType,
                     final Stream<Marshalled<Expression>> dimensions) {
         super(codeModel, marshaller, traits);
         this.elementType = marshaller.unmarshal(elementType);
@@ -83,7 +84,7 @@ public final class NewArray
     @Marshal
     public void destructor(final Marshaller marshaller,
                            final Out<Stream<Marshalled<Trait>>> traits,
-                           final Out<Marshalled<Expression>> elementType,
+                           final Out<Marshalled<TypeUsage>> elementType,
                            final Out<Stream<Marshalled<Expression>>> dimensions) {
         super.destructor(marshaller, traits);
         elementType.set(marshaller.marshal(this.elementType));
@@ -91,11 +92,11 @@ public final class NewArray
     }
 
     /**
-     * Obtains the element type expression.
+     * Obtains the resolved element type.
      *
-     * @return the element type {@link Expression}
+     * @return the element {@link TypeUsage}
      */
-    public Expression elementType() {
+    public TypeUsage elementType() {
         return this.elementType;
     }
 
@@ -119,13 +120,13 @@ public final class NewArray
     /**
      * Creates a {@link NewArray} expression.
      *
-     * @param codeModel  the {@link CodeModel}
-     * @param elementType the element type {@link Expression}
+     * @param codeModel   the {@link CodeModel}
+     * @param elementType the resolved element {@link TypeUsage}
      * @param dimensions  the dimension {@link Expression}s
      * @return a new {@link NewArray}
      */
     public static NewArray of(final CodeModel codeModel,
-                              final Expression elementType,
+                              final TypeUsage elementType,
                               final Stream<Expression> dimensions) {
         return new NewArray(codeModel, elementType, dimensions);
     }

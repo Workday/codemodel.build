@@ -9,9 +9,9 @@ package build.codemodel.jdk.expression;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -31,6 +31,7 @@ import build.codemodel.expression.AbstractExpression;
 import build.codemodel.expression.Expression;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.Trait;
+import build.codemodel.foundation.usage.TypeUsage;
 
 import java.lang.invoke.MethodHandles;
 import java.util.Objects;
@@ -52,9 +53,9 @@ public final class InstanceOf
     private final Expression expression;
 
     /**
-     * The type expression on the right-hand side of {@code instanceof}.
+     * The resolved type on the right-hand side of {@code instanceof}.
      */
-    private final Expression typeExpression;
+    private final TypeUsage type;
 
     /**
      * The optional pattern-binding variable name (Java 16+ pattern matching).
@@ -62,11 +63,11 @@ public final class InstanceOf
     private final Optional<String> bindingVariable;
 
     private InstanceOf(final Expression expression,
-                       final Expression typeExpression,
+                       final TypeUsage type,
                        final Optional<String> bindingVariable) {
         super(Objects.requireNonNull(expression, "expression must not be null").codeModel());
         this.expression = expression;
-        this.typeExpression = Objects.requireNonNull(typeExpression, "typeExpression must not be null");
+        this.type = Objects.requireNonNull(type, "type must not be null");
         this.bindingVariable = bindingVariable == null ? Optional.empty() : bindingVariable;
     }
 
@@ -75,11 +76,11 @@ public final class InstanceOf
                       final Marshaller marshaller,
                       final Stream<Marshalled<Trait>> traits,
                       final Marshalled<Expression> expression,
-                      final Marshalled<Expression> typeExpression,
+                      final Marshalled<TypeUsage> type,
                       final Optional<String> bindingVariable) {
         super(codeModel, marshaller, traits);
         this.expression = marshaller.unmarshal(expression);
-        this.typeExpression = marshaller.unmarshal(typeExpression);
+        this.type = marshaller.unmarshal(type);
         this.bindingVariable = bindingVariable == null ? Optional.empty() : bindingVariable;
     }
 
@@ -87,11 +88,11 @@ public final class InstanceOf
     public void destructor(final Marshaller marshaller,
                            final Out<Stream<Marshalled<Trait>>> traits,
                            final Out<Marshalled<Expression>> expression,
-                           final Out<Marshalled<Expression>> typeExpression,
+                           final Out<Marshalled<TypeUsage>> type,
                            final Out<Optional<String>> bindingVariable) {
         super.destructor(marshaller, traits);
         expression.set(marshaller.marshal(this.expression));
-        typeExpression.set(marshaller.marshal(this.typeExpression));
+        type.set(marshaller.marshal(this.type));
         bindingVariable.set(this.bindingVariable);
     }
 
@@ -105,12 +106,12 @@ public final class InstanceOf
     }
 
     /**
-     * Obtains the type expression on the right-hand side of {@code instanceof}.
+     * Obtains the resolved type on the right-hand side of {@code instanceof}.
      *
-     * @return the type {@link Expression}
+     * @return the {@link TypeUsage}
      */
-    public Expression typeExpression() {
-        return this.typeExpression;
+    public TypeUsage checkedType() {
+        return this.type;
     }
 
     /**
@@ -126,7 +127,7 @@ public final class InstanceOf
     public boolean equals(final Object object) {
         return object instanceof InstanceOf other
             && Objects.equals(this.expression, other.expression)
-            && Objects.equals(this.typeExpression, other.typeExpression)
+            && Objects.equals(this.type, other.type)
             && Objects.equals(this.bindingVariable, other.bindingVariable)
             && super.equals(other);
     }
@@ -135,25 +136,25 @@ public final class InstanceOf
      * Creates an {@link InstanceOf} expression.
      *
      * @param expression      the expression being tested
-     * @param typeExpression  the type expression on the right-hand side
+     * @param type            the resolved {@link TypeUsage} on the right-hand side
      * @param bindingVariable the optional pattern-binding variable name
      * @return a new {@link InstanceOf}
      */
     public static InstanceOf of(final Expression expression,
-                                final Expression typeExpression,
+                                final TypeUsage type,
                                 final Optional<String> bindingVariable) {
-        return new InstanceOf(expression, typeExpression, bindingVariable);
+        return new InstanceOf(expression, type, bindingVariable);
     }
 
     /**
      * Creates a classic (non-pattern) {@link InstanceOf} expression.
      *
-     * @param expression     the expression being tested
-     * @param typeExpression the type expression on the right-hand side
+     * @param expression the expression being tested
+     * @param type       the resolved {@link TypeUsage} on the right-hand side
      * @return a new {@link InstanceOf}
      */
-    public static InstanceOf of(final Expression expression, final Expression typeExpression) {
-        return new InstanceOf(expression, typeExpression, Optional.empty());
+    public static InstanceOf of(final Expression expression, final TypeUsage type) {
+        return new InstanceOf(expression, type, Optional.empty());
     }
 
     static {
