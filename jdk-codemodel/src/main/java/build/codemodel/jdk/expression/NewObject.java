@@ -9,9 +9,9 @@ package build.codemodel.jdk.expression;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -31,6 +31,7 @@ import build.codemodel.expression.AbstractExpression;
 import build.codemodel.expression.Expression;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.Trait;
+import build.codemodel.foundation.usage.TypeUsage;
 
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
@@ -48,9 +49,9 @@ public final class NewObject
     extends AbstractExpression {
 
     /**
-     * The type expression identifying the class to instantiate.
+     * The resolved type of the class to instantiate.
      */
-    private final Expression typeExpression;
+    private final TypeUsage type;
 
     /**
      * The constructor argument expressions.
@@ -58,16 +59,16 @@ public final class NewObject
     private final ArrayList<Expression> args;
 
     /**
-     * The type argument expressions (e.g. {@code <String>} in {@code new ArrayList<String>()}).
+     * The resolved type arguments (e.g. {@code <String>} in {@code new ArrayList<String>()}).
      */
-    private final ArrayList<Expression> typeArguments;
+    private final ArrayList<TypeUsage> typeArguments;
 
     private NewObject(final CodeModel codeModel,
-                      final Expression typeExpression,
+                      final TypeUsage type,
                       final Stream<Expression> args,
-                      final Stream<Expression> typeArguments) {
+                      final Stream<TypeUsage> typeArguments) {
         super(codeModel);
-        this.typeExpression = Objects.requireNonNull(typeExpression, "typeExpression must not be null");
+        this.type = Objects.requireNonNull(type, "type must not be null");
         this.args = args == null
             ? new ArrayList<>()
             : args.collect(Collectors.toCollection(ArrayList::new));
@@ -80,11 +81,11 @@ public final class NewObject
     public NewObject(@Bound final CodeModel codeModel,
                      final Marshaller marshaller,
                      final Stream<Marshalled<Trait>> traits,
-                     final Marshalled<Expression> typeExpression,
+                     final Marshalled<TypeUsage> type,
                      final Stream<Marshalled<Expression>> args,
-                     final Stream<Marshalled<Expression>> typeArguments) {
+                     final Stream<Marshalled<TypeUsage>> typeArguments) {
         super(codeModel, marshaller, traits);
-        this.typeExpression = marshaller.unmarshal(typeExpression);
+        this.type = marshaller.unmarshal(type);
         this.args = args == null
             ? new ArrayList<>()
             : args.map(marshaller::unmarshal).collect(Collectors.toCollection(ArrayList::new));
@@ -96,22 +97,22 @@ public final class NewObject
     @Marshal
     public void destructor(final Marshaller marshaller,
                            final Out<Stream<Marshalled<Trait>>> traits,
-                           final Out<Marshalled<Expression>> typeExpression,
+                           final Out<Marshalled<TypeUsage>> type,
                            final Out<Stream<Marshalled<Expression>>> args,
-                           final Out<Stream<Marshalled<Expression>>> typeArguments) {
+                           final Out<Stream<Marshalled<TypeUsage>>> typeArguments) {
         super.destructor(marshaller, traits);
-        typeExpression.set(marshaller.marshal(this.typeExpression));
+        type.set(marshaller.marshal(this.type));
         args.set(this.args.stream().map(marshaller::marshal));
         typeArguments.set(this.typeArguments.stream().map(marshaller::marshal));
     }
 
     /**
-     * Obtains the type expression identifying the class to instantiate.
+     * Obtains the resolved type of the class to instantiate.
      *
-     * @return the type {@link Expression}
+     * @return the {@link TypeUsage}
      */
-    public Expression typeExpression() {
-        return this.typeExpression;
+    public TypeUsage instantiatedType() {
+        return this.type;
     }
 
     /**
@@ -124,18 +125,18 @@ public final class NewObject
     }
 
     /**
-     * Obtains the type argument expressions (e.g. {@code <String>} in {@code new ArrayList<String>()}).
+     * Obtains the resolved type arguments (e.g. {@code <String>} in {@code new ArrayList<String>()}).
      *
-     * @return a {@link Stream} of type argument {@link Expression}s
+     * @return a {@link Stream} of type argument {@link TypeUsage}s
      */
-    public Stream<Expression> typeArguments() {
+    public Stream<TypeUsage> typeArguments() {
         return this.typeArguments.stream();
     }
 
     @Override
     public boolean equals(final Object object) {
         return object instanceof NewObject other
-            && Objects.equals(this.typeExpression, other.typeExpression)
+            && Objects.equals(this.type, other.type)
             && Objects.equals(this.args, other.args)
             && Objects.equals(this.typeArguments, other.typeArguments)
             && super.equals(other);
@@ -144,31 +145,31 @@ public final class NewObject
     /**
      * Creates a {@link NewObject} expression with type arguments.
      *
-     * @param codeModel      the {@link CodeModel}
-     * @param typeExpression the type {@link Expression}
-     * @param args           the constructor argument {@link Expression}s
-     * @param typeArguments  the type argument {@link Expression}s
+     * @param codeModel     the {@link CodeModel}
+     * @param type          the resolved {@link TypeUsage} of the class to instantiate
+     * @param args          the constructor argument {@link Expression}s
+     * @param typeArguments the resolved type argument {@link TypeUsage}s
      * @return a new {@link NewObject}
      */
     public static NewObject of(final CodeModel codeModel,
-                               final Expression typeExpression,
+                               final TypeUsage type,
                                final Stream<Expression> args,
-                               final Stream<Expression> typeArguments) {
-        return new NewObject(codeModel, typeExpression, args, typeArguments);
+                               final Stream<TypeUsage> typeArguments) {
+        return new NewObject(codeModel, type, args, typeArguments);
     }
 
     /**
      * Creates a {@link NewObject} expression without type arguments.
      *
-     * @param codeModel      the {@link CodeModel}
-     * @param typeExpression the type {@link Expression}
-     * @param args           the constructor argument {@link Expression}s
+     * @param codeModel the {@link CodeModel}
+     * @param type      the resolved {@link TypeUsage} of the class to instantiate
+     * @param args      the constructor argument {@link Expression}s
      * @return a new {@link NewObject}
      */
     public static NewObject of(final CodeModel codeModel,
-                               final Expression typeExpression,
+                               final TypeUsage type,
                                final Stream<Expression> args) {
-        return new NewObject(codeModel, typeExpression, args, null);
+        return new NewObject(codeModel, type, args, null);
     }
 
     static {

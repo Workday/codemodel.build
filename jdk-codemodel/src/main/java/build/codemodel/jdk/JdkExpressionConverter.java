@@ -285,18 +285,18 @@ public class JdkExpressionConverter
         final var args = t.getArguments().stream()
             .map(this::convert)
             .toList();
-        final Expression typeExpr;
-        final List<Expression> typeArgs;
+        final TypeUsage type;
+        final List<TypeUsage> typeArgs;
         if (t.getIdentifier() instanceof ParameterizedTypeTree pt) {
-            typeExpr = Identifier.of(codeModel, pt.getType().toString());
+            type = resolveTypeUsage(pt.getType());
             typeArgs = pt.getTypeArguments().stream()
-                .map(typeArg -> (Expression) Identifier.of(codeModel, typeArg.toString()))
+                .map(this::resolveTypeUsage)
                 .toList();
         } else {
-            typeExpr = Identifier.of(codeModel, t.getIdentifier().toString());
+            type = resolveTypeUsage(t.getIdentifier());
             typeArgs = List.of();
         }
-        return NewObject.of(codeModel, typeExpr, args.stream(), typeArgs.stream());
+        return NewObject.of(codeModel, type, args.stream(), typeArgs.stream());
     }
 
     @Override
@@ -304,8 +304,7 @@ public class JdkExpressionConverter
         final List<Expression> dims = t.getDimensions() == null
             ? List.of()
             : t.getDimensions().stream().map(this::convert).toList();
-        final String elementTypeName = t.getType() == null ? "?" : t.getType().toString();
-        return NewArray.of(codeModel, Identifier.of(codeModel, elementTypeName), dims.stream());
+        return NewArray.of(codeModel, resolveTypeUsage(t.getType()), dims.stream());
     }
 
     @Override
@@ -421,7 +420,7 @@ public class JdkExpressionConverter
         }
         return InstanceOf.of(
             convert(t.getExpression()),
-            Identifier.of(codeModel, t.getType().toString()),
+            resolveTypeUsage(t.getType()),
             bindingVariable);
     }
 
