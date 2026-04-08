@@ -24,9 +24,18 @@ import build.codemodel.expression.Cast;
 import build.codemodel.foundation.usage.NamedTypeUsage;
 import build.codemodel.imperative.Return;
 import build.codemodel.jdk.descriptor.MethodBodyDescriptor;
+import build.codemodel.jdk.expression.AssignmentOperator;
+import build.codemodel.jdk.expression.BitwiseBinary;
+import build.codemodel.jdk.expression.BitwiseOperator;
+import build.codemodel.jdk.expression.CompoundAssignment;
 import build.codemodel.jdk.expression.InstanceOf;
 import build.codemodel.jdk.expression.NewArray;
 import build.codemodel.jdk.expression.NewObject;
+import build.codemodel.jdk.expression.PostfixOperator;
+import build.codemodel.jdk.expression.PostfixUnary;
+import build.codemodel.jdk.expression.PrefixOperator;
+import build.codemodel.jdk.expression.PrefixUnary;
+import build.codemodel.jdk.statement.ExpressionStatement;
 import build.codemodel.jdk.statement.LocalVariableDeclaration;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
 import com.google.testing.compile.JavaFileObjects;
@@ -167,5 +176,97 @@ class ExpressionCaptureFidelityTests {
 
         assertThat(newArray.elementType()).isInstanceOf(NamedTypeUsage.class);
         assertThat(((NamedTypeUsage) newArray.elementType()).typeName().canonicalName()).isEqualTo("java.lang.String");
+    }
+
+    @Test
+    void shouldCaptureBitwiseOperator() {
+        final var source = JavaFileObjects.forSourceString(
+            "build.codemodel.jdk.example.Bits", """
+                package build.codemodel.jdk.example;
+                public class Bits {
+                    public int run(int a, int b) { return a << b; }
+                }
+                """);
+
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getNameProvider()
+            .getTypeName(Optional.empty(), "build.codemodel.jdk.example.Bits");
+        final var body = codeModel.getTypeDescriptor(typeName).orElseThrow()
+            .traits(MethodDescriptor.class).findFirst().orElseThrow()
+            .getTrait(MethodBodyDescriptor.class).orElseThrow().body();
+        final var bitwise = (BitwiseBinary) ((Return) body.statements().findFirst().orElseThrow()).expression();
+
+        assertThat(bitwise.operator()).isEqualTo(BitwiseOperator.LEFT_SHIFT);
+    }
+
+    @Test
+    void shouldCapturePrefixOperator() {
+        final var source = JavaFileObjects.forSourceString(
+            "build.codemodel.jdk.example.Counter", """
+                package build.codemodel.jdk.example;
+                public class Counter {
+                    public int run(int x) { return ++x; }
+                }
+                """);
+
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getNameProvider()
+            .getTypeName(Optional.empty(), "build.codemodel.jdk.example.Counter");
+        final var body = codeModel.getTypeDescriptor(typeName).orElseThrow()
+            .traits(MethodDescriptor.class).findFirst().orElseThrow()
+            .getTrait(MethodBodyDescriptor.class).orElseThrow().body();
+        final var prefix = (PrefixUnary) ((Return) body.statements().findFirst().orElseThrow()).expression();
+
+        assertThat(prefix.operator()).isEqualTo(PrefixOperator.INCREMENT);
+    }
+
+    @Test
+    void shouldCapturePostfixOperator() {
+        final var source = JavaFileObjects.forSourceString(
+            "build.codemodel.jdk.example.Postfix", """
+                package build.codemodel.jdk.example;
+                public class Postfix {
+                    public void run(int[] arr) { arr[0]--; }
+                }
+                """);
+
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getNameProvider()
+            .getTypeName(Optional.empty(), "build.codemodel.jdk.example.Postfix");
+        final var body = codeModel.getTypeDescriptor(typeName).orElseThrow()
+            .traits(MethodDescriptor.class).findFirst().orElseThrow()
+            .getTrait(MethodBodyDescriptor.class).orElseThrow().body();
+        final var postfix = (PostfixUnary) ((ExpressionStatement) body.statements().findFirst().orElseThrow()).expression();
+
+        assertThat(postfix.operator()).isEqualTo(PostfixOperator.DECREMENT);
+    }
+
+    @Test
+    void shouldCaptureAssignmentOperator() {
+        final var source = JavaFileObjects.forSourceString(
+            "build.codemodel.jdk.example.Assigner", """
+                package build.codemodel.jdk.example;
+                public class Assigner {
+                    public void run(int[] arr) { arr[0] += 1; }
+                }
+                """);
+
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getNameProvider()
+            .getTypeName(Optional.empty(), "build.codemodel.jdk.example.Assigner");
+        final var body = codeModel.getTypeDescriptor(typeName).orElseThrow()
+            .traits(MethodDescriptor.class).findFirst().orElseThrow()
+            .getTrait(MethodBodyDescriptor.class).orElseThrow().body();
+        final var assign = (CompoundAssignment) ((ExpressionStatement) body.statements().findFirst().orElseThrow()).expression();
+
+        assertThat(assign.operator()).isEqualTo(AssignmentOperator.PLUS);
     }
 }

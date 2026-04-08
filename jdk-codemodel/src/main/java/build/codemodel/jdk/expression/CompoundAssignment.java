@@ -9,9 +9,9 @@ package build.codemodel.jdk.expression;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -37,8 +37,7 @@ import java.util.Objects;
 import java.util.stream.Stream;
 
 /**
- * A compound assignment expression: {@code var OP= value} (e.g. {@code x += 1}).
- * Also used for simple assignment {@code var = value} when the operator is {@code "ASSIGNMENT"}.
+ * An assignment expression: simple {@code x = y} or compound {@code x += y}, {@code x <<= y}, etc.
  *
  * @author reed.vonredwitz
  * @since Mar-2026
@@ -47,9 +46,9 @@ public final class CompoundAssignment
     extends AbstractExpression {
 
     /**
-     * The operator kind string (e.g. {@code "PLUS_ASSIGNMENT"}, {@code "ASSIGNMENT"}).
+     * The operator.
      */
-    private final String operator;
+    private final AssignmentOperator operator;
 
     /**
      * The left-hand-side variable expression.
@@ -62,7 +61,7 @@ public final class CompoundAssignment
     private final Expression value;
 
     private CompoundAssignment(final CodeModel codeModel,
-                               final String operator,
+                               final AssignmentOperator operator,
                                final Expression variable,
                                final Expression value) {
         super(codeModel);
@@ -79,7 +78,7 @@ public final class CompoundAssignment
                               final Marshalled<Expression> variable,
                               final Marshalled<Expression> value) {
         super(codeModel, marshaller, traits);
-        this.operator = operator;
+        this.operator = AssignmentOperator.valueOf(operator);
         this.variable = marshaller.unmarshal(variable);
         this.value = marshaller.unmarshal(value);
     }
@@ -91,17 +90,17 @@ public final class CompoundAssignment
                            final Out<Marshalled<Expression>> variable,
                            final Out<Marshalled<Expression>> value) {
         super.destructor(marshaller, traits);
-        operator.set(this.operator);
+        operator.set(this.operator.name());
         variable.set(marshaller.marshal(this.variable));
         value.set(marshaller.marshal(this.value));
     }
 
     /**
-     * Obtains the operator kind string.
+     * Obtains the operator.
      *
-     * @return the operator kind string
+     * @return the {@link AssignmentOperator}
      */
-    public String operator() {
+    public AssignmentOperator operator() {
         return this.operator;
     }
 
@@ -126,7 +125,7 @@ public final class CompoundAssignment
     @Override
     public boolean equals(final Object object) {
         return object instanceof CompoundAssignment other
-            && Objects.equals(this.operator, other.operator)
+            && this.operator == other.operator
             && Objects.equals(this.variable, other.variable)
             && Objects.equals(this.value, other.value)
             && super.equals(other);
@@ -136,13 +135,13 @@ public final class CompoundAssignment
      * Creates a {@link CompoundAssignment} expression.
      *
      * @param codeModel the {@link CodeModel}
-     * @param operator   the operator kind string
-     * @param variable   the left-hand-side variable {@link Expression}
-     * @param value      the right-hand-side value {@link Expression}
+     * @param operator  the {@link AssignmentOperator}
+     * @param variable  the left-hand-side variable {@link Expression}
+     * @param value     the right-hand-side value {@link Expression}
      * @return a new {@link CompoundAssignment}
      */
     public static CompoundAssignment of(final CodeModel codeModel,
-                                        final String operator,
+                                        final AssignmentOperator operator,
                                         final Expression variable,
                                         final Expression value) {
         return new CompoundAssignment(codeModel, operator, variable, value);

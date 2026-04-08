@@ -9,9 +9,9 @@ package build.codemodel.jdk.expression;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -46,9 +46,9 @@ public final class PostfixUnary
     extends AbstractExpression {
 
     /**
-     * The operator kind string (e.g. {@code "POSTFIX_INCREMENT"}).
+     * The operator.
      */
-    private final String operator;
+    private final PostfixOperator operator;
 
     /**
      * The operand expression.
@@ -56,7 +56,7 @@ public final class PostfixUnary
     private final Expression operand;
 
     private PostfixUnary(final CodeModel codeModel,
-                         final String operator,
+                         final PostfixOperator operator,
                          final Expression operand) {
         super(codeModel);
         this.operator = Objects.requireNonNull(operator, "operator must not be null");
@@ -70,7 +70,7 @@ public final class PostfixUnary
                         final String operator,
                         final Marshalled<Expression> operand) {
         super(codeModel, marshaller, traits);
-        this.operator = operator;
+        this.operator = PostfixOperator.valueOf(operator);
         this.operand = marshaller.unmarshal(operand);
     }
 
@@ -80,16 +80,16 @@ public final class PostfixUnary
                            final Out<String> operator,
                            final Out<Marshalled<Expression>> operand) {
         super.destructor(marshaller, traits);
-        operator.set(this.operator);
+        operator.set(this.operator.name());
         operand.set(marshaller.marshal(this.operand));
     }
 
     /**
-     * Obtains the operator kind string.
+     * Obtains the operator.
      *
-     * @return the operator kind string
+     * @return the {@link PostfixOperator}
      */
-    public String operator() {
+    public PostfixOperator operator() {
         return this.operator;
     }
 
@@ -105,7 +105,7 @@ public final class PostfixUnary
     @Override
     public boolean equals(final Object object) {
         return object instanceof PostfixUnary other
-            && Objects.equals(this.operator, other.operator)
+            && this.operator == other.operator
             && Objects.equals(this.operand, other.operand)
             && super.equals(other);
     }
@@ -114,12 +114,12 @@ public final class PostfixUnary
      * Creates a {@link PostfixUnary} expression.
      *
      * @param codeModel the {@link CodeModel}
-     * @param operator   the operator kind string
-     * @param operand    the operand {@link Expression}
+     * @param operator  the {@link PostfixOperator}
+     * @param operand   the operand {@link Expression}
      * @return a new {@link PostfixUnary}
      */
     public static PostfixUnary of(final CodeModel codeModel,
-                                  final String operator,
+                                  final PostfixOperator operator,
                                   final Expression operand) {
         return new PostfixUnary(codeModel, operator, operand);
     }
