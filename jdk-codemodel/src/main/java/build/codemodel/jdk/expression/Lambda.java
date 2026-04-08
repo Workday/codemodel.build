@@ -9,9 +9,9 @@ package build.codemodel.jdk.expression;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -30,6 +30,7 @@ import build.base.marshalling.Unmarshal;
 import build.codemodel.expression.AbstractExpression;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.Trait;
+import build.codemodel.foundation.usage.TypeUsage;
 import build.codemodel.imperative.Statement;
 
 import java.lang.invoke.MethodHandles;
@@ -71,14 +72,14 @@ public final class Lambda
     public Lambda(@Bound final CodeModel codeModel,
                   final Marshaller marshaller,
                   final Stream<Marshalled<Trait>> traits,
-                  final Stream<String> paramTypeNames,
+                  final Stream<Marshalled<TypeUsage>> paramTypes,
                   final Stream<String> paramNames,
                   final Marshalled<Statement> body) {
         super(codeModel, marshaller, traits);
-        final var typeNameList = paramTypeNames == null ? List.<String>of() : paramTypeNames.toList();
+        final var typeList = paramTypes == null ? List.<TypeUsage>of() : paramTypes.map(marshaller::unmarshal).toList();
         final var nameList = paramNames == null ? List.<String>of() : paramNames.toList();
-        this.parameters = IntStream.range(0, Math.min(typeNameList.size(), nameList.size()))
-            .mapToObj(i -> new LambdaParameter(typeNameList.get(i), nameList.get(i)))
+        this.parameters = IntStream.range(0, Math.min(typeList.size(), nameList.size()))
+            .mapToObj(i -> new LambdaParameter(typeList.get(i), nameList.get(i)))
             .toList();
         this.body = marshaller.unmarshal(body);
     }
@@ -86,11 +87,11 @@ public final class Lambda
     @Marshal
     public void destructor(final Marshaller marshaller,
                            final Out<Stream<Marshalled<Trait>>> traits,
-                           final Out<Stream<String>> paramTypeNames,
+                           final Out<Stream<Marshalled<TypeUsage>>> paramTypes,
                            final Out<Stream<String>> paramNames,
                            final Out<Marshalled<Statement>> body) {
         super.destructor(marshaller, traits);
-        paramTypeNames.set(this.parameters.stream().map(LambdaParameter::typeName));
+        paramTypes.set(this.parameters.stream().map(p -> marshaller.marshal(p.type())));
         paramNames.set(this.parameters.stream().map(LambdaParameter::name));
         body.set(marshaller.marshal(this.body));
     }

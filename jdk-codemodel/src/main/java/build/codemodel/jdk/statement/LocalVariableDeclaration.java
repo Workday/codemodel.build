@@ -9,9 +9,9 @@ package build.codemodel.jdk.statement;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -30,6 +30,7 @@ import build.base.marshalling.Unmarshal;
 import build.codemodel.expression.Expression;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.Trait;
+import build.codemodel.foundation.usage.TypeUsage;
 import build.codemodel.imperative.AbstractStatement;
 
 import java.lang.invoke.MethodHandles;
@@ -52,9 +53,9 @@ public final class LocalVariableDeclaration
     private final boolean isFinal;
 
     /**
-     * The source-form type name of the variable.
+     * The resolved type of the variable.
      */
-    private final String typeName;
+    private final TypeUsage type;
 
     /**
      * The variable name.
@@ -68,12 +69,12 @@ public final class LocalVariableDeclaration
 
     private LocalVariableDeclaration(final CodeModel codeModel,
                                      final boolean isFinal,
-                                     final String typeName,
+                                     final TypeUsage type,
                                      final String name,
                                      final Optional<Expression> initializer) {
         super(codeModel);
         this.isFinal = isFinal;
-        this.typeName = Objects.requireNonNull(typeName, "typeName must not be null");
+        this.type = Objects.requireNonNull(type, "type must not be null");
         this.name = Objects.requireNonNull(name, "name must not be null");
         this.initializer = initializer == null ? Optional.empty() : initializer;
     }
@@ -83,12 +84,12 @@ public final class LocalVariableDeclaration
                                     final Marshaller marshaller,
                                     final Stream<Marshalled<Trait>> traits,
                                     final Boolean isFinal,
-                                    final String typeName,
+                                    final Marshalled<TypeUsage> type,
                                     final String name,
                                     final Optional<Marshalled<Expression>> initializer) {
         super(codeModel, marshaller, traits);
         this.isFinal = isFinal != null && isFinal;
-        this.typeName = typeName;
+        this.type = marshaller.unmarshal(type);
         this.name = name;
         this.initializer = initializer == null ? Optional.empty() : initializer.map(marshaller::unmarshal);
     }
@@ -97,12 +98,12 @@ public final class LocalVariableDeclaration
     public void destructor(final Marshaller marshaller,
                            final Out<Stream<Marshalled<Trait>>> traits,
                            final Out<Boolean> isFinal,
-                           final Out<String> typeName,
+                           final Out<Marshalled<TypeUsage>> type,
                            final Out<String> name,
                            final Out<Optional<Marshalled<Expression>>> initializer) {
         super.destructor(marshaller, traits);
         isFinal.set(this.isFinal);
-        typeName.set(this.typeName);
+        type.set(marshaller.marshal(this.type));
         name.set(this.name);
         initializer.set(this.initializer.map(marshaller::marshal));
     }
@@ -117,12 +118,12 @@ public final class LocalVariableDeclaration
     }
 
     /**
-     * Obtains the source-form type name of the variable.
+     * Obtains the resolved type of the variable.
      *
-     * @return the type name
+     * @return the {@link TypeUsage}
      */
-    public String typeName() {
-        return this.typeName;
+    public TypeUsage type() {
+        return this.type;
     }
 
     /**
@@ -147,7 +148,7 @@ public final class LocalVariableDeclaration
     public boolean equals(final Object object) {
         return object instanceof LocalVariableDeclaration other
             && this.isFinal == other.isFinal
-            && Objects.equals(this.typeName, other.typeName)
+            && Objects.equals(this.type, other.type)
             && Objects.equals(this.name, other.name)
             && Objects.equals(this.initializer, other.initializer)
             && super.equals(other);
@@ -156,19 +157,19 @@ public final class LocalVariableDeclaration
     /**
      * Creates a {@link LocalVariableDeclaration} statement.
      *
-     * @param codeModel  the {@link CodeModel}
+     * @param codeModel   the {@link CodeModel}
      * @param isFinal     whether the variable is {@code final}
-     * @param typeName    the source-form type name
+     * @param type        the resolved {@link TypeUsage}
      * @param name        the variable name
      * @param initializer the optional initializer {@link Expression}
      * @return a new {@link LocalVariableDeclaration}
      */
     public static LocalVariableDeclaration of(final CodeModel codeModel,
                                               final boolean isFinal,
-                                              final String typeName,
+                                              final TypeUsage type,
                                               final String name,
                                               final Optional<Expression> initializer) {
-        return new LocalVariableDeclaration(codeModel, isFinal, typeName, name, initializer);
+        return new LocalVariableDeclaration(codeModel, isFinal, type, name, initializer);
     }
 
     static {

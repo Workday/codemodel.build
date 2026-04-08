@@ -208,6 +208,8 @@ public class JdkInitializer
                     public Void visitClass(final ClassTree classTree, final Void unused) {
                         exprConverter.setTypeContext(trees, cut,
                             mirror -> resolveTypeUsage(mirror, null));
+                        stmtConverter.setTypeContext(trees, cut,
+                            mirror -> resolveTypeUsage(mirror, null));
                         final TreePath classPath = trees.getPath(cut, classTree);
                         final var typeElement = (TypeElement) trees.getElement(classPath);
                         if (typeElement != null
