@@ -107,7 +107,7 @@ class ExpressionCaptureFidelityTests {
             .findFirst().orElseThrow();
         final var body = check.getTrait(MethodBodyDescriptor.class).orElseThrow().body();
         final var returnStmt = (Return) body.statements().findFirst().orElseThrow();
-        final var instanceOf = (InstanceOf) returnStmt.expression();
+        final var instanceOf = (InstanceOf) returnStmt.expression().orElseThrow();
 
         assertThat(instanceOf.checkedType()).isInstanceOf(NamedTypeUsage.class);
         assertThat(((NamedTypeUsage) instanceOf.checkedType()).typeName().canonicalName()).isEqualTo("java.lang.String");
@@ -138,7 +138,7 @@ class ExpressionCaptureFidelityTests {
             .findFirst().orElseThrow();
         final var body = create.getTrait(MethodBodyDescriptor.class).orElseThrow().body();
         final var returnStmt = (Return) body.statements().findFirst().orElseThrow();
-        final var newObject = (NewObject) returnStmt.expression();
+        final var newObject = (NewObject) returnStmt.expression().orElseThrow();
 
         assertThat(newObject.instantiatedType()).isInstanceOf(NamedTypeUsage.class);
         assertThat(((NamedTypeUsage) newObject.instantiatedType()).typeName().canonicalName()).isEqualTo("java.util.ArrayList");
@@ -172,7 +172,7 @@ class ExpressionCaptureFidelityTests {
             .findFirst().orElseThrow();
         final var body = create.getTrait(MethodBodyDescriptor.class).orElseThrow().body();
         final var returnStmt = (Return) body.statements().findFirst().orElseThrow();
-        final var newArray = (NewArray) returnStmt.expression();
+        final var newArray = (NewArray) returnStmt.expression().orElseThrow();
 
         assertThat(newArray.elementType()).isInstanceOf(NamedTypeUsage.class);
         assertThat(((NamedTypeUsage) newArray.elementType()).typeName().canonicalName()).isEqualTo("java.lang.String");
@@ -196,7 +196,7 @@ class ExpressionCaptureFidelityTests {
         final var body = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(MethodDescriptor.class).findFirst().orElseThrow()
             .getTrait(MethodBodyDescriptor.class).orElseThrow().body();
-        final var bitwise = (BitwiseBinary) ((Return) body.statements().findFirst().orElseThrow()).expression();
+        final var bitwise = (BitwiseBinary) ((Return) body.statements().findFirst().orElseThrow()).expression().orElseThrow();
 
         assertThat(bitwise.operator()).isEqualTo(BitwiseOperator.LEFT_SHIFT);
     }
@@ -219,7 +219,7 @@ class ExpressionCaptureFidelityTests {
         final var body = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(MethodDescriptor.class).findFirst().orElseThrow()
             .getTrait(MethodBodyDescriptor.class).orElseThrow().body();
-        final var prefix = (PrefixUnary) ((Return) body.statements().findFirst().orElseThrow()).expression();
+        final var prefix = (PrefixUnary) ((Return) body.statements().findFirst().orElseThrow()).expression().orElseThrow();
 
         assertThat(prefix.operator()).isEqualTo(PrefixOperator.INCREMENT);
     }

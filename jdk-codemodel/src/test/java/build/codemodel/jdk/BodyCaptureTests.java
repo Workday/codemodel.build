@@ -126,7 +126,7 @@ class BodyCaptureTests {
             .findFirst().orElseThrow();
         final var body = method.getTrait(MethodBodyDescriptor.class).orElseThrow().body();
         final var lambda = body.statements()
-            .map(s -> s instanceof Return r ? r.expression() : null)
+            .map(s -> s instanceof Return r ? r.expression().orElse(null) : null)
             .filter(e -> e instanceof Lambda)
             .map(e -> (Lambda) e)
             .findFirst().orElseThrow();
@@ -219,5 +219,32 @@ class BodyCaptureTests {
             .map(t -> ((NamedTypeUsage) t).typeName().name().toString())
             .toList();
         assertThat(exTypeNames).containsExactlyInAnyOrder("IOException", "RuntimeException");
+    }
+
+    @Test
+    void shouldCaptureBareReturnAsEmptyOptional() {
+        final var source = JavaFileObjects.forSourceString(
+            "build.codemodel.jdk.example.Greeter", """
+                package build.codemodel.jdk.example;
+                public class Greeter {
+                    public void greet() {
+                        return;
+                    }
+                }
+                """);
+
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getNameProvider()
+            .getTypeName(Optional.empty(), "build.codemodel.jdk.example.Greeter");
+        final var method = codeModel.getTypeDescriptor(typeName).orElseThrow()
+            .traits(MethodDescriptor.class)
+            .filter(m -> m.methodName().name().toString().equals("greet"))
+            .findFirst().orElseThrow();
+        final var body = method.getTrait(MethodBodyDescriptor.class).orElseThrow().body();
+        final var returnStmt = (Return) body.statements().findFirst().orElseThrow();
+
+        assertThat(returnStmt.expression()).isEmpty();
     }
 }
