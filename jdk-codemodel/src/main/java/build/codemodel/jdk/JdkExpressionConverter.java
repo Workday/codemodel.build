@@ -419,30 +419,7 @@ public class JdkExpressionConverter
 
     @Override
     public Expression visitTypeCast(final TypeCastTree t, final Void v) {
-        final TypeUsage targetType;
-        if (trees != null && compilationUnit != null && typeResolver != null) {
-            try {
-                final var path = TreePath.getPath(compilationUnit, t.getType());
-                if (path != null) {
-                    final var typeMirror = trees.getTypeMirror(path);
-                    if (typeMirror != null
-                            && typeMirror.getKind() != TypeKind.ERROR
-                            && typeMirror.getKind() != TypeKind.NONE
-                            && typeMirror.getKind() != TypeKind.OTHER) {
-                        targetType = typeResolver.apply(typeMirror);
-                    } else {
-                        targetType = UnknownTypeUsage.create(codeModel);
-                    }
-                } else {
-                    targetType = UnknownTypeUsage.create(codeModel);
-                }
-            } catch (final Exception e) {
-                return Cast.of(UnknownTypeUsage.create(codeModel), convert(t.getExpression()));
-            }
-        } else {
-            targetType = UnknownTypeUsage.create(codeModel);
-        }
-        return Cast.of(targetType, convert(t.getExpression()));
+        return Cast.of(resolveTypeUsage(t.getType()), convert(t.getExpression()));
     }
 
     @Override
