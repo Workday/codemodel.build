@@ -33,6 +33,7 @@ import build.codemodel.foundation.descriptor.Trait;
 
 import java.lang.invoke.MethodHandles;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 /**
@@ -45,38 +46,39 @@ public class Return
     extends AbstractStatement {
 
     /**
-     * The {@link Expression} to return.
+     * The {@link Expression} to return, or empty for a bare {@code return;}.
      */
-    private Expression expression;
+    private Optional<Expression> expression;
 
     /**
-     * Constructs an {@link Return} {@link Statement}.
+     * Constructs a {@link Return} {@link Statement}.
      *
-     * @param expression the {@link Expression}
+     * @param codeModel  the {@link CodeModel}
+     * @param expression the optional {@link Expression}
      */
-    private Return(final Expression expression) {
+    private Return(final CodeModel codeModel, final Optional<Expression> expression) {
 
-        super(Objects.requireNonNull(expression, "The VariableUsage must not be null").codeModel());
-        this.expression = expression;
+        super(Objects.requireNonNull(codeModel, "codeModel must not be null"));
+        this.expression = expression == null ? Optional.empty() : expression;
     }
 
     /**
      * {@link Unmarshal} a {@link Return}.
      *
-     * @param codeModel the {@link CodeModel}
+     * @param codeModel  the {@link CodeModel}
      * @param marshaller the {@link Marshaller} for unmarshalling the {@link Marshalled} {@link Trait}s
      * @param traits     the {@link Marshalled} {@link Trait}s
-     * @param expression the {@link Marshalled} {@link Expression}
+     * @param expression the optional {@link Marshalled} {@link Expression}
      */
     @Unmarshal
     public Return(@Bound final CodeModel codeModel,
                   @Bound final Marshaller marshaller,
                   final Stream<Marshalled<Trait>> traits,
-                  final Marshalled<Expression> expression) {
+                  final Optional<Marshalled<Expression>> expression) {
 
         super(codeModel, marshaller, traits);
 
-        this.expression = marshaller.unmarshal(expression);
+        this.expression = expression == null ? Optional.empty() : expression.map(marshaller::unmarshal);
     }
 
     /**
@@ -84,34 +86,44 @@ public class Return
      *
      * @param marshaller the {@link Marshaller}
      * @param traits     the {@link Out} {@link Marshalled} {@link Trait}s
-     * @param expression the {@link Out} {@link Marshalled} {@link Expression}
+     * @param expression the {@link Out} optional {@link Marshalled} {@link Expression}
      */
     @Marshal
     public void destructor(final Marshaller marshaller,
                            final Out<Stream<Marshalled<Trait>>> traits,
-                           final Out<Marshalled<Expression>> expression) {
+                           final Out<Optional<Marshalled<Expression>>> expression) {
 
         super.destructor(marshaller, traits);
 
-        expression.set(marshaller.marshal(this.expression));
+        expression.set(this.expression.map(marshaller::marshal));
     }
 
     /**
-     * Obtains the {@link Expression} being assigned.
+     * Obtains the {@link Expression} being returned, or empty for a bare {@code return;}.
      *
-     * @return the {@link Expression}
+     * @return an {@link Optional} {@link Expression}
      */
-    public Expression expression() {
+    public Optional<Expression> expression() {
         return this.expression;
     }
 
     /**
-     * Creates an {@link Return} {@link Statement}.
+     * Creates a {@link Return} {@link Statement} with a value.
      *
-     * @param expression the {@link Expression}
+     * @param expression the {@link Expression} to return
      */
     public static Return of(final Expression expression) {
-        return new Return(expression);
+        Objects.requireNonNull(expression, "expression must not be null");
+        return new Return(expression.codeModel(), Optional.of(expression));
+    }
+
+    /**
+     * Creates a bare {@code return;} {@link Statement}.
+     *
+     * @param codeModel the {@link CodeModel}
+     */
+    public static Return of(final CodeModel codeModel) {
+        return new Return(Objects.requireNonNull(codeModel, "codeModel must not be null"), Optional.empty());
     }
 
     @Override

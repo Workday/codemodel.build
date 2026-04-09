@@ -29,7 +29,6 @@ import build.codemodel.imperative.If;
 import build.codemodel.imperative.Return;
 import build.codemodel.imperative.Statement;
 import build.codemodel.imperative.While;
-import build.codemodel.jdk.expression.NullLiteral;
 import build.codemodel.jdk.statement.Assert;
 import build.codemodel.jdk.statement.Break;
 import build.codemodel.jdk.statement.CatchClause;
@@ -171,10 +170,9 @@ public class JdkStatementConverter
 
     @Override
     public Statement visitReturn(final ReturnTree t, final Void v) {
-        final Expression expr = t.getExpression() == null
-            ? NullLiteral.of(codeModel)
-            : exprConverter.convert(t.getExpression());
-        return Return.of(expr);
+        return t.getExpression() == null
+            ? Return.of(codeModel)
+            : Return.of(exprConverter.convert(t.getExpression()));
     }
 
     @Override
