@@ -11,11 +11,11 @@ The following versions of `build.codemodel` are currently supported with securit
 
 ## Reporting a Vulnerability
 
-This is an Workday sponsored project hosted on GitHub.
+This is a Workday sponsored project hosted on GitHub.
 
 To report a security vulnerability, please **do not** open a public GitHub issue. Instead:
 
-1. Navigate to the [Security Advisories](https://https://github.com/workday/codemodel.build/security/advisories) page for
+1. Navigate to the [Security Advisories](https://github.com/workday/codemodel.build/security/advisories) page for
    this repository and click **Report a vulnerability**.
 
 2. Alternatively, contact the project maintainers directly by emailing the developers.
