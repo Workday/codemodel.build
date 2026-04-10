@@ -134,11 +134,54 @@ class BodyCaptureTests {
         final var params = lambda.parameters().toList();
         assertThat(params).hasSize(2);
         assertThat(params.get(0).name()).isEqualTo("a");
-        assertThat(params.get(0).type()).isInstanceOf(NamedTypeUsage.class);
-        assertThat(((NamedTypeUsage) params.get(0).type()).typeName().name().toString()).isEqualTo("String");
+        assertThat(params.get(0).type()).isPresent();
+        assertThat(params.get(0).type().orElseThrow()).isInstanceOf(NamedTypeUsage.class);
+        assertThat(((NamedTypeUsage) params.get(0).type().orElseThrow()).typeName().name().toString()).isEqualTo("String");
         assertThat(params.get(1).name()).isEqualTo("b");
-        assertThat(params.get(1).type()).isInstanceOf(NamedTypeUsage.class);
-        assertThat(((NamedTypeUsage) params.get(1).type()).typeName().name().toString()).isEqualTo("String");
+        assertThat(params.get(1).type()).isPresent();
+        assertThat(params.get(1).type().orElseThrow()).isInstanceOf(NamedTypeUsage.class);
+        assertThat(((NamedTypeUsage) params.get(1).type().orElseThrow()).typeName().name().toString()).isEqualTo("String");
+    }
+
+    @Test
+    void shouldResolveImplicitLambdaParameterTypes() {
+        final var source = JavaFileObjects.forSourceString(
+            "build.codemodel.jdk.example.ImplicitSorter", """
+                package build.codemodel.jdk.example;
+                import java.util.Comparator;
+                public class ImplicitSorter {
+                    public Comparator<String> comparator() {
+                        return (a, b) -> a.compareTo(b);
+                    }
+                }
+                """);
+
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getNameProvider()
+            .getTypeName(Optional.empty(), "build.codemodel.jdk.example.ImplicitSorter");
+        final var method = codeModel.getTypeDescriptor(typeName).orElseThrow()
+            .traits(MethodDescriptor.class)
+            .filter(m -> m.methodName().name().toString().equals("comparator"))
+            .findFirst().orElseThrow();
+        final var body = method.getTrait(MethodBodyDescriptor.class).orElseThrow().body();
+        final var lambda = body.statements()
+            .map(s -> s instanceof Return r ? r.expression().orElse(null) : null)
+            .filter(e -> e instanceof Lambda)
+            .map(e -> (Lambda) e)
+            .findFirst().orElseThrow();
+
+        final var params = lambda.parameters().toList();
+        assertThat(params).hasSize(2);
+        assertThat(params.get(0).name()).isEqualTo("a");
+        assertThat(params.get(0).type()).isPresent();
+        assertThat(params.get(0).type().orElseThrow()).isInstanceOf(NamedTypeUsage.class);
+        assertThat(((NamedTypeUsage) params.get(0).type().orElseThrow()).typeName().name().toString()).isEqualTo("String");
+        assertThat(params.get(1).name()).isEqualTo("b");
+        assertThat(params.get(1).type()).isPresent();
+        assertThat(params.get(1).type().orElseThrow()).isInstanceOf(NamedTypeUsage.class);
+        assertThat(((NamedTypeUsage) params.get(1).type().orElseThrow()).typeName().name().toString()).isEqualTo("String");
     }
 
     @Test

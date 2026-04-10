@@ -244,44 +244,37 @@ public class JdkExpressionConverter
     }
 
     TypeUsage resolveTypeUsage(final Tree typeTree) {
-        if (typeTree == null || trees == null || compilationUnit == null || typeResolver == null) {
-            return UnknownTypeUsage.create(codeModel);
+        return resolveTypeMirror(typeTree)
+            .map(typeResolver)
+            .orElseGet(() -> UnknownTypeUsage.create(codeModel));
+    }
+
+    private Optional<TypeUsage> resolveLambdaParameterType(final com.sun.source.tree.VariableTree p) {
+        final var tree = p.getType() != null ? p.getType() : p;
+        return resolveTypeMirror(tree).map(typeResolver);
+    }
+
+    private Optional<TypeUsage> resolveReceiverType(final ExpressionTree receiverExpr) {
+        return resolveTypeMirror(receiverExpr).map(typeResolver);
+    }
+
+    private Optional<TypeMirror> resolveTypeMirror(final Tree tree) {
+        if (tree == null || trees == null || compilationUnit == null || typeResolver == null) {
+            return Optional.empty();
         }
         try {
-            final var path = TreePath.getPath(compilationUnit, typeTree);
+            final var path = TreePath.getPath(compilationUnit, tree);
             if (path == null) {
-                return UnknownTypeUsage.create(codeModel);
+                return Optional.empty();
             }
             final var mirror = trees.getTypeMirror(path);
             if (mirror == null
                     || mirror.getKind() == TypeKind.ERROR
                     || mirror.getKind() == TypeKind.NONE
                     || mirror.getKind() == TypeKind.OTHER) {
-                return UnknownTypeUsage.create(codeModel);
-            }
-            return typeResolver.apply(mirror);
-        } catch (final Exception e) {
-            return UnknownTypeUsage.create(codeModel);
-        }
-    }
-
-    private Optional<TypeUsage> resolveReceiverType(final ExpressionTree receiverExpr) {
-        if (trees == null || compilationUnit == null || typeResolver == null) {
-            return Optional.empty();
-        }
-        try {
-            final var path = TreePath.getPath(compilationUnit, receiverExpr);
-            if (path == null) {
                 return Optional.empty();
             }
-            final var typeMirror = trees.getTypeMirror(path);
-            if (typeMirror == null
-                    || typeMirror.getKind() == TypeKind.ERROR
-                    || typeMirror.getKind() == TypeKind.NONE
-                    || typeMirror.getKind() == TypeKind.OTHER) {
-                return Optional.empty();
-            }
-            return Optional.of(typeResolver.apply(typeMirror));
+            return Optional.of(mirror);
         } catch (final Exception e) {
             return Optional.empty();
         }
@@ -447,7 +440,7 @@ public class JdkExpressionConverter
             body = Block.empty(codeModel);
         }
         final var params = t.getParameters().stream()
-            .map(p -> new LambdaParameter(resolveTypeUsage(p.getType()), p.getName().toString()))
+            .map(p -> new LambdaParameter(resolveLambdaParameterType(p), p.getName().toString()))
             .toList();
         return Lambda.of(codeModel, params, body);
     }

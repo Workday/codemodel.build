@@ -36,6 +36,7 @@ import build.codemodel.imperative.Statement;
 import java.lang.invoke.MethodHandles;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -76,7 +77,9 @@ public final class Lambda
                   final Stream<String> paramNames,
                   final Marshalled<Statement> body) {
         super(codeModel, marshaller, traits);
-        final var typeList = paramTypes == null ? List.<TypeUsage>of() : paramTypes.map(marshaller::unmarshal).toList();
+        final var typeList = paramTypes == null
+            ? List.<Optional<TypeUsage>>of()
+            : paramTypes.map(mt -> Optional.<TypeUsage>ofNullable(marshaller.unmarshal(mt))).toList();
         final var nameList = paramNames == null ? List.<String>of() : paramNames.toList();
         this.parameters = IntStream.range(0, Math.min(typeList.size(), nameList.size()))
             .mapToObj(i -> new LambdaParameter(typeList.get(i), nameList.get(i)))
@@ -91,7 +94,7 @@ public final class Lambda
                            final Out<Stream<String>> paramNames,
                            final Out<Marshalled<Statement>> body) {
         super.destructor(marshaller, traits);
-        paramTypes.set(this.parameters.stream().map(p -> marshaller.marshal(p.type())));
+        paramTypes.set(this.parameters.stream().map(p -> marshaller.marshal(p.type().orElse(null))));
         paramNames.set(this.parameters.stream().map(LambdaParameter::name));
         body.set(marshaller.marshal(this.body));
     }
