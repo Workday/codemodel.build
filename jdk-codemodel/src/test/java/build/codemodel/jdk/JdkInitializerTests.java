@@ -1,7 +1,9 @@
 package build.codemodel.jdk;
 
+import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.naming.NonCachingNameProvider;
 import build.codemodel.foundation.usage.AnnotationTypeUsage;
+import build.codemodel.foundation.usage.UnknownTypeUsage;
 import build.codemodel.objectoriented.descriptor.AccessModifier;
 import build.codemodel.objectoriented.descriptor.Classification;
 import build.codemodel.objectoriented.descriptor.ConstructorDescriptor;
@@ -10,7 +12,9 @@ import build.codemodel.objectoriented.descriptor.MethodDescriptor;
 import com.google.testing.compile.JavaFileObjects;
 import org.junit.jupiter.api.Test;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.PrintStream;
 import java.util.List;
 import java.util.Optional;
 
@@ -140,6 +144,41 @@ class JdkInitializerTests {
             .as("x is final").isTrue();
         assertThat(params.get(1).hasTrait(build.codemodel.jdk.descriptor.Final.class))
             .as("y is not final").isFalse();
+    }
+
+    @Test
+    void shouldNotWriteJavacErrorsToStderrWhenSourceReferencesUnresolvableType() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Foo",
+            """
+            package com.example;
+            public class Foo {
+                private com.example.Missing dependency;
+            }
+            """);
+
+        final var captured = new ByteArrayOutputStream();
+        final var original = System.err;
+        System.setErr(new PrintStream(captured));
+        final CodeModel codeModel;
+        try {
+            codeModel = runInternal(new JdkInitializer(List.of(), List.of(), List.of(source)));
+        } finally {
+            System.setErr(original);
+        }
+
+        assertThat(captured.toString())
+            .as("javac diagnostics must not leak to stderr")
+            .isEmpty();
+
+        // analysis still completed — Foo was discovered and the unresolvable field type degraded gracefully
+        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
+        final var field = descriptor.traits(FieldDescriptor.class)
+            .filter(f -> f.fieldName().toString().equals("dependency"))
+            .findFirst()
+            .orElseThrow();
+        assertThat(field.type()).isInstanceOf(UnknownTypeUsage.class);
     }
 
     @Test
