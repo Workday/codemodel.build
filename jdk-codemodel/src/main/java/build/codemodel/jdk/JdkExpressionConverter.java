@@ -42,6 +42,7 @@ import build.codemodel.expression.NumericLiteral;
 import build.codemodel.expression.StringLiteral;
 import build.codemodel.expression.Subtraction;
 import build.codemodel.foundation.CodeModel;
+import build.codemodel.foundation.usage.NamedTypeUsage;
 import build.codemodel.foundation.usage.TypeUsage;
 import build.codemodel.foundation.usage.UnknownTypeUsage;
 import build.codemodel.imperative.Block;
@@ -67,11 +68,13 @@ import build.codemodel.jdk.expression.PostfixOperator;
 import build.codemodel.jdk.expression.PostfixUnary;
 import build.codemodel.jdk.expression.PrefixOperator;
 import build.codemodel.jdk.expression.PrefixUnary;
+import build.codemodel.jdk.expression.ResolvedMethod;
 import build.codemodel.jdk.expression.SwitchExpression;
 import build.codemodel.jdk.expression.Symbol;
 import build.codemodel.jdk.expression.Ternary;
 import build.codemodel.jdk.expression.UnknownExpression;
 import build.codemodel.jdk.statement.ExpressionStatement;
+import build.codemodel.objectoriented.descriptor.MethodDescriptor;
 import com.sun.source.tree.ArrayAccessTree;
 import com.sun.source.tree.AssignmentTree;
 import com.sun.source.tree.BinaryTree;
@@ -104,6 +107,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 
@@ -259,6 +264,61 @@ public class JdkExpressionConverter
         });
     }
 
+    private Optional<ResolvedMethod> resolveMethod(final MethodInvocationTree t) {
+        if (trees == null || compilationUnit == null || typeResolver == null) {
+            return Optional.empty();
+        }
+        try {
+            final var selectPath = TreePath.getPath(compilationUnit, t.getMethodSelect());
+            if (selectPath == null) {
+                return Optional.empty();
+            }
+            final var element = trees.getElement(selectPath);
+            if (!(element instanceof ExecutableElement executableElement)) {
+                return Optional.empty();
+            }
+            if (!(executableElement.getEnclosingElement() instanceof TypeElement typeElement)) {
+                return Optional.empty();
+            }
+            final var fqn = typeElement.getQualifiedName().toString();
+            final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), fqn);
+            final var typeDescriptor = codeModel.getTypeDescriptor(typeName).orElse(null);
+            if (typeDescriptor == null) {
+                return Optional.empty();
+            }
+            final var simpleName = executableElement.getSimpleName().toString();
+            final var arity = executableElement.getParameters().size();
+            final var paramTypes = executableElement.getParameters().stream()
+                .map(p -> typeResolver.apply(p.asType()))
+                .toList();
+            return typeDescriptor.traits(MethodDescriptor.class)
+                .filter(md -> md.methodName().name().toString().equals(simpleName))
+                .filter(md -> md.getFormalParameterCount() == arity)
+                .filter(md -> parametersMatch(md, paramTypes))
+                .findFirst()
+                .map(ResolvedMethod::new);
+        } catch (final Exception e) {
+            return Optional.empty();
+        }
+    }
+
+    private boolean parametersMatch(final MethodDescriptor md, final List<TypeUsage> paramTypes) {
+        final var formals = md.formalParameters().toList();
+        for (int i = 0; i < formals.size(); i++) {
+            if (!typeUsageNamesMatch(formals.get(i).type(), paramTypes.get(i))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean typeUsageNamesMatch(final TypeUsage a, final TypeUsage b) {
+        if (a instanceof NamedTypeUsage na && b instanceof NamedTypeUsage nb) {
+            return na.typeName().canonicalName().equals(nb.typeName().canonicalName());
+        }
+        return a.toString().equals(b.toString());
+    }
+
     @Override
     public Expression visitMethodInvocation(final MethodInvocationTree t, final Void v) {
         final Expression target;
@@ -277,8 +337,10 @@ public class JdkExpressionConverter
         final var args = t.getArguments().stream()
             .map(this::convert)
             .toList();
-        return MethodInvocation.of(codeModel, Optional.ofNullable(target), methodName, args.stream(),
-            receiverType);
+        final var invocation = MethodInvocation.of(codeModel, Optional.ofNullable(target), methodName,
+            args.stream(), receiverType);
+        resolveMethod(t).ifPresent(invocation::addTrait);
+        return invocation;
     }
 
     TypeUsage resolveTypeUsage(final Tree typeTree) {
