@@ -68,6 +68,7 @@ import build.codemodel.jdk.expression.PostfixUnary;
 import build.codemodel.jdk.expression.PrefixOperator;
 import build.codemodel.jdk.expression.PrefixUnary;
 import build.codemodel.jdk.expression.SwitchExpression;
+import build.codemodel.jdk.expression.Symbol;
 import build.codemodel.jdk.expression.Ternary;
 import build.codemodel.jdk.expression.UnknownExpression;
 import build.codemodel.jdk.statement.ExpressionStatement;
@@ -102,6 +103,7 @@ import com.sun.source.util.Trees;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
+import javax.lang.model.element.Element;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 
@@ -218,7 +220,43 @@ public class JdkExpressionConverter
 
     @Override
     public Expression visitIdentifier(final IdentifierTree t, final Void v) {
-        return Identifier.of(codeModel, t.getName().toString());
+        final var identifier = Identifier.of(codeModel, t.getName().toString());
+        resolveSymbol(t).ifPresent(identifier::addTrait);
+        return identifier;
+    }
+
+    private Optional<Symbol> resolveSymbol(final IdentifierTree t) {
+        if (trees == null || compilationUnit == null) {
+            return Optional.empty();
+        }
+        final var name = t.getName().toString();
+        final var path = trees.getPath(compilationUnit, t);
+        if (path == null) {
+            return Optional.empty();
+        }
+        final var typeMirror = trees.getTypeMirror(path);
+        final TypeUsage typeUsage = typeMirror != null && typeMirror.getKind() != TypeKind.ERROR
+            ? typeResolver.apply(typeMirror)
+            : UnknownTypeUsage.create(codeModel);
+
+        if ("this".equals(name)) {
+            return Optional.of(new Symbol.ThisReference(typeUsage));
+        }
+        if ("super".equals(name)) {
+            return Optional.of(new Symbol.SuperReference(typeUsage));
+        }
+
+        final Element element = trees.getElement(path);
+        if (element == null) {
+            return Optional.empty();
+        }
+        return Optional.ofNullable(switch (element.getKind()) {
+            case LOCAL_VARIABLE -> new Symbol.LocalVariable(typeUsage);
+            case PARAMETER -> new Symbol.Parameter(typeUsage);
+            case FIELD, ENUM_CONSTANT -> new Symbol.Field(typeUsage);
+            case CLASS, INTERFACE, ENUM, ANNOTATION_TYPE, RECORD -> new Symbol.TypeReference(typeUsage);
+            default -> null;
+        });
     }
 
     @Override
