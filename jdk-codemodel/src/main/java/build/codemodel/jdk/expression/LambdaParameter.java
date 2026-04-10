@@ -22,13 +22,21 @@ package build.codemodel.jdk.expression;
 
 import build.codemodel.foundation.usage.TypeUsage;
 
+import java.util.Optional;
+
 /**
  * A parameter of a lambda expression, with its resolved {@link TypeUsage} and parameter name.
  *
- * @param type the resolved {@link TypeUsage} of the parameter
+ * <p>For explicitly-annotated parameters the type is always present (resolving to
+ * {@link build.codemodel.foundation.usage.UnknownTypeUsage} on failure). For implicitly-typed
+ * parameters the type is present when javac's inferred type is reachable, and empty when it
+ * is not — distinguishing "no annotation and inference unavailable" from "annotation present
+ * but unresolvable".
+ *
+ * @param type an {@link Optional} resolved {@link TypeUsage} of the parameter
  * @param name the parameter name
  * @author reed.vonredwitz
  * @since Apr-2026
  */
-public record LambdaParameter(TypeUsage type, String name) {
+public record LambdaParameter(Optional<TypeUsage> type, String name) {
 }
