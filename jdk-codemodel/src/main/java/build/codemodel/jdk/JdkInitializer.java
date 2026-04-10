@@ -9,9 +9,9 @@ package build.codemodel.jdk;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -23,7 +23,9 @@ package build.codemodel.jdk;
 import build.base.foundation.Lazy;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.FormalParameterDescriptor;
+import build.codemodel.foundation.descriptor.RequiresModuleDescriptor;
 import build.codemodel.foundation.descriptor.ThrowableDescriptor;
+import build.codemodel.foundation.naming.ModuleName;
 import build.codemodel.foundation.naming.NameProvider;
 import build.codemodel.foundation.usage.AnnotationTypeUsage;
 import build.codemodel.foundation.usage.AnnotationValue;
@@ -44,6 +46,7 @@ import build.codemodel.jdk.descriptor.AnnotationType;
 import build.codemodel.jdk.descriptor.EnclosingTypeDescriptor;
 import build.codemodel.jdk.descriptor.EnumConstantDescriptor;
 import build.codemodel.jdk.descriptor.EnumType;
+import build.codemodel.jdk.descriptor.ExportsDescriptor;
 import build.codemodel.jdk.descriptor.FieldInitializerDescriptor;
 import build.codemodel.jdk.descriptor.Final;
 import build.codemodel.jdk.descriptor.JDKClassTypeDescriptor;
@@ -51,9 +54,14 @@ import build.codemodel.jdk.descriptor.JDKInterfaceTypeDescriptor;
 import build.codemodel.jdk.descriptor.JDKTypeDescriptor;
 import build.codemodel.jdk.descriptor.MethodBodyDescriptor;
 import build.codemodel.jdk.descriptor.MethodImplementationDescriptor;
+import build.codemodel.jdk.descriptor.OpenModule;
+import build.codemodel.jdk.descriptor.OpensDescriptor;
+import build.codemodel.jdk.descriptor.ProvidesDescriptor;
 import build.codemodel.jdk.descriptor.RecordComponentDescriptor;
 import build.codemodel.jdk.descriptor.RecordType;
+import build.codemodel.jdk.descriptor.RequiresModifier;
 import build.codemodel.jdk.descriptor.Static;
+import build.codemodel.jdk.descriptor.UsesDescriptor;
 import build.codemodel.objectoriented.descriptor.AccessModifier;
 import build.codemodel.objectoriented.descriptor.Classification;
 import build.codemodel.objectoriented.descriptor.ConstructorDescriptor;
@@ -65,7 +73,14 @@ import build.codemodel.objectoriented.descriptor.ParameterizedTypeDescriptor;
 import build.codemodel.objectoriented.naming.MethodName;
 import com.sun.source.tree.ClassTree;
 import com.sun.source.tree.CompilationUnitTree;
+import com.sun.source.tree.ExportsTree;
+import com.sun.source.tree.ExpressionTree;
 import com.sun.source.tree.MethodTree;
+import com.sun.source.tree.ModuleTree;
+import com.sun.source.tree.OpensTree;
+import com.sun.source.tree.ProvidesTree;
+import com.sun.source.tree.RequiresTree;
+import com.sun.source.tree.UsesTree;
 import com.sun.source.tree.VariableTree;
 import com.sun.source.util.JavacTask;
 import com.sun.source.util.TreePath;
@@ -83,6 +98,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
@@ -216,7 +232,8 @@ public class JdkInitializer
                 return;
             }
 
-            final var task = compiler.getTask(null, fileManager, diagnostic -> {}, buildOptions(), null, combined);
+            final var task = compiler.getTask(null, fileManager, diagnostic -> {
+            }, buildOptions(), null, combined);
             final var javacTask = (JavacTask) task;
             final var compilationUnits = javacTask.parse();
             javacTask.analyze();
@@ -234,11 +251,70 @@ public class JdkInitializer
                         final TreePath classPath = trees.getPath(cut, classTree);
                         final var typeElement = (TypeElement) trees.getElement(classPath);
                         if (typeElement != null
-                                && !typeElement.getQualifiedName().toString().isEmpty()) {
+                            && !typeElement.getQualifiedName().toString().isEmpty()) {
                             exprConverter.setEnclosingType(resolveTypeUsage(typeElement.asType(), null));
                             processTypeElement(typeElement, classTree, cut);
                         }
                         return super.visitClass(classTree, unused);
+                    }
+
+                    @Override
+                    public Void visitModule(final ModuleTree moduleTree, final Void unused) {
+                        nameProvider.getModuleName(moduleTree.getName().toString()).ifPresent(moduleName -> {
+                            final var descriptor = codeModel.createModuleDescriptor(moduleName);
+
+                            if (moduleTree.getModuleType() == ModuleTree.ModuleKind.OPEN) {
+                                descriptor.addTrait(OpenModule.OPEN);
+                            }
+
+                            for (final var directive : moduleTree.getDirectives()) {
+                                switch (directive.getKind()) {
+                                    case REQUIRES -> {
+                                        final var req = (RequiresTree) directive;
+                                        nameProvider.getModuleName(req.getModuleName().toString())
+                                            .ifPresent(reqName -> {
+                                                final var reqDescriptor = RequiresModuleDescriptor.of(codeModel, reqName);
+                                                if (req.isTransitive()) {
+                                                    reqDescriptor.addTrait(RequiresModifier.TRANSITIVE);
+                                                }
+                                                if (req.isStatic()) {
+                                                    reqDescriptor.addTrait(RequiresModifier.STATIC);
+                                                }
+                                                descriptor.addTrait(reqDescriptor);
+                                            });
+                                    }
+                                    case EXPORTS -> {
+                                        final var exp = (ExportsTree) directive;
+                                        nameProvider.getNamespace(exp.getPackageName().toString())
+                                            .ifPresent(pkg -> descriptor.addTrait(ExportsDescriptor.of(
+                                                pkg, resolveModuleNames(exp.getModuleNames()))));
+                                    }
+                                    case OPENS -> {
+                                        final var opens = (OpensTree) directive;
+                                        nameProvider.getNamespace(opens.getPackageName().toString())
+                                            .ifPresent(pkg -> descriptor.addTrait(OpensDescriptor.of(
+                                                pkg, resolveModuleNames(opens.getModuleNames()))));
+                                    }
+                                    case PROVIDES -> {
+                                        final var provides = (ProvidesTree) directive;
+                                        final var service = SpecificTypeUsage.of(codeModel,
+                                            nameProvider.getTypeName(Optional.empty(), provides.getServiceName().toString()));
+                                        final var impls = provides.getImplementationNames().stream()
+                                            .map(n -> (TypeUsage) SpecificTypeUsage.of(codeModel,
+                                                nameProvider.getTypeName(Optional.empty(), n.toString())));
+                                        descriptor.addTrait(ProvidesDescriptor.of(service, impls));
+                                    }
+                                    case USES -> {
+                                        final var uses = (UsesTree) directive;
+                                        final var service = SpecificTypeUsage.of(codeModel,
+                                            nameProvider.getTypeName(Optional.empty(), uses.getServiceName().toString()));
+                                        descriptor.addTrait(UsesDescriptor.of(service));
+                                    }
+                                    default -> { /* version directive — not modelled */ }
+                                }
+                            }
+                        });
+                        return null;
                     }
                 }, null);
             }
@@ -247,6 +323,19 @@ public class JdkInitializer
             initialized = false;
             throw new RuntimeException("Failed to initialize CodeModel from source files", e);
         }
+    }
+
+    // --- Module helpers ---
+
+    private Stream<ModuleName> resolveModuleNames(
+        final List<? extends ExpressionTree> trees) {
+        if (trees == null) {
+            return Stream.of();
+        }
+        return trees.stream()
+            .map(t -> nameProvider.getModuleName(t.toString()))
+            .filter(Optional::isPresent)
+            .map(Optional::get);
     }
 
     // --- Compiler options ---
@@ -352,8 +441,8 @@ public class JdkInitializer
         final var upperBound = typeVar.getUpperBound();
         final Optional<Lazy<TypeUsage>> optUpper;
         if (upperBound.getKind() == TypeKind.DECLARED
-                && ((TypeElement) ((DeclaredType) upperBound).asElement())
-                    .getQualifiedName().toString().equals("java.lang.Object")) {
+            && ((TypeElement) ((DeclaredType) upperBound).asElement())
+            .getQualifiedName().toString().equals("java.lang.Object")) {
             optUpper = Optional.empty();
         } else {
             optUpper = Optional.of(Lazy.of(resolveTypeUsage(upperBound, enclosingElement)));
@@ -379,7 +468,7 @@ public class JdkInitializer
         }
         // java.lang.Object is the implicit superclass of every class; omit it per plan invariant
         if (superMirror instanceof DeclaredType dt
-                && ((TypeElement) dt.asElement()).getQualifiedName().toString().equals("java.lang.Object")) {
+            && ((TypeElement) dt.asElement()).getQualifiedName().toString().equals("java.lang.Object")) {
             return;
         }
         final var superUsage = resolveTypeUsage(superMirror, typeElement);
@@ -431,7 +520,7 @@ public class JdkInitializer
     }
 
     private void addEnumConstants(final JDKTypeDescriptor typeDescriptor,
-                                   final TypeElement typeElement) {
+                                  final TypeElement typeElement) {
         typeElement.getEnclosedElements().stream()
             .filter(e -> e.getKind() == ElementKind.ENUM_CONSTANT)
             .map(VariableElement.class::cast)
@@ -442,7 +531,7 @@ public class JdkInitializer
     }
 
     private void addRecordComponents(final JDKTypeDescriptor typeDescriptor,
-                                      final TypeElement typeElement) {
+                                     final TypeElement typeElement) {
         for (final RecordComponentElement component : typeElement.getRecordComponents()) {
             final var name = nameProvider.getIrreducibleName(component.getSimpleName());
             final var type = resolveTypeUsage(component.asType(), component);
@@ -571,7 +660,7 @@ public class JdkInitializer
      * {@code trees.getElement(TreePath)} always resolves from the source tree.
      */
     private HashMap<Element, MethodTree> buildMethodTreeMap(final ClassTree classTree,
-                                                             final CompilationUnitTree cut) {
+                                                            final CompilationUnitTree cut) {
         final var map = new HashMap<Element, MethodTree>();
         if (classTree == null || cut == null) {
             return map;
@@ -594,7 +683,7 @@ public class JdkInitializer
      * Builds an element→VariableTree map for fields from the class tree using tree-side lookup.
      */
     private HashMap<Element, VariableTree> buildFieldTreeMap(final ClassTree classTree,
-                                                              final CompilationUnitTree cut) {
+                                                             final CompilationUnitTree cut) {
         final var map = new HashMap<Element, VariableTree>();
         if (classTree == null || cut == null) {
             return map;
@@ -628,7 +717,7 @@ public class JdkInitializer
     // --- Annotation creation ---
 
     private AnnotationTypeUsage createAnnotationTypeUsage(final Element enclosing,
-                                                           final AnnotationMirror mirror) {
+                                                          final AnnotationMirror mirror) {
         final var annotationTypeName = resolveElementTypeName(mirror.getAnnotationType().asElement());
         final var values = new ArrayList<AnnotationValue>();
         mirror.getElementValues().forEach((exec, val) -> {
@@ -653,14 +742,14 @@ public class JdkInitializer
     private static Optional<AccessModifier> getAccessModifier(final Collection<? extends Modifier> modifiers) {
         for (final var m : modifiers) {
             switch (m) {
-            case PUBLIC:
-                return Optional.of(AccessModifier.PUBLIC);
-            case PROTECTED:
-                return Optional.of(AccessModifier.PROTECTED);
-            case PRIVATE:
-                return Optional.of(AccessModifier.PRIVATE);
-            default:
-                break;
+                case PUBLIC:
+                    return Optional.of(AccessModifier.PUBLIC);
+                case PROTECTED:
+                    return Optional.of(AccessModifier.PROTECTED);
+                case PRIVATE:
+                    return Optional.of(AccessModifier.PRIVATE);
+                default:
+                    break;
             }
         }
         return Optional.empty();
