@@ -193,7 +193,7 @@ public class JdkInitializer
                 return;
             }
 
-            final var task = compiler.getTask(null, fileManager, null, null, null, combined);
+            final var task = compiler.getTask(null, fileManager, diagnostic -> {}, null, null, combined);
             final var javacTask = (JavacTask) task;
             final var compilationUnits = javacTask.parse();
             javacTask.analyze();
