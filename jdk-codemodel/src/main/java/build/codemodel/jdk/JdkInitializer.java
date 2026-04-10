@@ -124,6 +124,8 @@ public class JdkInitializer
     private final List<File> sourceFiles;
     private final List<Path> sourceDirectories;
     private final List<JavaFileObject> javaFileObjects;
+    private final List<Path> classpath;
+    private final List<Path> modulePath;
 
     private boolean initialized = false;
 
@@ -137,16 +139,37 @@ public class JdkInitializer
     /**
      * Creates a {@link JdkInitializer} with explicit source inputs.
      *
-     * @param sourceFiles      individual {@link File} source files to parse
+     * @param sourceFiles       individual {@link File} source files to parse
      * @param sourceDirectories directories to walk recursively for {@code .java} files
-     * @param javaFileObjects  in-memory or pre-built {@link JavaFileObject} sources
+     * @param javaFileObjects   in-memory or pre-built {@link JavaFileObject} sources
      */
     public JdkInitializer(final List<File> sourceFiles,
                           final List<Path> sourceDirectories,
                           final List<JavaFileObject> javaFileObjects) {
+        this(sourceFiles, sourceDirectories, javaFileObjects, List.of(), List.of());
+    }
+
+    /**
+     * Creates a {@link JdkInitializer} with explicit source inputs and dependency paths.
+     * Callers are responsible for assembling the classpath and module-path lists; this class
+     * does no jar classification or module dependency resolution.
+     *
+     * @param sourceFiles       individual {@link File} source files to parse
+     * @param sourceDirectories directories to walk recursively for {@code .java} files
+     * @param javaFileObjects   in-memory or pre-built {@link JavaFileObject} sources
+     * @param classpath         jars or directories to pass as {@code --class-path}
+     * @param modulePath        jars or directories to pass as {@code --module-path}
+     */
+    public JdkInitializer(final List<File> sourceFiles,
+                          final List<Path> sourceDirectories,
+                          final List<JavaFileObject> javaFileObjects,
+                          final List<Path> classpath,
+                          final List<Path> modulePath) {
         this.sourceFiles = sourceFiles;
         this.sourceDirectories = sourceDirectories;
         this.javaFileObjects = javaFileObjects;
+        this.classpath = classpath;
+        this.modulePath = modulePath;
     }
 
     /**
@@ -193,7 +216,7 @@ public class JdkInitializer
                 return;
             }
 
-            final var task = compiler.getTask(null, fileManager, diagnostic -> {}, null, null, combined);
+            final var task = compiler.getTask(null, fileManager, diagnostic -> {}, buildOptions(), null, combined);
             final var javacTask = (JavacTask) task;
             final var compilationUnits = javacTask.parse();
             javacTask.analyze();
@@ -224,6 +247,25 @@ public class JdkInitializer
             initialized = false;
             throw new RuntimeException("Failed to initialize CodeModel from source files", e);
         }
+    }
+
+    // --- Compiler options ---
+
+    private List<String> buildOptions() {
+        final var options = new ArrayList<String>();
+        if (!classpath.isEmpty()) {
+            options.add("--class-path");
+            options.add(classpath.stream()
+                .map(Path::toString)
+                .collect(Collectors.joining(File.pathSeparator)));
+        }
+        if (!modulePath.isEmpty()) {
+            options.add("--module-path");
+            options.add(modulePath.stream()
+                .map(Path::toString)
+                .collect(Collectors.joining(File.pathSeparator)));
+        }
+        return options.isEmpty() ? null : options;
     }
 
     // --- Source collection ---

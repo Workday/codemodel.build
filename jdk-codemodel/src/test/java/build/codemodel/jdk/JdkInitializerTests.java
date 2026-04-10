@@ -15,8 +15,11 @@ import org.junit.jupiter.api.Test;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.PrintStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
+import javax.tools.ToolProvider;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -179,6 +182,45 @@ class JdkInitializerTests {
             .findFirst()
             .orElseThrow();
         assertThat(field.type()).isInstanceOf(UnknownTypeUsage.class);
+    }
+
+    @Test
+    void shouldResolveTypesFromClasspath() throws Exception {
+        // Compile a helper class to a temp directory, then pass that directory as the classpath.
+        // Without classpath support the field type would be UnknownTypeUsage.
+        final Path classpathDir = Files.createTempDirectory("jdk-initializer-test-cp");
+
+        final var helperSource = JavaFileObjects.forSourceString(
+            "com.example.Helper",
+            "package com.example; public class Helper {}");
+        final var compiler = ToolProvider.getSystemJavaCompiler();
+        try (final var fm = compiler.getStandardFileManager(null, null, null)) {
+            compiler.getTask(null, fm, diagnostic -> {},
+                List.of("-d", classpathDir.toString()), null, List.of(helperSource)).call();
+        }
+
+        final var consumer = JavaFileObjects.forSourceString(
+            "com.example.Consumer",
+            """
+            package com.example;
+            public class Consumer {
+                private com.example.Helper helper;
+            }
+            """);
+
+        final var codeModel = runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(consumer), List.of(classpathDir), List.of()));
+
+        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Consumer");
+        final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
+        final var field = descriptor.traits(FieldDescriptor.class)
+            .filter(f -> f.fieldName().toString().equals("helper"))
+            .findFirst()
+            .orElseThrow();
+
+        assertThat(field.type())
+            .as("type from classpath entry should resolve, not degrade to UnknownTypeUsage")
+            .isNotInstanceOf(UnknownTypeUsage.class);
     }
 
     @Test
