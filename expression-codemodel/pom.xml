@@ -30,12 +30,6 @@
 
         <dependency>
             <groupId>build.base</groupId>
-            <artifactId>base-io</artifactId>
-            <version>${base.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>build.base</groupId>
             <artifactId>base-marshalling</artifactId>
             <version>${base.version}</version>
         </dependency>
@@ -82,4 +76,24 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>analyze-dependencies</id>
+                        <configuration>
+                            <ignoredNonTestScopedDependencies>
+                                <!-- Required in module-info.java for JPMS test access, but only used in tests -->
+                                <ignoredNonTestScopedDependency>build.base:base-parsing</ignoredNonTestScopedDependency>
+                            </ignoredNonTestScopedDependencies>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 </project>

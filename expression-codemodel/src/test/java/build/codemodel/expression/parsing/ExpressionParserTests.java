@@ -31,6 +31,8 @@ import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.ConceptualCodeModel;
 import build.codemodel.foundation.naming.CachingNameProvider;
 import build.codemodel.foundation.naming.IrreducibleName;
+import build.base.parsing.ExpressionParser;
+import build.base.parsing.ExpressionParserException;
 import build.codemodel.foundation.naming.NonCachingNameProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -45,8 +47,8 @@ import java.math.BigDecimal;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
@@ -54,7 +56,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  */
 public class ExpressionParserTests {
 
-    private ExpressionParser parser;
+    private ExpressionParser<Expression> parser;
     private CodeModel codeModel;
 
     /**
@@ -65,7 +67,7 @@ public class ExpressionParserTests {
         final var javaNameProvider = new CachingNameProvider(new NonCachingNameProvider());
         codeModel = new ConceptualCodeModel(javaNameProvider);
 
-        parser = new ExpressionParser(codeModel);
+        parser = new ExpressionParser<>();
 
         parser.defineSection("(", ")");
         parser.defineAtom("[0-9]+([.][0-9]+)?", token -> NumericLiteral.of(codeModel, new BigDecimal(token.value())));
@@ -102,7 +104,7 @@ public class ExpressionParserTests {
     }
 
     /**
-     * Ensures that an empty expression is correctly parsed as an {@link EmptyExpression}.
+     * Ensures that an empty expression is correctly parsed as {@code null}.
      */
     @ParameterizedTest
     @NullSource
@@ -110,7 +112,7 @@ public class ExpressionParserTests {
     void shouldParseAnEmptyExpression(String expr)
     {
         final var result = parser.parse(expr);
-        assertInstanceOf(EmptyExpression.class, result);
+        assertNull(result);
     }
 
     /**
