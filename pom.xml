@@ -64,11 +64,12 @@
 
         <!-- Platform Versions -->
         <java.version>25</java.version>
+        <maven.version>3.9.14</maven.version>
 
         <!-- Module Dependency Versions -->
         <assertj.version>3.27.7</assertj.version>
         <auto-service.version>1.1.1</auto-service.version>
-        <base.version>0.21.5</base.version>
+        <base.version>0.22.0</base.version>
         <byte-buddy.version>1.18.4</byte-buddy.version>
         <compile-testing.version>0.23.0</compile-testing.version>
         <guava.version>33.4.8-jre</guava.version>
@@ -82,7 +83,6 @@
         <maven-central-publishing-plugin.version>0.10.0</maven-central-publishing-plugin.version>
         <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
         <checkstyle.version>13.3.0</checkstyle.version>
-        <maven.version>3.9.14</maven.version>
         <maven-dependency-plugin.version>3.10.0</maven-dependency-plugin.version>
         <maven-enforcer-plugin.version>3.6.2</maven-enforcer-plugin.version>
         <maven-flatten-plugin.version>1.7.3</maven-flatten-plugin.version>

@@ -26,13 +26,10 @@
 module build.codemodel.expression {
     requires build.codemodel.foundation;
     requires build.base.parsing;
-    requires build.base.io;
     requires build.base.marshalling;
     requires build.base.foundation;
 
     exports build.codemodel.expression;
     exports build.codemodel.expression.naming;
     exports build.codemodel.expression.parsing;
-    exports build.codemodel.expression.parsing.resolvers;
-    exports build.codemodel.expression.parsing.tokenparsers;
 }

@@ -1,5 +1,6 @@
 package build.codemodel.expression.parsing;
 
+import build.base.parsing.TemplateParser;
 import build.codemodel.expression.Expression;
 import build.codemodel.expression.StringLiteral;
 import build.codemodel.expression.VariableUsage;
@@ -9,6 +10,8 @@ import build.codemodel.foundation.ConceptualCodeModel;
 import build.codemodel.foundation.naming.CachingNameProvider;
 import build.codemodel.foundation.naming.IrreducibleName;
 import build.codemodel.foundation.naming.NonCachingNameProvider;
+
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -22,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class TemplateParserTests {
 
-    static private TemplateParser parser;
+    static private TemplateParser<Expression> parser;
     static private CodeModel codeModel;
 
     /**
@@ -33,7 +36,12 @@ public class TemplateParserTests {
         final var javaNameProvider = new CachingNameProvider(new NonCachingNameProvider());
         codeModel = new ConceptualCodeModel(javaNameProvider);
 
-        parser = new TemplateParser(codeModel);
+        parser = new TemplateParser<>((prev, curr) -> {
+            if (prev instanceof StringLiteral sl1 && curr instanceof StringLiteral sl2) {
+                return Optional.of(StringLiteral.of(sl1.codeModel(), sl1.value() + sl2.value()));
+            }
+            return Optional.empty();
+        });
 
         parser.defineAtom("\\[\\[", _ -> StringLiteral.of(codeModel, "["));
         parser.defineAtom("\\[[^]]+\\]", token -> VariableUsage.of(codeModel, VariableName.of(IrreducibleName.of(token.trimFirstAndLast()))));
@@ -51,7 +59,7 @@ public class TemplateParserTests {
 
         for (var i = 0; i < expected.size(); i++) {
             final var expectedExpression = expected.get(i);
-            final var actualExpression = result.expressions().get(i);
+            final var actualExpression = result.get(i);
             assertEquals(expectedExpression, actualExpression);
         }
     }
