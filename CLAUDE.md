@@ -4,15 +4,15 @@
 
 `codemodel.build` is a language-agnostic Java code model framework (Workday, Inc.) that provides a structured, serializable representation of software systems. A `CodeModel` can be populated from compiled classes (via reflection) or `.java` source files (via javac), then enriched, validated, and compiled through a plugin pipeline. It is the foundation for annotation processors and code generation tools.
 
-**Stack:** Java 25, Maven multi-module, Jakarta Inject, custom marshalling framework, Pratt-parser expression engine, JSR-330 DI implementation.
+**Stack:** Java 25, Maven multi-module, Jakarta Inject, custom marshalling framework (`build.base:base-marshalling`), Pratt-parser via `build.base:base-parsing`, JSR-330 DI implementation.
 
 **Structure:**
 - `codemodel-foundation` — core `TypeDescriptor`/`TypeUsage`/`Trait` system + naming + marshalling
-- `expression-codemodel` — expression AST nodes + extensible operator-precedence parser
+- `expression-codemodel` — expression AST nodes + Pratt-parser (via external `base-parsing` library)
 - `hierarchical-codemodel` — type hierarchy (ancestors, descendants, assignability)
 - `imperative-codemodel` — statement AST nodes (Block, If, While, Return)
 - `objectoriented-codemodel` — OOP traits (fields, methods, constructors, access modifiers)
-- `jdk-codemodel` — JDK-backed impl via reflection (`JDKCodeModel`) or javac (`JdkInitializer`)
+- `jdk-codemodel` — JDK-backed impl via reflection (`JDKCodeModel`) or javac (`JdkInitializer`); symbol resolution, method resolution to `MethodDescriptor`, JPMS module-info parsing
 - `dependency-injection` — custom JSR-330 DI built on `jdk-codemodel`
 - `codemodel-framework` — pipeline interfaces (Enricher, TypeChecker, Compiler, Completer)
 - `codemodel-framework-builder` — concrete `FrameworkBuilder` + `InternalFramework`
