@@ -33,7 +33,8 @@ import java.util.function.Supplier;
  */
 public final class Modules {
 
-    private Modules() {}
+    private Modules() {
+    }
 
     /**
      * Returns a {@link Module} whose bindings are {@code base}'s bindings with {@code overrides} winning on
@@ -95,8 +96,7 @@ public final class Modules {
         public Binding<T> to(final T value) {
             try {
                 return this.delegate.to(value);
-            }
-            catch (final BindingAlreadyExistsException ignored) {
+            } catch (final BindingAlreadyExistsException ignored) {
                 return null;
             }
         }
@@ -105,8 +105,7 @@ public final class Modules {
         public Binding<T> to(final Class<? extends T> bindingValueClass) {
             try {
                 return this.delegate.to(bindingValueClass);
-            }
-            catch (final BindingAlreadyExistsException ignored) {
+            } catch (final BindingAlreadyExistsException ignored) {
                 return null;
             }
         }
@@ -115,8 +114,7 @@ public final class Modules {
         public Binding<T> to(final Supplier<T> supplier) {
             try {
                 return this.delegate.to(supplier);
-            }
-            catch (final BindingAlreadyExistsException ignored) {
+            } catch (final BindingAlreadyExistsException ignored) {
                 return null;
             }
         }

@@ -30,9 +30,9 @@ package build.codemodel.injection;
  * bindings from the other.
  *
  * @author reed.vonredwitz
- * @since Apr-2026
  * @see Modules
  * @see Binder#install(Module)
+ * @since Apr-2026
  */
 @FunctionalInterface
 public interface Module {
