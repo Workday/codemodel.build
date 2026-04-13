@@ -9,9 +9,9 @@ package build.codemodel.injection;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,19 +21,26 @@ package build.codemodel.injection;
  */
 
 import build.base.foundation.Lazy;
+import build.codemodel.foundation.usage.GenericTypeUsage;
 import build.codemodel.foundation.usage.NamedTypeUsage;
 import build.codemodel.foundation.usage.TypeUsage;
+import build.codemodel.jdk.TypeUsages;
 import build.codemodel.jdk.descriptor.MethodType;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -56,6 +63,11 @@ class InjectionContext
     private final ConcurrentHashMap<Dependency, Binding<?>> bindingsByDependency;
 
     /**
+     * The multibinding entries keyed by element type.
+     */
+    private final ConcurrentHashMap<Class<?>, MultiBindingEntry<?>> multiBindings;
+
+    /**
      * The {@link Resolver} defined by the {@link Binding}s in this {@link Context}, so this {@link Context}
      * may be used to resolve {@link Binding}s of other {@link Context}s.
      */
@@ -76,9 +88,11 @@ class InjectionContext
         this.injectionFramework = Objects
             .requireNonNull(injectionFramework, "The Injection framework must not be null");
         this.bindingsByDependency = new ConcurrentHashMap<>();
+        this.multiBindings = new ConcurrentHashMap<>();
         this.chainedResolver = ChainedResolver.create();
         this.resolver = ChainedResolver.create(
             dependency -> Optional.ofNullable((Binding<Object>) this.bindingsByDependency.get(dependency)),
+            dependency -> (Optional<Binding<Object>>) (Optional<?>) resolveMultiBinding(dependency),
             chainedResolver);
     }
 
@@ -159,6 +173,68 @@ class InjectionContext
             return binding;
         });
         return binding;
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public <T> MultiBinder<T> bindSet(final Class<T> type) {
+        Objects.requireNonNull(type, "The element type must not be null");
+        final var entry = (MultiBindingEntry<T>) this.multiBindings
+            .computeIfAbsent(type, _ -> new MultiBindingEntry<T>());
+        return new MultiBinder<T>() {
+            @Override
+            public MultiBinder<T> add(final T value) {
+                entry.addValue(value);
+                return this;
+            }
+
+            @Override
+            public MultiBinder<T> add(final Class<? extends T> implementationClass) {
+                entry.addSupplier(() -> InjectionContext.this.create(implementationClass));
+                return this;
+            }
+
+            @Override
+            public MultiBinder<T> add(final Supplier<? extends T> supplier) {
+                entry.addSupplier(() -> supplier.get());
+                return this;
+            }
+        };
+    }
+
+    /**
+     * Attempts to resolve a multibinding for collection types ({@link Set}, {@link Collection},
+     * {@link Iterable}, {@link java.util.stream.Stream}, {@link List}).
+     *
+     * @param dependency the {@link Dependency} to resolve
+     * @return the resolved {@link Binding}, or empty if not a supported collection multibinding
+     */
+    @SuppressWarnings("unchecked")
+    private Optional<? extends Binding<?>> resolveMultiBinding(final Dependency dependency) {
+        if (!(dependency.typeUsage() instanceof GenericTypeUsage generic)) {
+            return Optional.empty();
+        }
+
+        final String rawName = generic.typeName().canonicalName();
+        if (!Set.class.getCanonicalName().equals(rawName)
+            && !Collection.class.getCanonicalName().equals(rawName)
+            && !Iterable.class.getCanonicalName().equals(rawName)
+            && !Stream.class.getCanonicalName().equals(rawName)
+            && !List.class.getCanonicalName().equals(rawName)) {
+            return Optional.empty();
+        }
+
+        return TypeUsages.getFirstTypeParameterClass(generic)
+            .map(elementClass -> (MultiBindingEntry<Object>) this.multiBindings.get(elementClass))
+            .map(entry -> switch (rawName) {
+                case "java.util.Set" -> ValueBinding.of(dependency, (Object) entry.buildSet());
+                case "java.util.Collection", "java.lang.Iterable" ->
+                    ValueBinding.of(dependency, (Object) (Collection<?>) entry.buildSet());
+                case "java.util.List" -> ValueBinding.of(dependency, (Object) List.copyOf(entry.buildSet()));
+                case "java.util.stream.Stream" ->
+                    new SupplierBinding<>(dependency, (Supplier<Object>) () -> entry.buildSet().stream());
+                default -> null;
+            });
     }
 
     @Override
@@ -249,8 +325,7 @@ class InjectionContext
 
         if (binding instanceof ValueBinding<Object> valueBinding) {
             return Optional.of((T) valueBinding.value());
-        }
-        else if (binding instanceof LazySingletonClassBinding<Object> lazySingletonClassBinding) {
+        } else if (binding instanceof LazySingletonClassBinding<Object> lazySingletonClassBinding) {
             final var concreteClass = lazySingletonClassBinding.concreteClass();
             final var singletonTypeUsage = codeModel.getTypeUsage(concreteClass);
             final var singletonDependency = IndependentDependency.of(
@@ -262,8 +337,7 @@ class InjectionContext
                     .resolve())
                 .map(object -> (T) object)
                 .optional();
-        }
-        else if (binding instanceof NonSingletonClassBinding<Object> nonSingletonClassBinding) {
+        } else if (binding instanceof NonSingletonClassBinding<Object> nonSingletonClassBinding) {
             return Optional.of(new ResolvableClass<T>(
                 requiredBy,
                 dependency,
@@ -285,8 +359,7 @@ class InjectionContext
 
                 // now attempt to get the value again
                 return getValue(requiredBy, dependency);
-            }
-            else if (requiredBy.isEmpty()) {
+            } else if (requiredBy.isEmpty()) {
                 // when we don't have a requiredBy, that means we're trying to instantiate the class directly
                 // (which is ok)
                 return Optional.of(new ResolvableClass<T>(
@@ -312,12 +385,10 @@ class InjectionContext
         if (dependency.typeUsage() instanceof NamedTypeUsage namedTypeUsage) {
             try {
                 return (Class<T>) Class.forName(namedTypeUsage.typeName().canonicalName());
-            }
-            catch (final ClassNotFoundException e) {
+            } catch (final ClassNotFoundException e) {
                 throw new UnsatisfiedDependencyException(dependency, e);
             }
-        }
-        else {
+        } else {
             throw new UnsatisfiedDependencyException(dependency, "Failed to determine Class");
         }
     }
@@ -444,7 +515,7 @@ class InjectionContext
          * inclusion in an {@link UnsatisfiedDependencyException} message.
          *
          * @return a multi-line string such as {@code "\n  required by Foo\n  required by Bar"}, or an empty string if
-         *         there are no requesters
+         * there are no requesters
          */
         private String buildRequiredByChain() {
             final var sb = new StringBuilder();
@@ -487,8 +558,7 @@ class InjectionContext
                     try {
                         method.setAccessible(true);
                         method.invoke(object);
-                    }
-                    catch (final IllegalAccessException | InvocationTargetException e) {
+                    } catch (final IllegalAccessException | InvocationTargetException e) {
                         throw new InjectionException(
                             "Invoking @PostInject method " + method + " on " + object.getClass(), e);
                     }
@@ -672,10 +742,9 @@ class InjectionContext
 
                                 // create the instance
                                 return (T) constructor.newInstance();
-                            }
-                            catch (final InvocationTargetException
-                                         | InstantiationException
-                                         | IllegalAccessException e) {
+                            } catch (final InvocationTargetException
+                                           | InstantiationException
+                                           | IllegalAccessException e) {
                                 throw new UnsatisfiedDependencyException(
                                     dependency(),
                                     "Failed to instantiate with default no-args constructor", e);
@@ -688,6 +757,31 @@ class InjectionContext
 
             // perform injection using the resolved dependencies
             return inject(object, resolvedDependencies);
+        }
+    }
+
+    /**
+     * Accumulates suppliers for a multibinding of element type {@code T}.
+     *
+     * @param <T> the element type
+     */
+    private static class MultiBindingEntry<T> {
+
+        private final CopyOnWriteArrayList<Supplier<T>> suppliers = new CopyOnWriteArrayList<>();
+
+        @SuppressWarnings("unchecked")
+        void addValue(final T value) {
+            this.suppliers.add(() -> value);
+        }
+
+        void addSupplier(final Supplier<T> supplier) {
+            this.suppliers.add(supplier);
+        }
+
+        Set<T> buildSet() {
+            return this.suppliers.stream()
+                .map(Supplier::get)
+                .collect(Collectors.toCollection(java.util.LinkedHashSet::new));
         }
     }
 }

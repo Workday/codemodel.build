@@ -43,6 +43,17 @@ public interface Binder {
     <T> BindingBuilder<T> bind(Class<T> bindingClass);
 
     /**
+     * Returns a {@link MultiBinder} for the specified element type, creating it if it does not yet exist.
+     * Multiple calls for the same type (e.g. from two different {@link Module}s) accumulate into the
+     * same underlying set.
+     *
+     * @param <T>  the element type
+     * @param type the element {@link Class}
+     * @return the {@link MultiBinder} for the element type
+     */
+    <T> MultiBinder<T> bindSet(Class<T> type);
+
+    /**
      * Installs the specified {@link Module}, applying its bindings to this {@link Binder}.
      *
      * @param module the {@link Module} to install
