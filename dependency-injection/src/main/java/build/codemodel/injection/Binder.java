@@ -43,6 +43,20 @@ public interface Binder {
     <T> BindingBuilder<T> bind(Class<T> bindingClass);
 
     /**
+     * Installs the specified {@link Module}, applying its bindings to this {@link Binder}.
+     *
+     * @param module the {@link Module} to install
+     * @return this {@link Binder} to permit fluent-style method invocation
+     */
+    default Binder install(final Module module) {
+        if (module != null) {
+            module.configure(this);
+        }
+
+        return this;
+    }
+
+    /**
      * Configures the {@link Binder} using the specified {@link Consumer}.
      *
      * @param consumer the {@link Consumer}

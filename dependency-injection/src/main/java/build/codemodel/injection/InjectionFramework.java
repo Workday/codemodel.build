@@ -344,6 +344,15 @@ public class InjectionFramework {
     }
 
     /**
+     * Creates a new empty {@link Context}.
+     *
+     * @return a new {@link Context}
+     */
+    public Context newContext() {
+        return new InjectionContext(this);
+    }
+
+    /**
      * Creates a new {@link Context} initialized with the specified {@link Resolver}s.
      *
      * @param resolvers the {@link Resolver}s
@@ -355,6 +364,22 @@ public class InjectionFramework {
         Streams.of(resolvers)
             .filter(Objects::nonNull)
             .forEach(context::addResolver);
+
+        return context;
+    }
+
+    /**
+     * Creates a new {@link Context} with the specified {@link Module}s pre-installed.
+     *
+     * @param modules the {@link Module}s to install
+     * @return a new {@link Context}
+     */
+    public Context newContext(final Module... modules) {
+        final var context = new InjectionContext(this);
+
+        Streams.of(modules)
+            .filter(Objects::nonNull)
+            .forEach(module -> module.configure(context));
 
         return context;
     }
