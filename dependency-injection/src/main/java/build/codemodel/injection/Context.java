@@ -112,6 +112,37 @@ public interface Context
         throws InjectionException;
 
     /**
+     * Validates the current set of registered bindings before any objects are created. Performs three checks:
+     * <ol>
+     *   <li><strong>Cycle detection</strong> — throws {@link CyclicDependencyException} with the full cycle
+     *       path if a dependency cycle is found among class bindings.</li>
+     *   <li><strong>Unsatisfied dependency detection</strong> — collects every class binding whose injected
+     *       dependencies have no corresponding binding and throws {@link ValidationException} listing them
+     *       all at once.</li>
+     *   <li><strong>Scope violation detection</strong> — flags edges where a wider-scoped binding (e.g.
+     *       {@link jakarta.inject.Singleton}) depends on a narrower-scoped one (e.g. prototype).</li>
+     * </ol>
+     *
+     * @return this {@link Context} for fluent chaining (e.g. {@code context.validate().initializeEagerSingletons()})
+     * @throws CyclicDependencyException if a dependency cycle is detected
+     * @throws ValidationException       if unsatisfied dependencies or scope violations are found
+     */
+    Context validate();
+
+    /**
+     * Pre-creates all {@link jakarta.inject.Singleton}-scoped class bindings in dependency order, using
+     * {@link build.base.graph.Graphs#parallelizableGroups} to initialize independent groups in parallel.
+     *
+     * <p>Typically called immediately after {@link #validate()}:
+     * <pre>{@code
+     * context.validate().initializeEagerSingletons();
+     * }</pre>
+     *
+     * @return this {@link Context} for fluent chaining
+     */
+    Context initializeEagerSingletons();
+
+    /**
      * Creates a new {@link Context} with the this {@link Context} as a parent solver.
      *
      * @return a new {@link Context}
