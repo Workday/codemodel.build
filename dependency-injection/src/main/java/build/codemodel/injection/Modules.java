@@ -126,6 +126,21 @@ public final class Modules {
         }
 
         @Override
+        public Binding<T> toOverriding(final T value) {
+            return this.delegate.toOverriding(value);
+        }
+
+        @Override
+        public Binding<T> toOverriding(final Class<? extends T> implementationClass) {
+            return this.delegate.toOverriding(implementationClass);
+        }
+
+        @Override
+        public Binding<T> toOverriding(final Supplier<T> supplier) {
+            return this.delegate.toOverriding(supplier);
+        }
+
+        @Override
         public BindingBuilder<T> as(final String name) {
             this.delegate.as(name);
             return this;

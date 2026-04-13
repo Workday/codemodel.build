@@ -9,9 +9,9 @@ package build.codemodel.injection;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -25,6 +25,7 @@ import jakarta.inject.Inject;
 
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 /**
  * An {@link Injector} that manages zero or more {@link Binding}s to be used for injection into {@link InjectionPoint}s.
@@ -50,6 +51,22 @@ import java.util.function.Function;
  */
 public interface Context
     extends Injector, Binder {
+
+    /**
+     * Creates a {@link BindingBuilder} pre-loaded with the specified instance value, enabling
+     * {@link BindingBuilder#asAllInterfaces()} and {@link BindingBuilder#asAllInterfaces(Predicate)} to
+     * register the value against every interface in its type hierarchy in a single call.
+     *
+     * <p>Example:
+     * <pre>{@code
+     * context.bind(myService).asAllInterfaces();
+     * }</pre>
+     *
+     * @param <T>   the type of the instance
+     * @param value the instance to bind
+     * @return a {@link BindingBuilder} loaded with the value
+     */
+    <T> BindingBuilder<T> bind(T value);
 
     /**
      * Creates an instance of the specified class by locating and injecting a constructor annotated
