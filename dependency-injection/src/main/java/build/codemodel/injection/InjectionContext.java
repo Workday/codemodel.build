@@ -434,9 +434,26 @@ class InjectionContext
             dependencies.forEach(dependency -> resolvedDependencies
                 .put(dependency,
                     getValue(requiredBy, dependency)
-                        .orElseThrow(() -> new UnsatisfiedDependencyException(dependency))));
+                        .orElseThrow(() -> new UnsatisfiedDependencyException(dependency, buildRequiredByChain()))));
 
             return resolvedDependencies;
+        }
+
+        /**
+         * Builds a human-readable "required by" chain from this {@link Resolvable} up to the root, suitable for
+         * inclusion in an {@link UnsatisfiedDependencyException} message.
+         *
+         * @return a multi-line string such as {@code "\n  required by Foo\n  required by Bar"}, or an empty string if
+         *         there are no requesters
+         */
+        private String buildRequiredByChain() {
+            final var sb = new StringBuilder();
+            var current = Optional.<Resolvable<?>>of(this);
+            while (current.isPresent()) {
+                sb.append("\n  required by ").append(current.get().dependency());
+                current = current.get().requiredBy();
+            }
+            return sb.toString();
         }
 
         /**
