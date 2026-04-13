@@ -9,9 +9,9 @@ package build.codemodel.injection;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -41,6 +41,20 @@ public interface Binder {
      * @return a new {@link BindingBuilder}
      */
     <T> BindingBuilder<T> bind(Class<T> bindingClass);
+
+    /**
+     * Installs the specified {@link Module}, applying its bindings to this {@link Binder}.
+     *
+     * @param module the {@link Module} to install
+     * @return this {@link Binder} to permit fluent-style method invocation
+     */
+    default Binder install(final Module module) {
+        if (module != null) {
+            module.configure(this);
+        }
+
+        return this;
+    }
 
     /**
      * Configures the {@link Binder} using the specified {@link Consumer}.

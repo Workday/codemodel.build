@@ -9,9 +9,9 @@ package build.codemodel.injection;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -344,6 +344,15 @@ public class InjectionFramework {
     }
 
     /**
+     * Creates a new empty {@link Context}.
+     *
+     * @return a new {@link Context}
+     */
+    public Context newContext() {
+        return new InjectionContext(this);
+    }
+
+    /**
      * Creates a new {@link Context} initialized with the specified {@link Resolver}s.
      *
      * @param resolvers the {@link Resolver}s
@@ -355,6 +364,22 @@ public class InjectionFramework {
         Streams.of(resolvers)
             .filter(Objects::nonNull)
             .forEach(context::addResolver);
+
+        return context;
+    }
+
+    /**
+     * Creates a new {@link Context} with the specified {@link Module}s pre-installed.
+     *
+     * @param modules the {@link Module}s to install
+     * @return a new {@link Context}
+     */
+    public Context newContext(final Module... modules) {
+        final var context = new InjectionContext(this);
+
+        Streams.of(modules)
+            .filter(Objects::nonNull)
+            .forEach(module -> module.configure(context));
 
         return context;
     }
