@@ -9,9 +9,9 @@ package build.codemodel.injection;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -25,6 +25,7 @@ import jakarta.inject.Named;
 import jakarta.inject.Qualifier;
 
 import java.lang.annotation.Annotation;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 /**
@@ -96,4 +97,69 @@ public interface BindingBuilder<T> {
      * @return this {@link BindingBuilder} to permit fluent-style method invocation
      */
     BindingBuilder<T> with(AnnotationTypeUsage qualifier);
+
+    /**
+     * Replaces an existing {@link Binding} for this type with the specified value, or registers a new
+     * {@link Binding} if none exists. Unlike {@link #to(Object)}, this does not throw
+     * {@link BindingAlreadyExistsException} when a binding is already registered.
+     *
+     * @param value the value
+     * @return the newly registered {@link Binding}
+     */
+    default Binding<T> toOverriding(final T value) {
+        throw new UnsupportedOperationException("toOverriding is not supported by this BindingBuilder");
+    }
+
+    /**
+     * Replaces an existing {@link Binding} for this type with an instance of the specified concrete
+     * {@link Class}, or registers a new {@link Binding} if none exists.
+     *
+     * @param implementationClass the concrete {@link Class} to bind
+     * @return the newly registered {@link Binding}
+     */
+    default Binding<T> toOverriding(final Class<? extends T> implementationClass) {
+        throw new UnsupportedOperationException("toOverriding is not supported by this BindingBuilder");
+    }
+
+    /**
+     * Replaces an existing {@link Binding} for this type with the specified {@link Supplier}, or registers
+     * a new {@link Binding} if none exists.
+     *
+     * @param supplier the {@link Supplier}
+     * @return the newly registered {@link Binding}
+     */
+    default Binding<T> toOverriding(final Supplier<T> supplier) {
+        throw new UnsupportedOperationException("toOverriding is not supported by this BindingBuilder");
+    }
+
+    /**
+     * Registers a {@link Binding} of the bound value to each non-{@code java.*} interface in its type
+     * hierarchy. Equivalent to calling {@link #asAllInterfaces(Predicate)} with a filter that excludes
+     * interfaces whose package name starts with {@code "java."}.
+     *
+     * <p>Example:
+     * <pre>{@code
+     * context.bind(myService).asAllInterfaces();
+     * // equivalent to registering bind(ServiceInterface.class).to(myService) for every user interface
+     * }</pre>
+     *
+     * @throws UnsupportedOperationException if called on a builder that was not created via
+     *                                       {@link Context#bind(Object)}
+     */
+    default void asAllInterfaces() {
+        throw new UnsupportedOperationException("asAllInterfaces is not supported by this BindingBuilder");
+    }
+
+    /**
+     * Registers a {@link Binding} of the bound value to each interface in its type hierarchy that matches
+     * the supplied {@link Predicate}.
+     *
+     * @param filter a {@link Predicate} applied to each interface {@link Class}; only matching interfaces
+     *               are bound
+     * @throws UnsupportedOperationException if called on a builder that was not created via
+     *                                       {@link Context#bind(Object)}
+     */
+    default void asAllInterfaces(final Predicate<Class<?>> filter) {
+        throw new UnsupportedOperationException("asAllInterfaces is not supported by this BindingBuilder");
+    }
 }

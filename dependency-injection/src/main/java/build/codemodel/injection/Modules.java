@@ -89,14 +89,8 @@ public final class Modules {
      *
      * @param <T> the type being bound
      */
-    private static class SuppressingBindingBuilder<T>
+    private record SuppressingBindingBuilder<T>(BindingBuilder<T> delegate)
         implements BindingBuilder<T> {
-
-        private final BindingBuilder<T> delegate;
-
-        SuppressingBindingBuilder(final BindingBuilder<T> delegate) {
-            this.delegate = delegate;
-        }
 
         @Override
         public Binding<T> to(final T value) {
@@ -123,6 +117,21 @@ public final class Modules {
             } catch (final BindingAlreadyExistsException ignored) {
                 return null;
             }
+        }
+
+        @Override
+        public Binding<T> toOverriding(final T value) {
+            return this.delegate.toOverriding(value);
+        }
+
+        @Override
+        public Binding<T> toOverriding(final Class<? extends T> implementationClass) {
+            return this.delegate.toOverriding(implementationClass);
+        }
+
+        @Override
+        public Binding<T> toOverriding(final Supplier<T> supplier) {
+            return this.delegate.toOverriding(supplier);
         }
 
         @Override

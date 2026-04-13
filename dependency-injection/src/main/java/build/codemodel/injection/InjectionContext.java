@@ -32,6 +32,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.IdentityHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -39,6 +40,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.BiFunction;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -154,6 +156,36 @@ class InjectionContext
 
                 return addBinding(dependency, new SupplierBinding<>(dependency, supplier));
             }
+
+            @Override
+            public Binding<T> toOverriding(final T value) {
+                final var dependency = IndependentDependency.of(
+                    typeUsage,
+                    this.injectionFramework::getQualifierAnnotationTypes);
+                return replaceBinding(dependency, SingletonValueBinding.of(dependency, value));
+            }
+
+            @Override
+            public Binding<T> toOverriding(final Class<? extends T> concreteClass) {
+                Objects.requireNonNull(concreteClass, "The Binding Value Class must not be null");
+                final var dependency = IndependentDependency.of(
+                    typeUsage,
+                    this.injectionFramework::getQualifierAnnotationTypes);
+                final var typeDescriptor = codeModel.getJDKTypeDescriptor(concreteClass)
+                    .orElseThrow(() -> new IllegalArgumentException(
+                        "Could not resolve a TypeDescriptor for " + concreteClass));
+                return replaceBinding(dependency, this.injectionFramework.isSingleton(typeDescriptor)
+                    ? new LazySingletonClassBinding<>(dependency, concreteClass)
+                    : new NonSingletonClassBinding<T>(dependency, concreteClass));
+            }
+
+            @Override
+            public Binding<T> toOverriding(final Supplier<T> supplier) {
+                final var dependency = IndependentDependency.of(
+                    typeUsage,
+                    this.injectionFramework::getQualifierAnnotationTypes);
+                return replaceBinding(dependency, new SupplierBinding<>(dependency, supplier));
+            }
         };
     }
 
@@ -173,6 +205,96 @@ class InjectionContext
             return binding;
         });
         return binding;
+    }
+
+    /**
+     * Replaces or adds the specified {@link Dependency} {@link Binding} without throwing when a binding
+     * already exists.
+     *
+     * @param dependency the {@link Dependency}
+     * @param binding    the {@link Binding}
+     * @return the {@link Binding} that was registered
+     */
+    private <T> Binding<T> replaceBinding(final Dependency dependency, final Binding<T> binding) {
+        this.bindingsByDependency.put(dependency, binding);
+        return binding;
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public <T> BindingBuilder<T> bind(final T value) {
+        Objects.requireNonNull(value, "The value must not be null");
+
+        final var codeModel = this.injectionFramework.codeModel();
+        final var type = (Class<T>) value.getClass();
+        final var typeUsage = codeModel.getTypeUsage(type);
+
+        return new AbstractBindingBuilder<>(this.injectionFramework, typeUsage) {
+            @Override
+            public Binding<T> to(final T v) {
+                final var dependency = IndependentDependency.of(
+                    typeUsage,
+                    this.injectionFramework::getQualifierAnnotationTypes);
+                return addBinding(dependency, SingletonValueBinding.of(dependency, v));
+            }
+
+            @Override
+            public Binding<T> to(final Class<? extends T> concreteClass) {
+                Objects.requireNonNull(concreteClass, "The Binding Value Class must not be null");
+                final var dependency = IndependentDependency.of(
+                    typeUsage,
+                    this.injectionFramework::getQualifierAnnotationTypes);
+                final var typeDescriptor = codeModel.getJDKTypeDescriptor(concreteClass)
+                    .orElseThrow(() -> new IllegalArgumentException(
+                        "Could not resolve a TypeDescriptor for " + concreteClass));
+                return addBinding(dependency, this.injectionFramework.isSingleton(typeDescriptor)
+                    ? new LazySingletonClassBinding<>(dependency, concreteClass)
+                    : new NonSingletonClassBinding<>(dependency, concreteClass));
+            }
+
+            @Override
+            public Binding<T> to(final Supplier<T> supplier) {
+                final var dependency = IndependentDependency.of(
+                    typeUsage,
+                    this.injectionFramework::getQualifierAnnotationTypes);
+                return addBinding(dependency, new SupplierBinding<>(dependency, supplier));
+            }
+
+            @Override
+            public void asAllInterfaces() {
+                asAllInterfaces(iface -> !iface.getPackageName().startsWith("java."));
+            }
+
+            @Override
+            @SuppressWarnings({"unchecked", "rawtypes"})
+            public void asAllInterfaces(final Predicate<Class<?>> filter) {
+                Objects.requireNonNull(filter, "The filter must not be null");
+                collectInterfaces(type, new LinkedHashSet<>())
+                    .stream()
+                    .filter(filter)
+                    .forEach(iface -> InjectionContext.this.bind((Class) iface).to(value));
+            }
+        };
+    }
+
+    /**
+     * Collects all interfaces from the type hierarchy of the given class, including inherited ones,
+     * into the provided accumulator set.
+     *
+     * @param type   the class to walk
+     * @param result the set to accumulate interfaces into
+     * @return the same set, populated
+     */
+    private static Set<Class<?>> collectInterfaces(final Class<?> type, final Set<Class<?>> result) {
+        if (type == null || type == Object.class) {
+            return result;
+        }
+        for (final Class<?> iface : type.getInterfaces()) {
+            result.add(iface);
+            collectInterfaces(iface, result);
+        }
+        collectInterfaces(type.getSuperclass(), result);
+        return result;
     }
 
     @Override
