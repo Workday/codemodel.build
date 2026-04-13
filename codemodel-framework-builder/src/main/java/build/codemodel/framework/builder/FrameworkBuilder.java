@@ -9,9 +9,9 @@ package build.codemodel.framework.builder;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -32,6 +32,7 @@ import build.codemodel.injection.Binder;
 import build.codemodel.injection.BindingBuilder;
 import build.codemodel.injection.Context;
 import build.codemodel.injection.InjectionFramework;
+import build.codemodel.injection.MultiBinder;
 import build.codemodel.jdk.JDKCodeModel;
 
 import java.nio.file.FileSystem;
@@ -95,6 +96,11 @@ public class FrameworkBuilder
     @Override
     public <T> BindingBuilder<T> bind(final Class<T> bindingClass) {
         return this.context.bind(bindingClass);
+    }
+
+    @Override
+    public <T> MultiBinder<T> bindSet(final Class<T> type) {
+        return this.context.bindSet(type);
     }
 
     /**
