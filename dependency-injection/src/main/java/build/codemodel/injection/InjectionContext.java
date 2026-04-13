@@ -21,6 +21,8 @@ package build.codemodel.injection;
  */
 
 import build.base.foundation.Lazy;
+import build.base.graph.Graph;
+import build.base.graph.Graphs;
 import build.codemodel.foundation.usage.GenericTypeUsage;
 import build.codemodel.foundation.usage.NamedTypeUsage;
 import build.codemodel.foundation.usage.TypeUsage;
@@ -420,6 +422,122 @@ class InjectionContext
 
         return (T) getValue(Optional.empty(), dependency)
             .orElseThrow(() -> new UnsatisfiedDependencyException(dependency));
+    }
+
+    @Override
+    public Context validate() {
+        // Build a directed dependency graph over all ClassBindings.
+        // Edge: binding.dependency() → each of its injected dependencies.
+        final var graphBuilder = Graph.<Dependency>directed();
+
+        this.bindingsByDependency.values().stream()
+            .filter(ClassBinding.class::isInstance)
+            .map(b -> (ClassBinding<?>) b)
+            .forEach(classBinding -> {
+                final var bindingDep = classBinding.dependency();
+                graphBuilder.addVertex(bindingDep);
+                this.injectionFramework.getInjectableDescriptor(classBinding.concreteClass())
+                    .injectionPoints()
+                    .flatMap(InjectionPoint::dependencies)
+                    .forEach(dep -> graphBuilder.addEdge(bindingDep, dep));
+            });
+
+        final var graph = graphBuilder.build();
+
+        // 1. Cycle detection
+        Graphs.findCycle(graph)
+            .ifPresent(cycle -> {
+                throw new CyclicDependencyException(cycle);
+            });
+
+        // 2. Unsatisfied dependency and 3. Scope violation detection
+        final var problems = new ArrayList<String>();
+
+        graph.edges().forEach(edge -> {
+            final var dep = edge.to();
+
+            // Unsatisfied: no explicit binding and not auto-resolvable
+            if (!isResolvable(dep)) {
+                problems.add("Unsatisfied dependency: [" + dep + "]"
+                    + " required by [" + edge.from() + "]");
+            }
+
+            // Scope violation: @Singleton depends on NonSingletonClassBinding (prototype)
+            final var fromBinding = this.bindingsByDependency.get(edge.from());
+            final var toBinding = this.bindingsByDependency.get(dep);
+            if (fromBinding instanceof LazySingletonClassBinding
+                && toBinding instanceof NonSingletonClassBinding) {
+                problems.add("Scope violation: singleton [" + edge.from()
+                    + "] depends on prototype-scoped [" + dep + "]");
+            }
+        });
+
+        if (!problems.isEmpty()) {
+            throw new ValidationException(problems);
+        }
+
+        return this;
+    }
+
+    /**
+     * Returns {@code true} if the given {@link Dependency} can be satisfied — either by an explicit or
+     * multibinding already registered, or by an auto-bindable {@link jakarta.inject.Singleton} class.
+     */
+    private boolean isResolvable(final Dependency dependency) {
+        if (resolver().resolve(dependency).isPresent()) {
+            return true;
+        }
+        // auto-singleton: a @Singleton class that can be bound on-demand
+        if (dependency.typeUsage() instanceof NamedTypeUsage namedTypeUsage) {
+            try {
+                final var clazz = Class.forName(namedTypeUsage.typeName().canonicalName());
+                return this.injectionFramework.codeModel()
+                    .getJDKTypeDescriptor(clazz)
+                    .map(this.injectionFramework::isSingleton)
+                    .orElse(false);
+            } catch (final ClassNotFoundException ignored) {
+                return false;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public Context initializeEagerSingletons() {
+        // Collect all explicitly-bound singleton class bindings
+        final var singletonBindings = this.bindingsByDependency.values().stream()
+            .filter(LazySingletonClassBinding.class::isInstance)
+            .map(b -> (LazySingletonClassBinding<Object>) b)
+            .collect(Collectors.toList());
+
+        if (singletonBindings.isEmpty()) {
+            return this;
+        }
+
+        // Build a dependency graph limited to singleton vertices so we can find initialization order
+        final var singletonDeps = singletonBindings.stream()
+            .map(Binding::dependency)
+            .collect(Collectors.toSet());
+
+        final var graphBuilder = Graph.<Dependency>directed();
+        singletonBindings.forEach(b -> {
+            final var bindingDep = b.dependency();
+            graphBuilder.addVertex(bindingDep);
+            this.injectionFramework.getInjectableDescriptor(b.concreteClass())
+                .injectionPoints()
+                .flatMap(InjectionPoint::dependencies)
+                .filter(singletonDeps::contains)
+                .forEach(dep -> graphBuilder.addEdge(bindingDep, dep));
+        });
+
+        final var graph = graphBuilder.build();
+
+        // Initialize each parallelizable layer; within a layer, initialize concurrently
+        Graphs.parallelizableGroups(graph).forEach(layer ->
+            layer.parallelStream().forEach(dep -> create(dep)));
+
+        return this;
     }
 
     @Override

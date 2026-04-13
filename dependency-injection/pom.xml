@@ -35,6 +35,12 @@
         </dependency>
 
         <dependency>
+            <groupId>build.base</groupId>
+            <artifactId>base-graph</artifactId>
+            <version>${base.version}</version>
+        </dependency>
+
+        <dependency>
             <groupId>build.codemodel</groupId>
             <artifactId>codemodel-foundation</artifactId>
             <version>${revision}</version>

@@ -32,6 +32,7 @@ module build.codemodel.injection {
     requires transitive build.base.transport;
     requires transitive build.base.telemetry;
     requires build.base.configuration;
+    requires build.base.graph;
 
     requires transitive build.codemodel.foundation;
     requires build.codemodel.expression;
