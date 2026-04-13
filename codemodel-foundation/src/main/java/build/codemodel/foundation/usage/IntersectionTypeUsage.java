@@ -120,8 +120,10 @@ public class IntersectionTypeUsage
 
     @Override
     public Stream<TypeUsage> dependencies() {
-        return traits(Dependent.class)
-            .flatMap(Dependent::dependencies);
+        return Streams.concat(
+            types(),
+            traits(Dependent.class)
+                .flatMap(Dependent::dependencies));
     }
 
     @Override

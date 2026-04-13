@@ -356,7 +356,7 @@ JdkInitializer.initialize(CodeModel)
 - `FieldType`/`MethodType`/`ConstructorType` are reflection-path only; source-path descriptors lack raw reflection handles
 - `java.lang.Object` superclass is **not** modelled as `ExtendsTypeDescriptor` unless explicitly extended
 - `ResolvedMethod` only resolves methods in types already present in the `CodeModel`; JDK stdlib methods (e.g. `String.valueOf`) are never resolved
-- Unbounded wildcard `?` in reflection: `WildcardType.getUpperBounds()` returns `[Object.class]` — the code explicitly suppresses this
+- Unbounded wildcard `?` in reflection: `WildcardType.getUpperBounds()` returns `[Object.class]` for an unbounded `?` — `JDKCodeModel.getTypeUsage()` suppresses this and correctly produces a `WildcardTypeUsage` with no upper bound; fully contained inside that method
 
 **Dependencies:** `objectoriented-codemodel`, `codemodel-framework`, `base-foundation`, `base-marshalling`, `base-telemetry-foundation`, `jakarta.inject-api`, JDK modules `java.compiler` + `jdk.compiler`
 **Depended on by:** `dependency-injection`, `codemodel-framework-builder`, `jdk-annotation-processor`
@@ -593,22 +593,28 @@ sequenceDiagram
 
 **Plugin extensibility:** Implement `Enricher<T, E>`, `TypeChecker<T>`, `Compiler<T>`, or `Completer<T>` and register via `ServiceLoader` (`META-INF/services`). Use `@AutoService` to auto-generate the registration.
 
-**TypeUsage equality:** String-based on `toString()`. A `TypeName` constructed with a `ModuleName` is **not** equal to the same logical type without one.
+**TypeUsage equality:** String-based on `toString()`. The reflection path includes a module prefix in `TypeName` (e.g. `java.base/java.lang.String`); the source path does not. Don't mix both paths for the same types in one `CodeModel`.
 
 ---
 
 ## Gotchas
 
-- **`JdkInitializer` is single-use.** Throws on second `initialize()` call.
-- **Javac diagnostics are silenced.** Unresolvable types become `UnknownTypeUsage` without any error.
-- **`Object` superclass is never modelled.** Types that implicitly extend `Object` have no `ExtendsTypeDescriptor` trait.
-- **`ResolvedMethod` only resolves within the current `CodeModel`.** JDK stdlib methods (e.g. `String.valueOf`) are never resolved to `MethodDescriptor`.
-- **`ProviderResolver` is opt-in.** `Provider<T>` injection fails silently without `context.addResolver(ProviderResolver::new)`.
-- **`@Singular` registration is JVM-global and cached forever.** Classification cannot be changed between tests; create new `CodeModel` instances but expect shared trait metadata.
-- **`@Provides` methods with parameters are silently ignored** by `ProvidesResolver`.
-- **Override suppression is unconditional.** Overriding a method in a subclass removes the parent's `@Inject`, even if the override has no `@Inject` itself.
-- **`IntersectionTypeUsage.dependencies()` does not include its own `types()`.** Asymmetric vs `UnionTypeUsage`. Potentially a bug.
-- **`base-parsing` migration (PR #24):** The internal Pratt-parser classes (`ExpressionParser`, `Tokenizer`, `NodeResolver`, `TokenParser`, and all related token-parser types) were deleted from `expression-codemodel`. If you see references to these classes in branches or external forks, they no longer exist.
+Non-obvious behaviours that are working as designed but will surprise you if you don't know them.
+
+**`jdk-codemodel`**
+- `JdkInitializer` is single-use — call `initialize()` a second time and it throws.
+- Javac diagnostics are suppressed — unresolvable types silently become `UnknownTypeUsage`. This is intentional; the source path is designed to be permissive.
+- Types that implicitly extend `Object` have no `ExtendsTypeDescriptor` trait. `Object` is the implicit root and is not modelled as an explicit parent.
+- `ResolvedMethod` is only attached when the declaring type is already in the `CodeModel`. Calls into JDK stdlib (e.g. `String.valueOf`) produce no trait — expected, since stdlib types aren't reverse-engineered unless explicitly loaded.
+- `FieldType`/`MethodType`/`ConstructorType` traits only exist on reflection-path descriptors. `MethodBodyDescriptor`/`FieldInitializerDescriptor` only exist on source-path descriptors.
+
+**`dependency-injection`**
+- `ProviderResolver` must be added explicitly: `context.addResolver(ProviderResolver::new)`. `Provider<T>` injection does nothing without it.
+- Overriding a method removes the parent's `@Inject` even if the override has no `@Inject` — this is JSR-330 spec behaviour.
+- `@Provides` methods with parameters are silently skipped by `ProvidesResolver` (factory pattern requires no-arg methods).
+
+**`base-parsing` migration**
+- The internal Pratt-parser classes (`ExpressionParser`, `Tokenizer`, `NodeResolver`, `TokenParser`, etc.) were deleted from `expression-codemodel` in PR #24. Parsing is now in `build.base:base-parsing`. References to those classes in old branches are dead.
 
 ---
 
