@@ -386,6 +386,46 @@ class InjectionContextTests
     }
 
     /**
+     * Ensure the {@link UnsatisfiedDependencyException} message includes the full "required by" chain so that
+     * developers can trace which top-level component pulled in a missing dependency.
+     */
+    @Test
+    void shouldIncludeRequiredByChainInUnsatisfiedDependencyMessage() {
+        final var context = createInjectionFramework().newContext();
+
+        final var exception = assertThrows(UnsatisfiedDependencyException.class,
+            () -> context.create(ChainRootService.class));
+
+        assertThat(exception.getMessage())
+            .contains("MissingLeafService")
+            .contains("required by")
+            .contains("ChainMiddleService")
+            .contains("ChainRootService");
+    }
+
+    /**
+     * A leaf dependency that is never bound, causing a resolution failure when a service chain requests it.
+     */
+    interface MissingLeafService {}
+
+    /**
+     * A singleton mid-chain service that requires the unbound {@link MissingLeafService}.
+     */
+    @Singleton
+    static class ChainMiddleService {
+        @Inject
+        ChainMiddleService(final MissingLeafService leaf) {}
+    }
+
+    /**
+     * The root service that pulls in {@link ChainMiddleService}, triggering the full chain failure.
+     */
+    static class ChainRootService {
+        @Inject
+        ChainRootService(final ChainMiddleService middle) {}
+    }
+
+    /**
      * Ensure a {@link Context} will use a {@link Supplier} to resolve values for injection.
      */
     @Test
