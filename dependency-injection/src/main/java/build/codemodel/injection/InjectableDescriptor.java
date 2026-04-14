@@ -9,9 +9,9 @@ package build.codemodel.injection;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -55,15 +55,22 @@ public class InjectableDescriptor
     private final ArrayList<MethodDescriptor> postInjectionMethods;
 
     /**
+     * The {@link PreDestroy} {@link MethodDescriptor}s.
+     */
+    private final ArrayList<MethodDescriptor> preDestroyMethods;
+
+    /**
      * Constructs a new {@link InjectableDescriptor} for the specified {@link JDKTypeDescriptor}.
      *
      * @param typeDescriptor       the {@link JDKTypeDescriptor}
      * @param injectionPoints      the {@link InjectionPoint}s
      * @param postInjectionMethods the {@link PostInject} annotated {@link MethodDescriptor}s
+     * @param preDestroyMethods    the {@link PreDestroy} annotated {@link MethodDescriptor}s
      */
     private InjectableDescriptor(final JDKTypeDescriptor typeDescriptor,
                                  final Stream<InjectionPoint> injectionPoints,
-                                 final Stream<MethodDescriptor> postInjectionMethods) {
+                                 final Stream<MethodDescriptor> postInjectionMethods,
+                                 final Stream<MethodDescriptor> preDestroyMethods) {
 
         this.typeDescriptor = Objects.requireNonNull(typeDescriptor, "The TypeDescriptor must not be null");
         this.injectionPoints = injectionPoints == null
@@ -72,6 +79,9 @@ public class InjectableDescriptor
         this.postInjectionMethods = postInjectionMethods == null
             ? new ArrayList<>()
             : postInjectionMethods.collect(Collectors.toCollection(ArrayList::new));
+        this.preDestroyMethods = preDestroyMethods == null
+            ? new ArrayList<>()
+            : preDestroyMethods.collect(Collectors.toCollection(ArrayList::new));
     }
 
     /**
@@ -111,16 +121,27 @@ public class InjectableDescriptor
     }
 
     /**
+     * Obtains the {@link PreDestroy} annotated {@link MethodDescriptor}s defined for the {@link JDKTypeDescriptor}.
+     *
+     * @return the {@link Stream} of {@link PreDestroy} {@link MethodDescriptor}s
+     */
+    public Stream<MethodDescriptor> preDestroyMethods() {
+        return this.preDestroyMethods.stream();
+    }
+
+    /**
      * Creates a new {@link InjectableDescriptor} for the specified {@link JDKTypeDescriptor}.
      *
      * @param typeDescriptor       the {@link JDKTypeDescriptor}
      * @param injectionPoints      the {@link InjectionPoint}s
      * @param postInjectionMethods the {@link PostInject} annotated {@link MethodDescriptor}s
+     * @param preDestroyMethods    the {@link PreDestroy} annotated {@link MethodDescriptor}s
      */
     public static InjectableDescriptor of(final JDKTypeDescriptor typeDescriptor,
                                           final Stream<InjectionPoint> injectionPoints,
-                                          final Stream<MethodDescriptor> postInjectionMethods) {
+                                          final Stream<MethodDescriptor> postInjectionMethods,
+                                          final Stream<MethodDescriptor> preDestroyMethods) {
 
-        return new InjectableDescriptor(typeDescriptor, injectionPoints, postInjectionMethods);
+        return new InjectableDescriptor(typeDescriptor, injectionPoints, postInjectionMethods, preDestroyMethods);
     }
 }

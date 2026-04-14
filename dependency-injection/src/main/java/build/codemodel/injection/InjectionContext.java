@@ -33,6 +33,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -134,6 +135,7 @@ class InjectionContext
             }
 
             @Override
+            @SuppressWarnings("unchecked")
             public Binding<T> to(final Class<? extends T> concreteClass) {
                 Objects.requireNonNull(concreteClass, "The Binding Value Class must not be null");
 
@@ -144,6 +146,16 @@ class InjectionContext
                 final var typeDescriptor = codeModel.getJDKTypeDescriptor(concreteClass)
                     .orElseThrow(() -> new IllegalArgumentException(
                         "Could not resolve a TypeDescriptor for " + concreteClass));
+
+                // check for a registered custom scope annotation on the concrete class
+                final var scopeEntry = this.injectionFramework.findScopeEntry(typeDescriptor).orElse(null);
+                if (scopeEntry != null) {
+                    final ValueBinding<T> factory = new SupplierBinding<>(
+                        dependency, () -> (T) InjectionContext.this.createUnscoped(concreteClass));
+                    final Binding<?> scoped = scopeEntry.getValue().scope(factory);
+                    return addBinding(dependency,
+                        new CustomScopedClassBinding<>(dependency, concreteClass, scopeEntry.getKey(), scoped));
+                }
 
                 return addBinding(dependency, this.injectionFramework.isSingleton(typeDescriptor)
                     ? new LazySingletonClassBinding<>(dependency, concreteClass)
@@ -462,13 +474,17 @@ class InjectionContext
                     + " required by [" + edge.from() + "]");
             }
 
-            // Scope violation: @Singleton depends on NonSingletonClassBinding (prototype)
+            // Scope violation: @Singleton depends on a narrower-scoped binding
             final var fromBinding = this.bindingsByDependency.get(edge.from());
             final var toBinding = this.bindingsByDependency.get(dep);
-            if (fromBinding instanceof LazySingletonClassBinding
-                && toBinding instanceof NonSingletonClassBinding) {
-                problems.add("Scope violation: singleton [" + edge.from()
-                    + "] depends on prototype-scoped [" + dep + "]");
+            if (fromBinding instanceof LazySingletonClassBinding) {
+                if (toBinding instanceof NonSingletonClassBinding) {
+                    problems.add("Scope violation: singleton [" + edge.from()
+                        + "] depends on prototype-scoped [" + dep + "]");
+                } else if (toBinding instanceof CustomScopedClassBinding<?> csb) {
+                    problems.add("Scope violation: singleton [" + edge.from()
+                        + "] depends on @" + csb.scopeAnnotation().getSimpleName() + "-scoped [" + dep + "]");
+                }
             }
         });
 
@@ -538,6 +554,90 @@ class InjectionContext
             layer.parallelStream().forEach(dep -> create(dep)));
 
         return this;
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public void close() {
+        // Collect all instantiated singleton bindings
+        final var instantiatedSingletons = this.bindingsByDependency.values().stream()
+            .filter(LazySingletonClassBinding.class::isInstance)
+            .map(b -> (LazySingletonClassBinding<Object>) b)
+            .filter(b -> b.value().optional().isPresent())
+            .collect(Collectors.toList());
+
+        if (instantiatedSingletons.isEmpty()) {
+            return;
+        }
+
+        // Build a dependency graph over instantiated singletons only
+        final var singletonDeps = instantiatedSingletons.stream()
+            .map(Binding::dependency)
+            .collect(Collectors.toSet());
+
+        final var graphBuilder = Graph.<Dependency>directed();
+        instantiatedSingletons.forEach(b -> {
+            final var bindingDep = b.dependency();
+            graphBuilder.addVertex(bindingDep);
+            this.injectionFramework.getInjectableDescriptor(b.concreteClass())
+                .injectionPoints()
+                .flatMap(InjectionPoint::dependencies)
+                .filter(singletonDeps::contains)
+                .forEach(dep -> graphBuilder.addEdge(bindingDep, dep));
+        });
+
+        final var graph = graphBuilder.build();
+
+        // topologicalSort returns [leaf-first, root-last]; reverse for destruction (dependents first)
+        final var destroyOrder = new ArrayList<>(Graphs.topologicalSort(graph));
+        Collections.reverse(destroyOrder);
+
+        // Index bindings by dependency for lookup during destruction
+        final var depToBinding = instantiatedSingletons.stream()
+            .collect(Collectors.toMap(Binding::dependency, b -> b));
+
+        // Invoke @PreDestroy methods on each singleton in destruction order
+        destroyOrder.forEach(dep -> {
+            final var binding = depToBinding.get(dep);
+            if (binding == null) {
+                return;
+            }
+            final var instance = binding.value().optional().orElse(null);
+            if (instance == null) {
+                return;
+            }
+            this.injectionFramework.getInjectableDescriptor(binding.concreteClass())
+                .preDestroyMethods()
+                .map(md -> md.getTrait(MethodType.class).orElse(null))
+                .filter(Objects::nonNull)
+                .map(MethodType::method)
+                .forEach(method -> {
+                    try {
+                        method.setAccessible(true);
+                        method.invoke(instance);
+                    } catch (final IllegalAccessException | InvocationTargetException e) {
+                        throw new InjectionException(
+                            "Invoking @PreDestroy method " + method + " on " + instance.getClass(), e);
+                    }
+                });
+        });
+    }
+
+    /**
+     * Creates an instance of the specified class bypassing any registered {@link Binding}s by
+     * directly instantiating via {@link ResolvableClass}. Used by scope implementations to produce
+     * a fresh unscoped instance without recursing into the scoped binding.
+     *
+     * @param <T>           the type
+     * @param concreteClass the class to instantiate
+     * @return a new injected instance
+     */
+    @SuppressWarnings("unchecked")
+    private <T> T createUnscoped(final Class<? extends T> concreteClass) {
+        final var codeModel = this.injectionFramework.codeModel();
+        final var typeUsage = codeModel.getTypeUsage(concreteClass);
+        final var dependency = IndependentDependency.of(typeUsage, this.injectionFramework::getQualifierAnnotationTypes);
+        return (T) new ResolvableClass<>(Optional.empty(), dependency, concreteClass).resolve();
     }
 
     @Override

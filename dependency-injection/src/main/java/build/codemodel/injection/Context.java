@@ -50,7 +50,7 @@ import java.util.function.Predicate;
  * @since Oct-2024
  */
 public interface Context
-    extends Injector, Binder {
+    extends Injector, Binder, AutoCloseable {
 
     /**
      * Creates a {@link BindingBuilder} pre-loaded with the specified instance value, enabling
@@ -141,6 +141,14 @@ public interface Context
      * @return this {@link Context} for fluent chaining
      */
     Context initializeEagerSingletons();
+
+    /**
+     * Closes this {@link Context}, invoking any {@link PreDestroy} lifecycle methods on
+     * instantiated singleton instances in reverse dependency order (dependents are destroyed
+     * before their dependencies).
+     */
+    @Override
+    void close();
 
     /**
      * Creates a new {@link Context} with the this {@link Context} as a parent solver.

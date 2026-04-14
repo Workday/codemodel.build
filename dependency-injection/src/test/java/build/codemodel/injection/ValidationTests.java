@@ -24,6 +24,11 @@ import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import org.junit.jupiter.api.Test;
 
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -81,6 +86,22 @@ class ValidationTests
 
     // Prototype-scoped (no @Singleton): when explicitly bound via ClassBinding this is a scope violation
     static class PrototypeDep {
+    }
+
+    @Retention(RetentionPolicy.RUNTIME)
+    @Target(ElementType.TYPE)
+    @ScopeAnnotation
+    @interface RequestScoped {
+    }
+
+    @RequestScoped
+    static class RequestScopedDep {
+    }
+
+    @Singleton
+    static class SingletonConsumerOfRequestScoped {
+        @Inject
+        RequestScopedDep requestScopedDep;
     }
 
     static final AtomicInteger eagerInitCount = new AtomicInteger(0);
@@ -166,6 +187,25 @@ class ValidationTests
         assertThatThrownBy(context::validate)
             .isInstanceOf(ValidationException.class)
             .hasMessageContaining("Scope violation");
+    }
+
+    /**
+     * Ensures {@link Context#validate()} throws when a {@link Singleton}-scoped class binding depends on a
+     * custom-scoped binding, naming the scope annotation in the error message.
+     */
+    @Test
+    void shouldDetectScopeViolationForCustomScope() {
+        final var framework = createInjectionFramework();
+        framework.bindScope(RequestScoped.class, new ScopedValueScope());
+
+        final var context = framework.newContext();
+        context.bind(SingletonConsumerOfRequestScoped.class).to(SingletonConsumerOfRequestScoped.class);
+        context.bind(RequestScopedDep.class).to(RequestScopedDep.class);
+
+        assertThatThrownBy(context::validate)
+            .isInstanceOf(ValidationException.class)
+            .hasMessageContaining("Scope violation")
+            .hasMessageContaining("RequestScoped");
     }
 
     // ---- initializeEagerSingletons ----

@@ -5,3 +5,5 @@ target/
 # IntelliJ IDEA
 .idea/
 *.iml
+
+.build/
