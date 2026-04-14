@@ -28,7 +28,9 @@ import build.codemodel.foundation.usage.NamedTypeUsage;
 import build.codemodel.foundation.usage.TypeUsage;
 import build.codemodel.jdk.TypeUsages;
 import build.codemodel.jdk.descriptor.MethodType;
+import jakarta.inject.Singleton;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
@@ -84,6 +86,12 @@ class InjectionContext
     private final ChainedResolver chainedResolver;
 
     /**
+     * The {@link BindingGraphContributor} notified of binding registrations and dependency resolutions.
+     * Captured from the {@link InjectionFramework} at construction time.
+     */
+    private final BindingGraphContributor bindingGraphContributor;
+
+    /**
      * Constructs an {@link InjectionContext}.
      *
      * @param injectionFramework the {@link InjectionFramework}
@@ -95,6 +103,7 @@ class InjectionContext
         this.bindingsByDependency = new ConcurrentHashMap<>();
         this.multiBindings = new ConcurrentHashMap<>();
         this.chainedResolver = ChainedResolver.create();
+        this.bindingGraphContributor = injectionFramework.bindingGraphContributor();
         this.resolver = ChainedResolver.create(
             dependency -> Optional.ofNullable((Binding<Object>) this.bindingsByDependency.get(dependency)),
             dependency -> (Optional<Binding<Object>>) (Optional<?>) resolveMultiBinding(dependency),
@@ -135,7 +144,6 @@ class InjectionContext
             }
 
             @Override
-            @SuppressWarnings("unchecked")
             public Binding<T> to(final Class<? extends T> concreteClass) {
                 Objects.requireNonNull(concreteClass, "The Binding Value Class must not be null");
 
@@ -204,6 +212,35 @@ class InjectionContext
     }
 
     /**
+     * Builds a {@link BindingNode} description of the given {@link Binding} for the
+     * {@link BindingGraphContributor}. Fields that cannot be populated in Track 1 are {@code null}.
+     *
+     * @param binding the binding to describe
+     * @return the {@link BindingNode}
+     */
+    private BindingNode toBindingNode(final Binding<?> binding) {
+        if (binding == null) {
+            return null;
+        }
+        final BindingKind kind = switch (binding) {
+            case LazySingletonClassBinding<?> ignored -> BindingKind.CLASS;
+            case NonSingletonClassBinding<?> ignored -> BindingKind.CLASS;
+            case CustomScopedClassBinding<?> ignored -> BindingKind.CLASS;
+            case SingletonValueBinding<?> ignored -> BindingKind.VALUE;
+            default -> BindingKind.SUPPLIER;
+        };
+        final Class<? extends Annotation> scopeAnnotation = switch (binding) {
+            case LazySingletonClassBinding<?> ignored -> Singleton.class;
+            case CustomScopedClassBinding<?> csb -> csb.scopeAnnotation();
+            default -> null;
+        };
+        final var typeDescriptor = binding instanceof ClassBinding<?> cb
+            ? this.injectionFramework.codeModel().getJDKTypeDescriptor(cb.concreteClass()).orElse(null)
+            : null;
+        return new BindingNode(typeDescriptor, scopeAnnotation, null, kind);
+    }
+
+    /**
      * Attempts to add the specified {@link Dependency} {@link Binding}.
      *
      * @param dependency the {@link Dependency}
@@ -218,6 +255,7 @@ class InjectionContext
             }
             return binding;
         });
+        this.bindingGraphContributor.contributeBinding(toBindingNode(binding));
         return binding;
     }
 
@@ -231,6 +269,7 @@ class InjectionContext
      */
     private <T> Binding<T> replaceBinding(final Dependency dependency, final Binding<T> binding) {
         this.bindingsByDependency.put(dependency, binding);
+        this.bindingGraphContributor.contributeBinding(toBindingNode(binding));
         return binding;
     }
 
@@ -315,8 +354,15 @@ class InjectionContext
     @SuppressWarnings("unchecked")
     public <T> MultiBinder<T> bindSet(final Class<T> type) {
         Objects.requireNonNull(type, "The element type must not be null");
+        final boolean isNew = !this.multiBindings.containsKey(type);
         final var entry = (MultiBindingEntry<T>) this.multiBindings
             .computeIfAbsent(type, _ -> new MultiBindingEntry<T>());
+        if (isNew) {
+            final var typeDescriptor = this.injectionFramework.codeModel()
+                .getJDKTypeDescriptor(type).orElse(null);
+            this.bindingGraphContributor.contributeBinding(
+                new BindingNode(typeDescriptor, null, null, BindingKind.MULTI));
+        }
         return new MultiBinder<T>() {
             @Override
             public MultiBinder<T> add(final T value) {
@@ -525,7 +571,7 @@ class InjectionContext
         final var singletonBindings = this.bindingsByDependency.values().stream()
             .filter(LazySingletonClassBinding.class::isInstance)
             .map(b -> (LazySingletonClassBinding<Object>) b)
-            .collect(Collectors.toList());
+            .toList();
 
         if (singletonBindings.isEmpty()) {
             return this;
@@ -551,7 +597,7 @@ class InjectionContext
 
         // Initialize each parallelizable layer; within a layer, initialize concurrently
         Graphs.parallelizableGroups(graph).forEach(layer ->
-            layer.parallelStream().forEach(dep -> create(dep)));
+            layer.parallelStream().forEach(this::create));
 
         return this;
     }
@@ -564,7 +610,7 @@ class InjectionContext
             .filter(LazySingletonClassBinding.class::isInstance)
             .map(b -> (LazySingletonClassBinding<Object>) b)
             .filter(b -> b.value().optional().isPresent())
-            .collect(Collectors.toList());
+            .toList();
 
         if (instantiatedSingletons.isEmpty()) {
             return;
@@ -632,7 +678,6 @@ class InjectionContext
      * @param concreteClass the class to instantiate
      * @return a new injected instance
      */
-    @SuppressWarnings("unchecked")
     private <T> T createUnscoped(final Class<? extends T> concreteClass) {
         final var codeModel = this.injectionFramework.codeModel();
         final var typeUsage = codeModel.getTypeUsage(concreteClass);
@@ -842,10 +887,19 @@ class InjectionContext
             // resolve the dependencies
             final var resolvedDependencies = new IdentityHashMap<Dependency, Object>();
 
-            dependencies.forEach(dependency -> resolvedDependencies
-                .put(dependency,
+            dependencies.forEach(dependency -> {
+                resolvedDependencies.put(dependency,
                     getValue(requiredBy, dependency)
-                        .orElseThrow(() -> new UnsatisfiedDependencyException(dependency, buildRequiredByChain()))));
+                        .orElseThrow(() -> new UnsatisfiedDependencyException(dependency, buildRequiredByChain())));
+
+                // Track 2: injectionPoint is null until the resolution path threads it through
+                InjectionContext.this.bindingGraphContributor.contributeDependency(
+                    InjectionContext.this.toBindingNode(
+                        InjectionContext.this.bindingsByDependency.get(this.dependency())),
+                    InjectionContext.this.toBindingNode(
+                        InjectionContext.this.bindingsByDependency.get(dependency)),
+                    new DependencyEdge(null, dependency));
+            });
 
             return resolvedDependencies;
         }
@@ -1109,7 +1163,6 @@ class InjectionContext
 
         private final CopyOnWriteArrayList<Supplier<T>> suppliers = new CopyOnWriteArrayList<>();
 
-        @SuppressWarnings("unchecked")
         void addValue(final T value) {
             this.suppliers.add(() -> value);
         }

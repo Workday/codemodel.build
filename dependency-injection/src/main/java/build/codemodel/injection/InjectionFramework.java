@@ -66,6 +66,13 @@ public class InjectionFramework {
     private final ConcurrentHashMap<Class<? extends Annotation>, Scope> registeredScopes;
 
     /**
+     * The {@link BindingGraphContributor} notified of every binding registration and dependency
+     * resolution. Defaults to {@link BindingGraphContributor#NOOP}; replaced by Track 2 via
+     * {@link #setBindingGraphContributor}.
+     */
+    private volatile BindingGraphContributor bindingGraphContributor = BindingGraphContributor.NOOP;
+
+    /**
      * Constructs an {@link InjectionFramework}.
      *
      * @param codeModel the {@link JDKCodeModel}
@@ -415,6 +422,27 @@ public class InjectionFramework {
      */
     public Optional<Scope> findScope(final JDKTypeDescriptor typeDescriptor) {
         return findScopeEntry(typeDescriptor).map(java.util.Map.Entry::getValue);
+    }
+
+    /**
+     * Installs a {@link BindingGraphContributor} that will be notified of every binding registration
+     * and dependency resolution for all contexts created by this framework. Replaces the default
+     * {@link BindingGraphContributor#NOOP}. Intended for Track 2 use.
+     *
+     * @param contributor the contributor to install; must not be {@code null}
+     */
+    public void setBindingGraphContributor(final BindingGraphContributor contributor) {
+        this.bindingGraphContributor = Objects.requireNonNull(
+            contributor, "The BindingGraphContributor must not be null");
+    }
+
+    /**
+     * Returns the currently installed {@link BindingGraphContributor}.
+     *
+     * @return the contributor
+     */
+    BindingGraphContributor bindingGraphContributor() {
+        return this.bindingGraphContributor;
     }
 
     /**
