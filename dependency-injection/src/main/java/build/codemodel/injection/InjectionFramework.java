@@ -40,6 +40,8 @@ import java.util.ArrayDeque;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 
 /**
@@ -59,6 +61,11 @@ public class InjectionFramework {
     private final JDKCodeModel codeModel;
 
     /**
+     * Registered custom scopes keyed by their scope annotation type.
+     */
+    private final ConcurrentHashMap<Class<? extends Annotation>, Scope> registeredScopes;
+
+    /**
      * Constructs an {@link InjectionFramework}.
      *
      * @param codeModel the {@link JDKCodeModel}
@@ -66,6 +73,7 @@ public class InjectionFramework {
     public InjectionFramework(final JDKCodeModel codeModel) {
         this.codeModel = Objects
             .requireNonNull(codeModel, "The CodeModel must not be null");
+        this.registeredScopes = new ConcurrentHashMap<>();
     }
 
     /**
@@ -219,10 +227,31 @@ public class InjectionFramework {
                 injectionPoints.put("constructor", constructorInjectionPoint);
             });
 
+        // the @PreDestroy MethodDescriptors in order of their discovery
+        final var preDestroyMethodDescriptors = new LinkedHashSet<MethodDescriptor>();
+
+        // re-walk the hierarchy to discover @PreDestroy (done after injection-point discovery so
+        // the same deque structure is reused conceptually; in practice we need a second pass here)
+        var nextForDestroy = injectableClass;
+        final var destroyDeque = new ArrayDeque<Class<?>>();
+        while (nextForDestroy != null && !nextForDestroy.equals(Object.class)) {
+            destroyDeque.push(nextForDestroy);
+            nextForDestroy = nextForDestroy.getSuperclass();
+        }
+
+        while (!destroyDeque.isEmpty()) {
+            final var currentClass = destroyDeque.pop();
+            this.codeModel.getJDKTypeDescriptor(currentClass).ifPresent(currentDescriptor ->
+                currentDescriptor.declaredMethods()
+                    .filter(this::isPreDestroy)
+                    .forEach(preDestroyMethodDescriptors::add));
+        }
+
         return InjectableDescriptor.of(
             typeDescriptor,
             injectionPoints.values().stream(),
-            postInjectMethodDescriptors.stream());
+            postInjectMethodDescriptors.stream(),
+            preDestroyMethodDescriptors.stream());
     }
 
     /**
@@ -318,6 +347,102 @@ public class InjectionFramework {
                 .typeName()
                 .canonicalName()
                 .equals(PostInject.class.getCanonicalName()));
+    }
+
+    /**
+     * Determines if a {@link MethodDescriptor} represents a {@link PreDestroy} method.
+     *
+     * @param descriptor the {@link MethodDescriptor}
+     * @return {@code true} if annotated with {@link PreDestroy}
+     */
+    public boolean isPreDestroy(final MethodDescriptor descriptor) {
+        return descriptor.getTrait(Static.class).isEmpty()
+            && descriptor.getTrait(Classification.class)
+            .map(classification -> classification != Classification.ABSTRACT)
+            .orElse(true)
+            && descriptor.traits(AnnotationTypeUsage.class)
+            .anyMatch(a -> a.typeName().canonicalName().equals(PreDestroy.class.getCanonicalName()));
+    }
+
+    /**
+     * Registers a {@link Scope} implementation for the specified scope annotation type. The scope is
+     * applied whenever a class annotated with {@code scopeAnnotation} is bound via
+     * {@link Context#bind(Class)}.
+     *
+     * @param scopeAnnotation the scope annotation class (must be annotated with {@link ScopeAnnotation})
+     * @param scope           the {@link Scope} implementation to register
+     */
+    public void bindScope(final Class<? extends Annotation> scopeAnnotation, final Scope scope) {
+        Objects.requireNonNull(scopeAnnotation, "The scope annotation class must not be null");
+        Objects.requireNonNull(scope, "The Scope must not be null");
+        this.registeredScopes.put(scopeAnnotation, scope);
+    }
+
+    /**
+     * Returns the registered scope entry (annotation class + {@link Scope}) for the given
+     * {@link JDKTypeDescriptor}, if the type carries a scope annotation that has been registered
+     * via {@link #bindScope}.
+     *
+     * @param typeDescriptor the type descriptor to inspect
+     * @return an {@link Optional} containing the matching entry, or empty if none
+     */
+    public Optional<java.util.Map.Entry<Class<? extends Annotation>, Scope>> findScopeEntry(
+        final JDKTypeDescriptor typeDescriptor) {
+
+        if (typeDescriptor == null) {
+            return Optional.empty();
+        }
+        return typeDescriptor.traits(AnnotationTypeUsage.class)
+            .filter(this::hasScopeAnnotation)
+            .flatMap(annotation -> {
+                final var name = annotation.typeName().canonicalName();
+                return this.registeredScopes.entrySet().stream()
+                    .filter(e -> {
+                        final var canonical = e.getKey().getCanonicalName();
+                        return name.equals(e.getKey().getName())
+                            || (canonical != null && name.equals(canonical));
+                    });
+            })
+            .findFirst();
+    }
+
+    /**
+     * Returns the registered {@link Scope} for the given {@link JDKTypeDescriptor}, if the type carries
+     * a scope annotation that has been registered via {@link #bindScope}.
+     *
+     * @param typeDescriptor the type descriptor to inspect
+     * @return an {@link Optional} containing the matching {@link Scope}, or empty if none
+     */
+    public Optional<Scope> findScope(final JDKTypeDescriptor typeDescriptor) {
+        return findScopeEntry(typeDescriptor).map(java.util.Map.Entry::getValue);
+    }
+
+    /**
+     * Returns {@code true} if the given annotation usage is itself annotated with {@link ScopeAnnotation}.
+     * Uses codemodel lookup as the primary path, and falls back to matching against registered scopes
+     * by name to handle inner annotation types that the codemodel may represent using a different name
+     * format.
+     *
+     * @param annotation the annotation to check
+     * @return {@code true} if it is a scope annotation
+     */
+    private boolean hasScopeAnnotation(final AnnotationTypeUsage annotation) {
+        // Primary: look up the annotation type in the codemodel and check for @ScopeAnnotation meta-annotation
+        if (this.codeModel.getJDKTypeDescriptor(annotation.typeName())
+            .map(desc -> desc.traits(AnnotationTypeUsage.class)
+                .anyMatch(a -> a.typeName().canonicalName().equals(ScopeAnnotation.class.getCanonicalName())))
+            .orElse(false)) {
+            return true;
+        }
+        // Fallback: match against registered scope annotation classes by name.
+        // Handles inner annotation types where the codemodel lookup may use a different name format
+        // (binary '$' vs canonical '.') than Class.getCanonicalName().
+        final var name = annotation.typeName().canonicalName();
+        return this.registeredScopes.keySet().stream()
+            .anyMatch(cls -> {
+                final var canonical = cls.getCanonicalName();
+                return name.equals(cls.getName()) || (canonical != null && name.equals(canonical));
+            });
     }
 
     /**
