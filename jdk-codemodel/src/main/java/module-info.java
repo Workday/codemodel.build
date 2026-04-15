@@ -39,6 +39,8 @@ open module build.codemodel.jdk {
 
     requires build.base.marshalling;
     requires build.base.foundation;
+    requires build.base.parsing;
+    requires build.base.version;
 
     exports build.codemodel.jdk;
     exports build.codemodel.jdk.descriptor;
