@@ -23,6 +23,7 @@ package build.codemodel.injection;
 import build.codemodel.foundation.usage.TypeUsage;
 import jakarta.inject.Inject;
 
+import java.nio.file.Path;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -110,6 +111,21 @@ public interface Context
      */
     <T> T create(Dependency dependency)
         throws InjectionException;
+
+    /**
+     * Builds a {@link BindingGraphTrait} from the current contributor state, attaches it to the
+     * framework's {@link build.codemodel.jdk.JDKCodeModel}, and writes a human-readable wiring
+     * report to {@code outputPath}.
+     *
+     * <p>No-ops immediately if no real {@link BindingGraphContributor} is installed (i.e. the
+     * {@link BindingGraphContributor#NOOP} is still in place). May be called at any point after
+     * bindings are registered.
+     *
+     * @param outputPath the path to write the wiring report to
+     * @return this {@link Context} for fluent chaining
+     * @throws java.io.UncheckedIOException if writing the report fails
+     */
+    Context snapshot(Path outputPath);
 
     /**
      * Validates the current set of registered bindings before any objects are created. Performs three checks:

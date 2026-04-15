@@ -20,10 +20,12 @@ package build.codemodel.injection;
  * #L%
  */
 
+import java.util.Optional;
+
 /**
  * Observes binding registration and dependency resolution events in an {@link InjectionContext}.
  * The Track 1 default is {@link #NOOP}. Track 2 provides a real implementation that builds and
- * maintains a {@code BindingGraphTrait} on the {@link InjectionFramework}'s {@code JDKTypeDescriptor}.
+ * maintains a {@link BindingGraphTrait} on the {@link InjectionFramework}'s {@code JDKCodeModel}.
  *
  * <p>Register a contributor via {@link InjectionFramework#setBindingGraphContributor}. Every
  * context created by that framework will call through to it; switching from the NOOP to a real
@@ -36,6 +38,19 @@ package build.codemodel.injection;
  * @since Apr-2026
  */
 public interface BindingGraphContributor {
+
+    /**
+     * Builds a {@link BindingGraphTrait} from the events accumulated so far. Returns
+     * {@link java.util.Optional#empty()} for implementations that do not maintain a graph (i.e.
+     * {@link #NOOP}). {@link InjectionContext} calls this from {@link Context#snapshot} and
+     * no-ops immediately if the result is empty.
+     *
+     * @return an {@link java.util.Optional} containing the built trait, or empty if not supported
+     */
+    default Optional<BindingGraphTrait> buildTrait() {
+        return Optional.empty();
+    }
+
 
     /**
      * Called each time a {@link Binding} is registered in an {@link InjectionContext} (including

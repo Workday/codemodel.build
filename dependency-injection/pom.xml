@@ -41,6 +41,12 @@
         </dependency>
 
         <dependency>
+            <groupId>build.base</groupId>
+            <artifactId>base-telemetry</artifactId>
+            <version>${base.version}</version>
+        </dependency>
+
+        <dependency>
             <groupId>build.codemodel</groupId>
             <artifactId>codemodel-foundation</artifactId>
             <version>${revision}</version>
@@ -55,6 +61,12 @@
         <dependency>
             <groupId>build.codemodel</groupId>
             <artifactId>jdk-codemodel</artifactId>
+            <version>${revision}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>build.codemodel</groupId>
+            <artifactId>codemodel-framework</artifactId>
             <version>${revision}</version>
         </dependency>
 

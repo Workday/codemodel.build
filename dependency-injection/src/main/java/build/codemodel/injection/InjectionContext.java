@@ -26,6 +26,7 @@ import build.base.graph.Graphs;
 import build.codemodel.foundation.usage.GenericTypeUsage;
 import build.codemodel.foundation.usage.NamedTypeUsage;
 import build.codemodel.foundation.usage.TypeUsage;
+import build.codemodel.jdk.JDKCodeModel;
 import build.codemodel.jdk.TypeUsages;
 import build.codemodel.jdk.descriptor.MethodType;
 import jakarta.inject.Singleton;
@@ -33,6 +34,7 @@ import jakarta.inject.Singleton;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -538,6 +540,17 @@ class InjectionContext
             throw new ValidationException(problems);
         }
 
+        return this;
+    }
+
+    @Override
+    public Context snapshot(final Path outputPath) {
+        this.bindingGraphContributor.buildTrait().ifPresent(trait -> {
+            this.injectionFramework.codeModel()
+                .<JDKCodeModel, BindingGraphTrait>computeIfAbsent(
+                    BindingGraphTrait.class, _ -> trait);
+            WiringReportCompiler.writeReport(trait, outputPath);
+        });
         return this;
     }
 

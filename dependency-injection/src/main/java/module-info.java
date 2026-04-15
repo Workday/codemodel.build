@@ -39,6 +39,7 @@ module build.codemodel.injection {
     requires build.codemodel.imperative;
     requires build.codemodel.objectoriented;
     requires transitive build.codemodel.jdk;
+    requires build.codemodel.framework;
 
     exports build.codemodel.injection;
 }
