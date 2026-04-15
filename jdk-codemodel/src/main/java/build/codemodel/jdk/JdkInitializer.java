@@ -23,9 +23,7 @@ package build.codemodel.jdk;
 import build.base.foundation.Lazy;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.FormalParameterDescriptor;
-import build.codemodel.foundation.descriptor.RequiresModuleDescriptor;
 import build.codemodel.foundation.descriptor.ThrowableDescriptor;
-import build.codemodel.foundation.naming.ModuleName;
 import build.codemodel.foundation.naming.NameProvider;
 import build.codemodel.foundation.usage.AnnotationTypeUsage;
 import build.codemodel.foundation.usage.AnnotationValue;
@@ -46,22 +44,17 @@ import build.codemodel.jdk.descriptor.AnnotationType;
 import build.codemodel.jdk.descriptor.EnclosingTypeDescriptor;
 import build.codemodel.jdk.descriptor.EnumConstantDescriptor;
 import build.codemodel.jdk.descriptor.EnumType;
-import build.codemodel.jdk.descriptor.ExportsDescriptor;
 import build.codemodel.jdk.descriptor.FieldInitializerDescriptor;
 import build.codemodel.jdk.descriptor.Final;
 import build.codemodel.jdk.descriptor.JDKClassTypeDescriptor;
 import build.codemodel.jdk.descriptor.JDKInterfaceTypeDescriptor;
+import build.codemodel.jdk.descriptor.JDKModuleDescriptor;
 import build.codemodel.jdk.descriptor.JDKTypeDescriptor;
 import build.codemodel.jdk.descriptor.MethodBodyDescriptor;
 import build.codemodel.jdk.descriptor.MethodImplementationDescriptor;
-import build.codemodel.jdk.descriptor.OpenModule;
-import build.codemodel.jdk.descriptor.OpensDescriptor;
-import build.codemodel.jdk.descriptor.ProvidesDescriptor;
 import build.codemodel.jdk.descriptor.RecordComponentDescriptor;
 import build.codemodel.jdk.descriptor.RecordType;
-import build.codemodel.jdk.descriptor.RequiresModifier;
 import build.codemodel.jdk.descriptor.Static;
-import build.codemodel.jdk.descriptor.UsesDescriptor;
 import build.codemodel.objectoriented.descriptor.AccessModifier;
 import build.codemodel.objectoriented.descriptor.Classification;
 import build.codemodel.objectoriented.descriptor.ConstructorDescriptor;
@@ -73,14 +66,8 @@ import build.codemodel.objectoriented.descriptor.ParameterizedTypeDescriptor;
 import build.codemodel.objectoriented.naming.MethodName;
 import com.sun.source.tree.ClassTree;
 import com.sun.source.tree.CompilationUnitTree;
-import com.sun.source.tree.ExportsTree;
-import com.sun.source.tree.ExpressionTree;
 import com.sun.source.tree.MethodTree;
 import com.sun.source.tree.ModuleTree;
-import com.sun.source.tree.OpensTree;
-import com.sun.source.tree.ProvidesTree;
-import com.sun.source.tree.RequiresTree;
-import com.sun.source.tree.UsesTree;
 import com.sun.source.tree.VariableTree;
 import com.sun.source.util.JavacTask;
 import com.sun.source.util.TreePath;
@@ -98,7 +85,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
@@ -261,58 +247,9 @@ public class JdkInitializer
                     @Override
                     public Void visitModule(final ModuleTree moduleTree, final Void unused) {
                         nameProvider.getModuleName(moduleTree.getName().toString()).ifPresent(moduleName -> {
-                            final var descriptor = codeModel.createModuleDescriptor(moduleName);
-
-                            if (moduleTree.getModuleType() == ModuleTree.ModuleKind.OPEN) {
-                                descriptor.addTrait(OpenModule.OPEN);
-                            }
-
-                            for (final var directive : moduleTree.getDirectives()) {
-                                switch (directive.getKind()) {
-                                    case REQUIRES -> {
-                                        final var req = (RequiresTree) directive;
-                                        nameProvider.getModuleName(req.getModuleName().toString())
-                                            .ifPresent(reqName -> {
-                                                final var reqDescriptor = RequiresModuleDescriptor.of(codeModel, reqName);
-                                                if (req.isTransitive()) {
-                                                    reqDescriptor.addTrait(RequiresModifier.TRANSITIVE);
-                                                }
-                                                if (req.isStatic()) {
-                                                    reqDescriptor.addTrait(RequiresModifier.STATIC);
-                                                }
-                                                descriptor.addTrait(reqDescriptor);
-                                            });
-                                    }
-                                    case EXPORTS -> {
-                                        final var exp = (ExportsTree) directive;
-                                        nameProvider.getNamespace(exp.getPackageName().toString())
-                                            .ifPresent(pkg -> descriptor.addTrait(ExportsDescriptor.of(
-                                                pkg, resolveModuleNames(exp.getModuleNames()))));
-                                    }
-                                    case OPENS -> {
-                                        final var opens = (OpensTree) directive;
-                                        nameProvider.getNamespace(opens.getPackageName().toString())
-                                            .ifPresent(pkg -> descriptor.addTrait(OpensDescriptor.of(
-                                                pkg, resolveModuleNames(opens.getModuleNames()))));
-                                    }
-                                    case PROVIDES -> {
-                                        final var provides = (ProvidesTree) directive;
-                                        final var service = SpecificTypeUsage.of(codeModel,
-                                            nameProvider.getTypeName(Optional.empty(), provides.getServiceName().toString()));
-                                        final var impls = provides.getImplementationNames().stream()
-                                            .map(n -> (TypeUsage) SpecificTypeUsage.of(codeModel,
-                                                nameProvider.getTypeName(Optional.empty(), n.toString())));
-                                        descriptor.addTrait(ProvidesDescriptor.of(service, impls));
-                                    }
-                                    case USES -> {
-                                        final var uses = (UsesTree) directive;
-                                        final var service = SpecificTypeUsage.of(codeModel,
-                                            nameProvider.getTypeName(Optional.empty(), uses.getServiceName().toString()));
-                                        descriptor.addTrait(UsesDescriptor.of(service));
-                                    }
-                                    default -> { /* version directive — not modelled */ }
-                                }
-                            }
+                            final var descriptor = codeModel.createModuleDescriptor(
+                                moduleName, JDKModuleDescriptor::of);
+                            descriptor.populateFrom(moduleTree);
                         });
                         return null;
                     }
@@ -323,19 +260,6 @@ public class JdkInitializer
             initialized = false;
             throw new RuntimeException("Failed to initialize CodeModel from source files", e);
         }
-    }
-
-    // --- Module helpers ---
-
-    private Stream<ModuleName> resolveModuleNames(
-        final List<? extends ExpressionTree> trees) {
-        if (trees == null) {
-            return Stream.of();
-        }
-        return trees.stream()
-            .map(t -> nameProvider.getModuleName(t.toString()))
-            .filter(Optional::isPresent)
-            .map(Optional::get);
     }
 
     // --- Compiler options ---

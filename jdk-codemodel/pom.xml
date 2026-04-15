@@ -30,6 +30,24 @@
 
         <dependency>
             <groupId>build.base</groupId>
+            <artifactId>base-io</artifactId>
+            <version>${base.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>build.base</groupId>
+            <artifactId>base-parsing</artifactId>
+            <version>${base.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>build.base</groupId>
+            <artifactId>base-version</artifactId>
+            <version>${base.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>build.base</groupId>
             <artifactId>base-marshalling</artifactId>
             <version>${base.version}</version>
         </dependency>
