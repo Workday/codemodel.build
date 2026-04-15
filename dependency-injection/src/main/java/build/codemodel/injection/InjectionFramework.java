@@ -425,9 +425,21 @@ public class InjectionFramework {
     }
 
     /**
+     * Installs a {@link GraphBuildingContributor} and returns this framework for fluent chaining.
+     * Every context created by this framework will contribute its bindings and resolved dependencies
+     * to the graph, which can then be snapshotted via {@link Context#snapshot}.
+     *
+     * @return this {@link InjectionFramework}
+     */
+    public InjectionFramework withBindingGraph() {
+        setBindingGraphContributor(new GraphBuildingContributor());
+        return this;
+    }
+
+    /**
      * Installs a {@link BindingGraphContributor} that will be notified of every binding registration
      * and dependency resolution for all contexts created by this framework. Replaces the default
-     * {@link BindingGraphContributor#NOOP}. Intended for Track 2 use.
+     * {@link BindingGraphContributor#NOOP}.
      *
      * @param contributor the contributor to install; must not be {@code null}
      */
