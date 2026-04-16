@@ -19,69 +19,58 @@
         <dependency>
             <groupId>jakarta.inject</groupId>
             <artifactId>jakarta.inject-api</artifactId>
-            <version>${jakarta-inject.version}</version>
         </dependency>
 
         <dependency>
             <groupId>build.base</groupId>
             <artifactId>base-foundation</artifactId>
-            <version>${base.version}</version>
         </dependency>
 
         <dependency>
             <groupId>build.base</groupId>
             <artifactId>base-configuration</artifactId>
-            <version>${base.version}</version>
         </dependency>
 
         <dependency>
             <groupId>build.base</groupId>
             <artifactId>base-graph</artifactId>
-            <version>${base.version}</version>
         </dependency>
 
         <dependency>
             <groupId>build.base</groupId>
             <artifactId>base-telemetry</artifactId>
-            <version>${base.version}</version>
         </dependency>
 
         <dependency>
             <groupId>build.codemodel</groupId>
             <artifactId>codemodel-foundation</artifactId>
-            <version>${revision}</version>
         </dependency>
 
         <dependency>
             <groupId>build.codemodel</groupId>
             <artifactId>objectoriented-codemodel</artifactId>
-            <version>${revision}</version>
         </dependency>
 
         <dependency>
             <groupId>build.codemodel</groupId>
             <artifactId>jdk-codemodel</artifactId>
-            <version>${revision}</version>
         </dependency>
 
         <dependency>
             <groupId>build.codemodel</groupId>
             <artifactId>codemodel-framework</artifactId>
-            <version>${revision}</version>
         </dependency>
 
         <!-- Test Dependencies -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
-            <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>org.assertj</groupId>
             <artifactId>assertj-core</artifactId>
-            <version>${assertj.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

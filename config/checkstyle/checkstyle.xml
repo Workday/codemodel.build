@@ -21,8 +21,8 @@
         <module name="FinalLocalVariable">
             <property name="tokens" value="VARIABLE_DEF,PARAMETER_DEF"/>
         </module>
-        <module name="HideUtilityClassConstructor"/>
         <module name="FinalParameters"/>
+        <module name="HideUtilityClassConstructor"/>
         <module name="IllegalInstantiation"/>
         <module name="IllegalTokenText"/>
         <module name="LeftCurly"/>
