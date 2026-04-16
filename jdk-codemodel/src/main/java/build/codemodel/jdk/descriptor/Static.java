@@ -20,6 +20,7 @@ package build.codemodel.jdk.descriptor;
  * #L%
  */
 
+import build.base.marshalling.Marshalling;
 import build.codemodel.foundation.descriptor.Trait;
 
 /**
@@ -35,4 +36,8 @@ public enum Static
      * Indicates that a definition is {@code static}.
      */
     STATIC;
+
+    static {
+        Marshalling.registerEnum(Static.class);
+    }
 }

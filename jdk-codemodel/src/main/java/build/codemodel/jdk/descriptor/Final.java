@@ -20,6 +20,7 @@ package build.codemodel.jdk.descriptor;
  * #L%
  */
 
+import build.base.marshalling.Marshalling;
 import build.codemodel.foundation.descriptor.Trait;
 
 /**
@@ -35,4 +36,8 @@ public enum Final
      * Indicates that a parameter is {@code final}.
      */
     FINAL;
+
+    static {
+        Marshalling.registerEnum(Final.class);
+    }
 }

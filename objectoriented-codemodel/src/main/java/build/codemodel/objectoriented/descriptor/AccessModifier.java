@@ -20,6 +20,7 @@ package build.codemodel.objectoriented.descriptor;
  * #L%
  */
 
+import build.base.marshalling.Marshalling;
 import build.codemodel.foundation.descriptor.Singular;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.descriptor.TypeDescriptor;
@@ -49,4 +50,8 @@ public enum AccessModifier
      * Indicates only {@code private} access is permitted.
      */
     PRIVATE;
+
+    static {
+        Marshalling.registerEnum(AccessModifier.class);
+    }
 }

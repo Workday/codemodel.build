@@ -20,6 +20,7 @@ package build.codemodel.jdk.descriptor;
  * #L%
  */
 
+import build.base.marshalling.Marshalling;
 import build.codemodel.foundation.descriptor.NonSingular;
 import build.codemodel.foundation.descriptor.Trait;
 
@@ -42,4 +43,8 @@ public enum RequiresModifier implements Trait {
      * {@code requires static} — the dependency is required at compile time only.
      */
     STATIC;
+
+    static {
+        Marshalling.registerEnum(RequiresModifier.class);
+    }
 }

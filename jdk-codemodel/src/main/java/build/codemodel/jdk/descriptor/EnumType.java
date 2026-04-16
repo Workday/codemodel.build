@@ -20,6 +20,7 @@ package build.codemodel.jdk.descriptor;
  * #L%
  */
 
+import build.base.marshalling.Marshalling;
 import build.codemodel.foundation.descriptor.Trait;
 
 /**
@@ -34,4 +35,8 @@ public enum EnumType implements Trait {
      * Indicates that a type is an enum.
      */
     ENUM;
+
+    static {
+        Marshalling.registerEnum(EnumType.class);
+    }
 }

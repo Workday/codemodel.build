@@ -20,6 +20,7 @@ package build.codemodel.objectoriented.descriptor;
  * #L%
  */
 
+import build.base.marshalling.Marshalling;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.descriptor.Traitable;
 
@@ -56,5 +57,9 @@ public enum Classification
      */
     public boolean isAbstract() {
         return this == ABSTRACT;
+    }
+
+    static {
+        Marshalling.registerEnum(Classification.class);
     }
 }
