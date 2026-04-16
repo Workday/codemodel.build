@@ -20,6 +20,7 @@ package build.codemodel.jdk.descriptor;
  * #L%
  */
 
+import build.base.marshalling.Marshalling;
 import build.codemodel.foundation.descriptor.Trait;
 
 /**
@@ -34,4 +35,8 @@ public enum AnnotationType implements Trait {
      * Indicates that a type is an annotation type.
      */
     ANNOTATION_TYPE;
+
+    static {
+        Marshalling.registerEnum(AnnotationType.class);
+    }
 }

@@ -20,6 +20,7 @@ package build.codemodel.jdk.descriptor;
  * #L%
  */
 
+import build.base.marshalling.Marshalling;
 import build.codemodel.foundation.descriptor.Singular;
 import build.codemodel.foundation.descriptor.Trait;
 
@@ -36,4 +37,8 @@ public enum OpenModule implements Trait {
      * Indicates the module is an open module.
      */
     OPEN;
+
+    static {
+        Marshalling.registerEnum(OpenModule.class);
+    }
 }

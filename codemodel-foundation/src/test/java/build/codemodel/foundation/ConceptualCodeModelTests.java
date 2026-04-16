@@ -1,6 +1,7 @@
 package build.codemodel.foundation;
 
 import build.base.foundation.stream.Streamable;
+import build.base.marshalling.Marshalling;
 import build.base.mereology.Strategy;
 import build.base.query.Indexable;
 import build.codemodel.foundation.descriptor.AbstractTraitable;
@@ -283,7 +284,11 @@ class ConceptualCodeModelTests
         implements Trait {
         RED,
         GREEN,
-        BLUE
+        BLUE;
+
+        static {
+            Marshalling.registerEnum(ConceptualCodeModelTests.Color.class);
+        }
     }
 
     @Singular
@@ -292,7 +297,11 @@ class ConceptualCodeModelTests
 
         FAST,
         SLOW,
-        MEDIUM
+        MEDIUM;
+
+        static {
+            Marshalling.registerEnum(ConceptualCodeModelTests.Speed.class);
+        }
     }
 
     public static class Wheel

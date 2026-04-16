@@ -1,5 +1,6 @@
 package build.codemodel.foundation;
 
+import build.base.marshalling.Marshalling;
 import build.base.mereology.Strategy;
 import build.codemodel.foundation.descriptor.NonSingular;
 import build.codemodel.foundation.descriptor.Singular;
@@ -296,6 +297,10 @@ public interface TraitableCompatibilityTests {
         BLUE,
         YELLOW,
         PURPLE;
+
+        static {
+            Marshalling.registerEnum(TraitableCompatibilityTests.Color.class);
+        }
     }
 
     @Singular

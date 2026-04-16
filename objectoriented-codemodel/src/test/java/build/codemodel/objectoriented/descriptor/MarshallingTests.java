@@ -9,6 +9,7 @@ import build.codemodel.expression.Expression;
 import build.codemodel.expression.StringLiteral;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.FormalParameterDescriptor;
+import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.descriptor.TypeDescriptor;
 import build.codemodel.foundation.naming.IrreducibleName;
 import build.codemodel.foundation.naming.ModuleName;
@@ -216,6 +217,45 @@ class MarshallingTests {
     }
 
     /**
+     * Ensures that enum {@link Trait}s (e.g. {@link AccessModifier}) attached to a {@link ClassTypeDescriptor}
+     * survive a marshal/transport/unmarshal round-trip.
+     * <p>
+     * This test will fail until {@code Marshalling.registerEnum} is available (Workday/base.build#42)
+     * and called for {@link AccessModifier} and {@link Classification}.
+     *
+     * @throws IOException if an error occurs during marshalling, transport or unmarshalling
+     */
+    @Test
+    void shouldPreserveEnumTraitsOnClassTypeDescriptorAfterMarshalling()
+        throws IOException {
+
+        final var typeName = TypeName.of(
+            ModuleName.of("com.example", this.nameProvider),
+            Optional.empty(),
+            Optional.empty(),
+            IrreducibleName.of("TestClass"));
+
+        final var typeDescriptor = ClassTypeDescriptor.of(codeModel, typeName);
+        typeDescriptor.addTrait(AccessModifier.PUBLIC);
+        typeDescriptor.addTrait(Classification.FINAL);
+
+        final var unmarshalled = marshallAndTransportAndUnMarshal(typeDescriptor);
+
+        assertThat(unmarshalled.hasTrait(AccessModifier.class))
+            .as("AccessModifier trait should survive marshalling round-trip")
+            .isTrue();
+        assertThat(unmarshalled.trait(AccessModifier.class))
+            .as("AccessModifier value should be preserved")
+            .isEqualTo(AccessModifier.PUBLIC);
+        assertThat(unmarshalled.hasTrait(Classification.class))
+            .as("Classification trait should survive marshalling round-trip")
+            .isTrue();
+        assertThat(unmarshalled.trait(Classification.class))
+            .as("Classification value should be preserved")
+            .isEqualTo(Classification.FINAL);
+    }
+
+    /**
      * Ensures that {@link InterfaceTypeDescriptor} can be marshalled, transported and unmarshalled using a {@link JsonTransport}.
      *
      * @throws IOException if an error occurs during marshalling, transport or unmarshalling
@@ -298,6 +338,21 @@ class MarshallingTests {
     private <T> void marshallAndTransportAndUnMarshalAndAssert(T original)
         throws IOException {
 
+        final var unmarshalled = marshallAndTransportAndUnMarshal(original);
+
+        if (original instanceof TypeDescriptor otd && unmarshalled instanceof TypeDescriptor utd) {
+            // TODO: Replace this with TypeDescriptor equality when it is repaired
+            assertThat(otd.typeName())
+                .isEqualTo(utd.typeName());
+        } else {
+            assertThat(original)
+                .isEqualTo(unmarshalled);
+        }
+    }
+
+    private <T> T marshallAndTransportAndUnMarshal(T original)
+        throws IOException {
+
         final var marshaller = Marshalling.newMarshaller();
         final var marshalled = marshaller.marshal(original);
 
@@ -333,16 +388,6 @@ class MarshallingTests {
         final var parser = factory.createParser(reader);
         final Marshalled<T> transported = transport.read(parser, marshaller);
 
-        final var unmarshalled = marshaller.unmarshal(transported);
-
-        if (original instanceof TypeDescriptor otd && unmarshalled instanceof TypeDescriptor utd) {
-            // TODO: Replace this with TypeDescriptor equality when it is repaired
-            assertThat(otd.typeName())
-                .isEqualTo(utd.typeName());
-        }
-        else {
-            assertThat(original)
-                .isEqualTo(unmarshalled);
-        }
+        return marshaller.unmarshal(transported);
     }
 } 

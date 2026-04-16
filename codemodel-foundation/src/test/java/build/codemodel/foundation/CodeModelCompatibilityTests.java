@@ -1,6 +1,7 @@
 package build.codemodel.foundation;
 
 import build.base.foundation.stream.Streamable;
+import build.base.marshalling.Marshalling;
 import build.base.query.Indexable;
 import build.base.telemetry.Location;
 import build.codemodel.foundation.descriptor.AbstractTypeDescriptor;
@@ -622,6 +623,10 @@ public interface CodeModelCompatibilityTests
          */
         @Indexable
         public static final Function<Color, String> NAME = Color::name;
+
+        static {
+            Marshalling.registerEnum(CodeModelCompatibilityTests.Color.class);
+        }
     }
 
     /**
