@@ -25,36 +25,31 @@ import build.codemodel.foundation.descriptor.NonSingular;
 import build.codemodel.foundation.descriptor.Trait;
 
 /**
- * A {@link Trait} qualifying a {@link build.codemodel.foundation.descriptor.RequiresModuleDescriptor}
- * with a JPMS modifier keyword.
+ * A {@link Trait} qualifying a {@link JDKModuleDescriptor} with a module-level flag.
  *
  * @author reed.vonredwitz
  * @since Apr-2026
  */
 @NonSingular
-public enum RequiresModifier implements Trait {
+public enum ModuleModifier implements Trait {
 
     /**
-     * {@code requires transitive} — the dependency is re-exported to consumers of this module.
+     * Automatic module — derived from a plain JAR without a {@code module-info.class}.
+     * Set by the module system at load time; does not appear in source.
      */
-    TRANSITIVE,
+    AUTOMATIC,
 
     /**
-     * {@code requires static} — the dependency is required at compile time only.
-     */
-    STATIC,
-
-    /**
-     * Compiler-generated {@code requires} — present only in bytecode, never in source.
+     * Compiler-generated module — present only in bytecode, never in source.
      */
     SYNTHETIC,
 
     /**
-     * Implicitly required by the platform (e.g. {@code requires java.base}) — present only in bytecode, never in source.
+     * Implicitly required by the platform — present only in bytecode, never in source.
      */
     MANDATED;
 
     static {
-        Marshalling.registerEnum(RequiresModifier.class);
+        Marshalling.registerEnum(ModuleModifier.class);
     }
 }

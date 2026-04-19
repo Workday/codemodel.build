@@ -27,7 +27,6 @@ import build.base.version.Version;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.AbstractModuleDescriptor;
 import build.codemodel.foundation.descriptor.RequiresModuleDescriptor;
-import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.naming.ModuleName;
 import build.codemodel.foundation.naming.Namespace;
 import build.codemodel.foundation.usage.SpecificTypeUsage;
@@ -50,12 +49,15 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.zip.ZipFile;
 
 /**
  * A {@link build.codemodel.foundation.descriptor.ModuleDescriptor} implementation for the
@@ -80,6 +82,11 @@ import java.util.stream.Stream;
  */
 public final class JDKModuleDescriptor
     extends AbstractModuleDescriptor {
+
+    /**
+     * The filename of a JPMS module declaration source file.
+     */
+    public static final String SOURCE_FILENAME = "module-info.java";
 
     private JDKModuleDescriptor(final CodeModel codeModel,
                                 final ModuleName moduleName) {
@@ -117,21 +124,24 @@ public final class JDKModuleDescriptor
             switch (directive.getKind()) {
                 case REQUIRES -> {
                     final var req = (RequiresTree) directive;
-                    addRequires(req.getModuleName().toString(), req.isTransitive(), req.isStatic());
+                    addRequires(req.getModuleName().toString(), req.isTransitive(), req.isStatic(),
+                        false, false, Optional.empty());
                 }
                 case EXPORTS -> {
                     final var exp = (ExportsTree) directive;
                     addExports(exp.getPackageName().toString(),
                         exp.getModuleNames() == null
                             ? Stream.empty()
-                            : exp.getModuleNames().stream().map(Object::toString));
+                            : exp.getModuleNames().stream().map(Object::toString),
+                        Optional.empty());
                 }
                 case OPENS -> {
                     final var op = (OpensTree) directive;
                     addOpens(op.getPackageName().toString(),
                         op.getModuleNames() == null
                             ? Stream.empty()
-                            : op.getModuleNames().stream().map(Object::toString));
+                            : op.getModuleNames().stream().map(Object::toString),
+                        Optional.empty());
                 }
                 case PROVIDES -> {
                     final var prov = (ProvidesTree) directive;
@@ -160,6 +170,12 @@ public final class JDKModuleDescriptor
         if (mod.moduleFlags().contains(AccessFlag.OPEN)) {
             addTrait(OpenModule.OPEN);
         }
+        if (mod.moduleFlags().contains(AccessFlag.SYNTHETIC)) {
+            addTrait(ModuleModifier.SYNTHETIC);
+        }
+        if (mod.moduleFlags().contains(AccessFlag.MANDATED)) {
+            addTrait(ModuleModifier.MANDATED);
+        }
 
         mod.moduleVersion()
             .map(v -> v.stringValue())
@@ -167,18 +183,46 @@ public final class JDKModuleDescriptor
             .flatMap(Version::tryParse)
             .ifPresent(v -> addTrait(VersionTrait.of(v)));
 
-        mod.requires().forEach(req ->
+        mod.requires().forEach(req -> {
+            final Optional<Version> version = req.requiresVersion()
+                .map(v -> v.stringValue())
+                .filter(v -> !v.isBlank())
+                .flatMap(Version::tryParse);
             addRequires(req.requires().name().stringValue(),
                 req.requiresFlags().contains(AccessFlag.TRANSITIVE),
-                req.requiresFlags().contains(AccessFlag.STATIC_PHASE)));
+                req.requiresFlags().contains(AccessFlag.STATIC_PHASE),
+                req.requiresFlags().contains(AccessFlag.SYNTHETIC),
+                req.requiresFlags().contains(AccessFlag.MANDATED),
+                version);
+        });
 
-        mod.exports().forEach(exp ->
+        mod.exports().forEach(exp -> {
+            final Optional<PackageDirectiveModifier> modifier;
+            if (exp.exportsFlags().contains(AccessFlag.MANDATED)) {
+                modifier = Optional.of(PackageDirectiveModifier.MANDATED);
+            } else if (exp.exportsFlags().contains(AccessFlag.SYNTHETIC)) {
+                modifier = Optional.of(PackageDirectiveModifier.SYNTHETIC);
+            } else {
+                modifier = Optional.empty();
+            }
             addExports(exp.exportedPackage().name().stringValue(),
-                exp.exportsTo().stream().map(me -> me.name().stringValue())));
+                exp.exportsTo().stream().map(me -> me.name().stringValue()),
+                modifier);
+        });
 
-        mod.opens().forEach(op ->
+        mod.opens().forEach(op -> {
+            final Optional<PackageDirectiveModifier> modifier;
+            if (op.opensFlags().contains(AccessFlag.MANDATED)) {
+                modifier = Optional.of(PackageDirectiveModifier.MANDATED);
+            } else if (op.opensFlags().contains(AccessFlag.SYNTHETIC)) {
+                modifier = Optional.of(PackageDirectiveModifier.SYNTHETIC);
+            } else {
+                modifier = Optional.empty();
+            }
             addOpens(op.openedPackage().name().stringValue(),
-                op.opensTo().stream().map(me -> me.name().stringValue())));
+                op.opensTo().stream().map(me -> me.name().stringValue()),
+                modifier);
+        });
 
         mod.provides().forEach(prov ->
             addProvides(prov.provides().asInternalName(),
@@ -244,7 +288,7 @@ public final class JDKModuleDescriptor
             codeModel.createModuleDescriptor(moduleName, JDKModuleDescriptor::of);
 
         if (open) {
-            descriptor.addTrait(OpenModule.OPEN);
+            descriptor.computeIfAbsent(OpenModule.class, _ -> OpenModule.OPEN);
         }
 
         scanner.consume(OPEN_BRACE);
@@ -253,15 +297,18 @@ public final class JDKModuleDescriptor
             if (scanner.optionallyConsume(REQUIRES).isPresent()) {
                 final boolean isStatic = scanner.optionallyConsume(STATIC).isPresent();
                 final boolean isTransitive = !isStatic && scanner.optionallyConsume(TRANSITIVE).isPresent();
-                descriptor.addRequires(scanner.consume(NAME_PATTERN), isTransitive, isStatic);
+                descriptor.addRequires(scanner.consume(NAME_PATTERN), isTransitive, isStatic,
+                    false, false, Optional.empty());
                 scanner.consume(SEMICOLON);
             } else if (scanner.optionallyConsume(EXPORTS).isPresent()) {
                 descriptor.addExports(scanner.consume(NAME_PATTERN),
-                    parsePackageTargets(scanner, TO, NAME_PATTERN, COMMA).stream());
+                    parsePackageTargets(scanner, TO, NAME_PATTERN, COMMA).stream(),
+                    Optional.empty());
                 scanner.consume(SEMICOLON);
             } else if (scanner.optionallyConsume(OPENS).isPresent()) {
                 descriptor.addOpens(scanner.consume(NAME_PATTERN),
-                    parsePackageTargets(scanner, TO, NAME_PATTERN, COMMA).stream());
+                    parsePackageTargets(scanner, TO, NAME_PATTERN, COMMA).stream(),
+                    Optional.empty());
                 scanner.consume(SEMICOLON);
             } else if (scanner.optionallyConsume(USES).isPresent()) {
                 descriptor.addUses(scanner.consume(NAME_PATTERN));
@@ -320,16 +367,43 @@ public final class JDKModuleDescriptor
      */
     public static Optional<JDKModuleDescriptor> extract(final CodeModel codeModel,
                                                         final Path path) {
+        return extractWith(codeModel, path,
+            (cm, mn) -> cm.createModuleDescriptor(mn, JDKModuleDescriptor::of));
+    }
+
+    /**
+     * Extracts a {@link JDKModuleDescriptor} from the {@code module-info.class} inside the JAR at
+     * the given {@link Path} <em>without</em> registering it in the {@link CodeModel}.
+     * Falls back to the {@code Automatic-Module-Name} manifest attribute for automatic modules.
+     * <p>
+     * Use this when the caller maintains its own descriptor cache keyed by artifact coordinates
+     * (groupId:artifactId:version) so that two JARs sharing the same JPMS module name but carrying
+     * different versions receive independent descriptor objects rather than sharing the single entry
+     * that {@link CodeModel#createModuleDescriptor} would return.
+     *
+     * @param codeModel the {@link CodeModel} used for name resolution and child-descriptor creation
+     * @param path      the {@link Path} of a JAR file
+     * @return the {@link Optional} {@link JDKModuleDescriptor}, or {@link Optional#empty()} if the
+     * JAR carries no recognisable JPMS module information
+     * @throws IllegalArgumentException if the path does not exist
+     * @throws UncheckedIOException     if the JAR cannot be read
+     */
+    public static Optional<JDKModuleDescriptor> extractFresh(final CodeModel codeModel,
+                                                             final Path path) {
+        return extractWith(codeModel, path, JDKModuleDescriptor::of);
+    }
+
+    private static Optional<JDKModuleDescriptor> extractWith(final CodeModel codeModel,
+                                                             final Path path,
+                                                             final BiFunction<CodeModel, ModuleName, JDKModuleDescriptor> factory) {
 
         if (!Files.exists(path)) {
             throw new IllegalArgumentException("Path does not exist: " + path);
         }
 
-        try (JarFile jarFile = new JarFile(path.toFile())) {
+        try (JarFile jarFile = new JarFile(path.toFile(), true, ZipFile.OPEN_READ, Runtime.version())) {
 
-            final var entry = jarFile.stream()
-                .filter(e -> e.getName().endsWith("module-info.class"))
-                .findFirst();
+            final var entry = Optional.ofNullable(jarFile.getJarEntry("module-info.class"));
 
             if (entry.isPresent()) {
                 final byte[] bytes = jarFile.getInputStream(entry.get()).readAllBytes();
@@ -345,8 +419,7 @@ public final class JDKModuleDescriptor
                 final String rawName = mod.moduleName().name().stringValue();
 
                 return codeModel.getNameProvider().getModuleName(rawName).map(moduleName -> {
-                    final var descriptor =
-                        codeModel.createModuleDescriptor(moduleName, JDKModuleDescriptor::of);
+                    final var descriptor = factory.apply(codeModel, moduleName);
                     descriptor.populateFrom(mod);
                     return descriptor;
                 });
@@ -359,8 +432,8 @@ public final class JDKModuleDescriptor
                     manifest.getMainAttributes().getValue("Automatic-Module-Name");
                 if (autoName != null && !autoName.isBlank()) {
                     return codeModel.getNameProvider().getModuleName(autoName.trim()).map(moduleName -> {
-                        final var descriptor =
-                            codeModel.createModuleDescriptor(moduleName, JDKModuleDescriptor::of);
+                        final var descriptor = factory.apply(codeModel, moduleName);
+                        descriptor.addTrait(ModuleModifier.AUTOMATIC);
                         manifestVersion(manifest).ifPresent(v -> descriptor.addTrait(VersionTrait.of(v)));
                         return descriptor;
                     });
@@ -371,6 +444,159 @@ public final class JDKModuleDescriptor
         }
 
         return Optional.empty();
+    }
+
+    // ---- Convenience accessors -------------------------------------------
+
+    /**
+     * Returns the module version if one was recorded.
+     *
+     * @return the {@link Optional} {@link Version}
+     */
+    public Optional<Version> version() {
+        return getTrait(VersionTrait.class).map(VersionTrait::version);
+    }
+
+    /**
+     * Returns {@code true} if this is an open module ({@code open module ...}).
+     *
+     * @return {@code true} if the module is open
+     */
+    public boolean isOpen() {
+        return hasTrait(OpenModule.class);
+    }
+
+    /**
+     * Returns {@code true} if this is an automatic module (derived from a plain JAR via
+     * {@code Automatic-Module-Name}). Never {@code true} for source-parsed descriptors.
+     *
+     * @return {@code true} if the module is automatic
+     */
+    public boolean isAutomatic() {
+        return traits(ModuleModifier.class).anyMatch(m -> m == ModuleModifier.AUTOMATIC);
+    }
+
+    /**
+     * Returns {@code true} if this module is marked {@code SYNTHETIC} in bytecode.
+     * Never {@code true} for source-parsed descriptors.
+     *
+     * @return {@code true} if the module is synthetic
+     */
+    public boolean isSynthetic() {
+        return traits(ModuleModifier.class).anyMatch(m -> m == ModuleModifier.SYNTHETIC);
+    }
+
+    /**
+     * Returns {@code true} if this module is marked {@code MANDATED} in bytecode.
+     * Never {@code true} for source-parsed descriptors.
+     *
+     * @return {@code true} if the module is mandated
+     */
+    public boolean isMandated() {
+        return traits(ModuleModifier.class).anyMatch(m -> m == ModuleModifier.MANDATED);
+    }
+
+    /**
+     * Returns the version declared on a {@code requires} clause, if any.
+     * Only present in bytecode-extracted descriptors; always empty for source-parsed descriptors.
+     *
+     * @param req the {@link RequiresModuleDescriptor}
+     * @return the {@link Optional} {@link Version}
+     */
+    public static Optional<Version> requiresVersion(final RequiresModuleDescriptor req) {
+        return req.getTrait(RequiresVersionTrait.class).map(RequiresVersionTrait::version);
+    }
+
+    /**
+     * Copies all JPMS directives from {@code other} into this descriptor, deduplicating
+     * each directive type: {@code requires} by module name, {@code exports} and {@code opens}
+     * by package name, {@code provides} and {@code uses} by service type.
+     *
+     * @param other the {@link JDKModuleDescriptor} whose directives should be merged in
+     */
+    public void include(final JDKModuleDescriptor other) {
+        final Set<ModuleName> existingReqs = requiresClauses()
+            .map(RequiresModuleDescriptor::requiresModuleName)
+            .collect(Collectors.toSet());
+        other.requiresClauses()
+            .filter(r -> !existingReqs.contains(r.requiresModuleName()))
+            .forEach(r -> {
+                final var copy = RequiresModuleDescriptor.of(codeModel(), r.requiresModuleName());
+                r.traits(RequiresModifier.class).forEach(copy::addTrait);
+                requiresVersion(r).ifPresent(v -> copy.addTrait(RequiresVersionTrait.of(v)));
+                addTrait(copy);
+            });
+        final Set<Namespace> existingExports = exportsClauses()
+            .map(ExportsDescriptor::packageName)
+            .collect(Collectors.toSet());
+        other.exportsClauses()
+            .filter(e -> !existingExports.contains(e.packageName()))
+            .forEach(this::addTrait);
+        final Set<Namespace> existingOpens = opensClauses()
+            .map(OpensDescriptor::packageName)
+            .collect(Collectors.toSet());
+        other.opensClauses()
+            .filter(o -> !existingOpens.contains(o.packageName()))
+            .forEach(this::addTrait);
+        final Set<TypeUsage> existingProvides = providesClauses()
+            .map(ProvidesDescriptor::serviceType)
+            .collect(Collectors.toSet());
+        other.providesClauses()
+            .filter(p -> !existingProvides.contains(p.serviceType()))
+            .forEach(this::addTrait);
+        final Set<TypeUsage> existingUses = usesClauses()
+            .map(UsesDescriptor::serviceType)
+            .collect(Collectors.toSet());
+        other.usesClauses()
+            .filter(u -> !existingUses.contains(u.serviceType()))
+            .forEach(this::addTrait);
+    }
+
+    /**
+     * Returns all {@code requires} clauses as a stream of {@link RequiresModuleDescriptor}s.
+     * Named {@code requiresClauses} to avoid shadowing the foundation method
+     * {@link build.codemodel.foundation.descriptor.ModuleDescriptor#requires()}.
+     *
+     * @return a {@link Stream} of {@link RequiresModuleDescriptor}
+     */
+    public Stream<RequiresModuleDescriptor> requiresClauses() {
+        return traits(RequiresModuleDescriptor.class);
+    }
+
+    /**
+     * Returns all {@code exports} clauses as a stream of {@link ExportsDescriptor}s.
+     *
+     * @return a {@link Stream} of {@link ExportsDescriptor}
+     */
+    public Stream<ExportsDescriptor> exportsClauses() {
+        return traits(ExportsDescriptor.class);
+    }
+
+    /**
+     * Returns all {@code opens} clauses as a stream of {@link OpensDescriptor}s.
+     *
+     * @return a {@link Stream} of {@link OpensDescriptor}
+     */
+    public Stream<OpensDescriptor> opensClauses() {
+        return traits(OpensDescriptor.class);
+    }
+
+    /**
+     * Returns all {@code provides} clauses as a stream of {@link ProvidesDescriptor}s.
+     *
+     * @return a {@link Stream} of {@link ProvidesDescriptor}
+     */
+    public Stream<ProvidesDescriptor> providesClauses() {
+        return traits(ProvidesDescriptor.class);
+    }
+
+    /**
+     * Returns all {@code uses} clauses as a stream of {@link UsesDescriptor}s.
+     *
+     * @return a {@link Stream} of {@link UsesDescriptor}
+     */
+    public Stream<UsesDescriptor> usesClauses() {
+        return traits(UsesDescriptor.class);
     }
 
     // ---- Private trait-adding helpers ------------------------------------
@@ -395,9 +621,16 @@ public final class JDKModuleDescriptor
 
     private void addRequires(final String rawName,
                              final boolean isTransitive,
-                             final boolean isStatic) {
+                             final boolean isStatic,
+                             final boolean isSynthetic,
+                             final boolean isMandated,
+                             final Optional<Version> version) {
 
         codeModel().getNameProvider().getModuleName(rawName).ifPresent(reqName -> {
+            // idempotent: skip if this module is already in the requires list
+            if (requiresClauses().anyMatch(r -> r.requiresModuleName().equals(reqName))) {
+                return;
+            }
             final var reqDescriptor = RequiresModuleDescriptor.of(codeModel(), reqName);
             if (isTransitive) {
                 reqDescriptor.addTrait(RequiresModifier.TRANSITIVE);
@@ -405,37 +638,61 @@ public final class JDKModuleDescriptor
             if (isStatic) {
                 reqDescriptor.addTrait(RequiresModifier.STATIC);
             }
+            if (isSynthetic) {
+                reqDescriptor.addTrait(RequiresModifier.SYNTHETIC);
+            }
+            if (isMandated) {
+                reqDescriptor.addTrait(RequiresModifier.MANDATED);
+            }
+            version.ifPresent(v -> reqDescriptor.addTrait(RequiresVersionTrait.of(v)));
             addTrait(reqDescriptor);
         });
     }
 
     private void addExports(final String rawPkg,
-                            final Stream<String> rawTargets) {
-        addPackageDirective(rawPkg, rawTargets, ExportsDescriptor::of);
+                            final Stream<String> rawTargets,
+                            final Optional<PackageDirectiveModifier> modifier) {
+        final String pkg = rawPkg.replace('/', '.');
+        codeModel().getNameProvider().getNamespace(pkg).ifPresent(ns -> {
+            if (exportsClauses().anyMatch(e -> e.packageName().equals(ns))) {
+                return;
+            }
+            addTrait(modifier
+                .map(m -> ExportsDescriptor.of(ns, resolveModuleNames(rawTargets), m))
+                .orElseGet(() -> ExportsDescriptor.of(ns, resolveModuleNames(rawTargets))));
+        });
     }
 
     private void addOpens(final String rawPkg,
-                          final Stream<String> rawTargets) {
-        addPackageDirective(rawPkg, rawTargets, OpensDescriptor::of);
-    }
-
-    private void addPackageDirective(final String rawPkg,
-                                     final Stream<String> rawTargets,
-                                     final BiFunction<Namespace, Stream<ModuleName>, Trait> factory) {
+                          final Stream<String> rawTargets,
+                          final Optional<PackageDirectiveModifier> modifier) {
         final String pkg = rawPkg.replace('/', '.');
-        codeModel().getNameProvider().getNamespace(pkg).ifPresent(ns ->
-            addTrait(factory.apply(ns, resolveModuleNames(rawTargets))));
+        codeModel().getNameProvider().getNamespace(pkg).ifPresent(ns -> {
+            if (opensClauses().anyMatch(o -> o.packageName().equals(ns))) {
+                return;
+            }
+            addTrait(modifier
+                .map(m -> OpensDescriptor.of(ns, resolveModuleNames(rawTargets), m))
+                .orElseGet(() -> OpensDescriptor.of(ns, resolveModuleNames(rawTargets))));
+        });
     }
 
     private void addProvides(final String rawService,
                              final Stream<String> rawProviders) {
         final var service = typeUsage(rawService);
+        if (providesClauses().anyMatch(p -> p.serviceType().equals(service))) {
+            return;
+        }
         final var impls = rawProviders.map(this::typeUsage);
         addTrait(ProvidesDescriptor.of(service, impls));
     }
 
     private void addUses(final String rawService) {
-        addTrait(UsesDescriptor.of(typeUsage(rawService)));
+        final var service = typeUsage(rawService);
+        if (usesClauses().anyMatch(u -> u.serviceType().equals(service))) {
+            return;
+        }
+        addTrait(UsesDescriptor.of(service));
     }
 
     // ---- Private utilities -----------------------------------------------

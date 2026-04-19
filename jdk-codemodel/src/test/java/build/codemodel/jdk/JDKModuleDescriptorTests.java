@@ -30,6 +30,7 @@ import build.codemodel.jdk.descriptor.JDKModuleDescriptor;
 import build.codemodel.jdk.descriptor.OpenModule;
 import build.codemodel.jdk.descriptor.OpensDescriptor;
 import build.codemodel.jdk.descriptor.ProvidesDescriptor;
+import build.codemodel.jdk.descriptor.ModuleModifier;
 import build.codemodel.jdk.descriptor.RequiresModifier;
 import build.codemodel.jdk.descriptor.UsesDescriptor;
 import build.codemodel.jdk.descriptor.VersionTrait;
@@ -410,6 +411,16 @@ class JDKModuleDescriptorTests {
         assertThat(vt.version()).isEqualTo(Version.parse("3.1.0"));
     }
 
+    // ---- extract: multi-release JARs ------------------------------------
+
+    @Test
+    void extractMultiReleaseJarWithVersionedModuleInfo() throws Exception {
+        final var result = JDKModuleDescriptor.extract(newCodeModel(),
+            multiReleaseJar("module com.mr.example { }", 9));
+        assertThat(result).isPresent();
+        assertThat(result.get().moduleName().toString()).isEqualTo("com.mr.example");
+    }
+
     // ---- extract: edge cases --------------------------------------------
 
     @Test
@@ -428,6 +439,176 @@ class JDKModuleDescriptorTests {
         assertThatThrownBy(() ->
             JDKModuleDescriptor.extract(newCodeModel(), Path.of("no-such.jar")))
             .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    // ---- convenience accessors ------------------------------------------
+
+    @Test
+    void isOpenDelegatesToOpenModuleTrait() throws ParseException {
+        assertThat(parse("open module com.example { }").isOpen()).isTrue();
+        assertThat(parse("module com.example { }").isOpen()).isFalse();
+    }
+
+    @Test
+    void versionAccessorReturnsVersion() throws Exception {
+        final var withVersion = JDKModuleDescriptor.extract(newCodeModel(),
+            compileAndJar("module com.example { }", "--module-version", "4.5.6"));
+        assertThat(withVersion.get().version()).contains(Version.parse("4.5.6"));
+    }
+
+    @Test
+    void versionAccessorEmptyWhenNotDeclared() throws ParseException {
+        assertThat(parse("module com.example { }").version()).isEmpty();
+    }
+
+    @Test
+    void isAutomaticSetForAutoModuleJar() throws Exception {
+        final var result = JDKModuleDescriptor.extract(newCodeModel(),
+            autoModuleJar("com.auto.module", null));
+        assertThat(result.get().isAutomatic()).isTrue();
+        assertThat(result.get().traits(ModuleModifier.class).toList())
+            .containsExactly(ModuleModifier.AUTOMATIC);
+    }
+
+    @Test
+    void isAutomaticFalseForRegularModule() throws ParseException {
+        assertThat(parse("module com.example { }").isAutomatic()).isFalse();
+    }
+
+    @Test
+    void requiresVersionEmptyForSourceParsed() throws ParseException {
+        final var md = parse("module com.example { requires java.base; }");
+        final var req = md.requiresClauses().findFirst().orElseThrow();
+        assertThat(JDKModuleDescriptor.requiresVersion(req)).isEmpty();
+    }
+
+    // ---- include() -------------------------------------------------------
+
+    @Test
+    void includeDeduplicatesRequiresByModuleName() throws ParseException {
+        final var base = parse("module com.a { requires java.base; }");
+        final var other = parse("module com.b { requires java.base; requires java.logging; }");
+        base.include(other);
+        assertThat(base.requiresClauses()
+            .map(r -> r.requiresModuleName().toString())
+            .toList())
+            .containsExactlyInAnyOrder("java.base", "java.logging");
+    }
+
+    @Test
+    void includeDeduplicatesExportsByPackageName() throws ParseException {
+        final var base = parse("module com.a { exports com.shared.api; }");
+        final var other = parse("module com.b { exports com.shared.api; exports com.extra; }");
+        base.include(other);
+        assertThat(base.exportsClauses()
+            .map(e -> e.packageName().toString())
+            .toList())
+            .containsExactlyInAnyOrder("com.shared.api", "com.extra");
+    }
+
+    @Test
+    void includeDeduplicatesOpensByPackageName() throws ParseException {
+        final var base = parse("module com.a { opens com.shared.internal; }");
+        final var other = parse("module com.b { opens com.shared.internal; opens com.extra.internal; }");
+        base.include(other);
+        assertThat(base.opensClauses()
+            .map(o -> o.packageName().toString())
+            .toList())
+            .containsExactlyInAnyOrder("com.shared.internal", "com.extra.internal");
+    }
+
+    @Test
+    void includeDeduplicatesUsesByServiceType() throws ParseException {
+        final var base = parse("module com.a { uses com.shared.Service; }");
+        final var other = parse("module com.b { uses com.shared.Service; uses com.extra.Other; }");
+        base.include(other);
+        assertThat(base.usesClauses()
+            .map(u -> u.serviceType().toString())
+            .toList())
+            .containsExactlyInAnyOrder("com.shared.Service", "com.extra.Other");
+    }
+
+    @Test
+    void includeMergesDistinctDirectives() throws ParseException {
+        final var base = parse("""
+            module com.a {
+                requires java.base;
+                exports com.a.api;
+                uses com.a.spi.Service;
+                provides com.a.spi.Service with com.a.impl.ServiceImpl;
+            }
+            """);
+        final var other = parse("""
+            module com.b {
+                requires java.logging;
+                exports com.b.api;
+                uses com.b.spi.Other;
+                provides com.b.spi.Other with com.b.impl.OtherImpl;
+            }
+            """);
+        base.include(other);
+        assertThat(base.requiresClauses().count()).isEqualTo(2);
+        assertThat(base.exportsClauses().count()).isEqualTo(2);
+        assertThat(base.usesClauses().count()).isEqualTo(2);
+        assertThat(base.providesClauses().count()).isEqualTo(2);
+    }
+
+    // ---- extractFresh() --------------------------------------------------
+
+    @Test
+    void extractFreshReturnsDescriptorNotRegisteredInCodeModel() throws Exception {
+        final CodeModel codeModel = newCodeModel();
+        final var result = JDKModuleDescriptor.extractFresh(codeModel,
+            compileAndJar("module com.fresh.example { }"));
+        assertThat(result).isPresent();
+        assertThat(result.get().moduleName().toString()).isEqualTo("com.fresh.example");
+        final var moduleName = codeModel.getNameProvider()
+            .getModuleName("com.fresh.example").orElseThrow();
+        assertThat(codeModel.getModuleDescriptor(moduleName)).isEmpty();
+    }
+
+    @Test
+    void extractFreshReturnsSeparateDescriptorsForSameModuleName() throws Exception {
+        final CodeModel codeModel = newCodeModel();
+        final Path jar1 = compileAndJar("module com.shared { }", "--module-version", "1.0.0");
+        final Path jar2 = compileAndJar("module com.shared { }", "--module-version", "2.0.0");
+        final var d1 = JDKModuleDescriptor.extractFresh(codeModel, jar1).orElseThrow();
+        final var d2 = JDKModuleDescriptor.extractFresh(codeModel, jar2).orElseThrow();
+        assertThat(d1).isNotSameAs(d2);
+        assertThat(d1.version()).contains(Version.parse("1.0.0"));
+        assertThat(d2.version()).contains(Version.parse("2.0.0"));
+    }
+
+    @Test
+    void extractFreshAutoModuleDoesNotRegister() throws Exception {
+        final CodeModel codeModel = newCodeModel();
+        final var result = JDKModuleDescriptor.extractFresh(codeModel,
+            autoModuleJar("com.fresh.auto", null));
+        assertThat(result).isPresent();
+        assertThat(result.get().isAutomatic()).isTrue();
+        final var moduleName = codeModel.getNameProvider()
+            .getModuleName("com.fresh.auto").orElseThrow();
+        assertThat(codeModel.getModuleDescriptor(moduleName)).isEmpty();
+    }
+
+    // ---- add-helper idempotency ------------------------------------------
+
+    @Test
+    void extractCalledTwiceForSameModuleProducesNoDuplicateDirectives() throws Exception {
+        stubPackage("com.example.api");
+        final Path jar = compileAndJar("""
+            module com.example {
+                requires java.logging;
+                exports com.example.api;
+            }
+            """);
+        final CodeModel codeModel = newCodeModel();
+        JDKModuleDescriptor.extract(codeModel, jar);
+        final var descriptor = JDKModuleDescriptor.extract(codeModel, jar).orElseThrow();
+        assertThat(descriptor.requiresClauses()
+            .filter(r -> r.requiresModuleName().toString().equals("java.logging"))
+            .count()).isEqualTo(1);
+        assertThat(descriptor.exportsClauses().count()).isEqualTo(1);
     }
 
     // ---- compile helpers ------------------------------------------------
@@ -462,6 +643,32 @@ class JDKModuleDescriptorTests {
         try (var jos = new JarOutputStream(Files.newOutputStream(jar))) {
             jos.putNextEntry(new JarEntry("module-info.class"));
             jos.write(Files.readAllBytes(tempDir.resolve("module-info.class")));
+            jos.closeEntry();
+        }
+        return jar;
+    }
+
+    /**
+     * Builds a multi-release JAR whose {@code module-info.class} lives only under
+     * {@code META-INF/versions/<version>/} — no base entry. Requires MR-aware opening
+     * ({@code JarFile(path, true, ZipFile.OPEN_READ, Runtime.version())}) to resolve it.
+     */
+    private Path multiReleaseJar(final String source, final int version) throws Exception {
+        final Path srcFile = tempDir.resolve("module-info.java");
+        Files.writeString(srcFile, source);
+        final Path classDir = Files.createTempDirectory(tempDir, "mr-classes");
+        final int rc = ToolProvider.getSystemJavaCompiler()
+            .run(null, null, null, "-d", classDir.toString(), srcFile.toString());
+        if (rc != 0) {
+            throw new IllegalStateException("Compilation failed (exit " + rc + ")");
+        }
+        final Path jar = Files.createTempFile(tempDir, "mr-module", ".jar");
+        final var manifest = new Manifest();
+        manifest.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, "1.0");
+        manifest.getMainAttributes().putValue("Multi-Release", "true");
+        try (var jos = new JarOutputStream(Files.newOutputStream(jar), manifest)) {
+            jos.putNextEntry(new JarEntry("META-INF/versions/" + version + "/module-info.class"));
+            jos.write(Files.readAllBytes(classDir.resolve("module-info.class")));
             jos.closeEntry();
         }
         return jar;
