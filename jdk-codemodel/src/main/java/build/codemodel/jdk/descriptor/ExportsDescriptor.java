@@ -26,6 +26,8 @@ import build.codemodel.foundation.naming.ModuleName;
 import build.codemodel.foundation.naming.Namespace;
 
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 /**
@@ -34,19 +36,35 @@ import java.util.stream.Stream;
  *
  * @param packageName       the exported package
  * @param targetModuleNames the modules this package is exported to; empty means unqualified
+ * @param modifier          an optional {@link PackageDirectiveModifier}; only present in bytecode
  * @author reed.vonredwitz
  * @since Apr-2026
  */
 @NonSingular
-public record ExportsDescriptor(Namespace packageName, List<ModuleName> targetModuleNames)
+public record ExportsDescriptor(Namespace packageName,
+                                List<ModuleName> targetModuleNames,
+                                Optional<PackageDirectiveModifier> modifier)
     implements Trait {
 
     public ExportsDescriptor {
         targetModuleNames = List.copyOf(targetModuleNames);
+        Objects.requireNonNull(modifier, "modifier must not be null");
     }
 
+    /**
+     * Creates an {@link ExportsDescriptor} with no modifier (source-parsed).
+     */
     public static ExportsDescriptor of(final Namespace packageName,
                                        final Stream<ModuleName> targetModuleNames) {
-        return new ExportsDescriptor(packageName, targetModuleNames.toList());
+        return new ExportsDescriptor(packageName, targetModuleNames.toList(), Optional.empty());
+    }
+
+    /**
+     * Creates an {@link ExportsDescriptor} with a {@link PackageDirectiveModifier} (bytecode-extracted).
+     */
+    public static ExportsDescriptor of(final Namespace packageName,
+                                       final Stream<ModuleName> targetModuleNames,
+                                       final PackageDirectiveModifier modifier) {
+        return new ExportsDescriptor(packageName, targetModuleNames.toList(), Optional.of(modifier));
     }
 }
