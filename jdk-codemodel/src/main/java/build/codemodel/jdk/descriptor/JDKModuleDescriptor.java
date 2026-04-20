@@ -29,8 +29,10 @@ import build.codemodel.foundation.descriptor.AbstractModuleDescriptor;
 import build.codemodel.foundation.descriptor.RequiresModuleDescriptor;
 import build.codemodel.foundation.naming.ModuleName;
 import build.codemodel.foundation.naming.Namespace;
+import build.codemodel.foundation.usage.AnnotationTypeUsage;
 import build.codemodel.foundation.usage.SpecificTypeUsage;
 import build.codemodel.foundation.usage.TypeUsage;
+import com.sun.source.tree.AnnotationTree;
 import com.sun.source.tree.ExportsTree;
 import com.sun.source.tree.ModuleTree;
 import com.sun.source.tree.OpensTree;
@@ -118,6 +120,13 @@ public final class JDKModuleDescriptor
 
         if (moduleTree.getModuleType() == ModuleTree.ModuleKind.OPEN) {
             addTrait(OpenModule.OPEN);
+        }
+
+        for (final AnnotationTree ann : moduleTree.getAnnotations()) {
+            final String name = ann.getAnnotationType().toString();
+            addTrait(AnnotationTypeUsage.of(codeModel(),
+                codeModel().getNameProvider().getTypeName(Optional.empty(), name),
+                Stream.empty()));
         }
 
         for (final var directive : moduleTree.getDirectives()) {
@@ -277,6 +286,16 @@ public final class JDKModuleDescriptor
             scanner.consume(SEMICOLON);
         }
 
+        // capture annotations that legally precede the module declaration (e.g. @SomeAnnotation or @Some.Annotation(...))
+        final var annotationNames = new ArrayList<String>();
+        while (scanner.follows(Pattern.compile("@[\\w.]+"))) {
+            final String token = scanner.consume(Pattern.compile("@[\\w.]+"));
+            annotationNames.add(token.substring(1)); // strip leading @
+            if (scanner.follows(Pattern.compile("\\("))) {
+                scanner.consume(Pattern.compile("\\([^)]*\\)"));
+            }
+        }
+
         final boolean open = scanner.optionallyConsume(OPEN).isPresent();
         scanner.consume(MODULE);
         final String rawName = scanner.consume(NAME_PATTERN);
@@ -290,6 +309,11 @@ public final class JDKModuleDescriptor
         if (open) {
             descriptor.computeIfAbsent(OpenModule.class, _ -> OpenModule.OPEN);
         }
+
+        annotationNames.forEach(name ->
+            descriptor.addTrait(AnnotationTypeUsage.of(codeModel,
+                codeModel.getNameProvider().getTypeName(Optional.empty(), name),
+                Stream.empty())));
 
         scanner.consume(OPEN_BRACE);
 
@@ -597,6 +621,17 @@ public final class JDKModuleDescriptor
      */
     public Stream<UsesDescriptor> usesClauses() {
         return traits(UsesDescriptor.class);
+    }
+
+    /**
+     * Returns all annotations declared on the {@code module} declaration as a stream of
+     * {@link AnnotationTypeUsage}s. Only populated for source-parsed and javac-tree-based descriptors;
+     * bytecode-extracted descriptors return an empty stream.
+     *
+     * @return a {@link Stream} of {@link AnnotationTypeUsage}
+     */
+    public Stream<AnnotationTypeUsage> annotationClauses() {
+        return traits(AnnotationTypeUsage.class);
     }
 
     // ---- Private trait-adding helpers ------------------------------------

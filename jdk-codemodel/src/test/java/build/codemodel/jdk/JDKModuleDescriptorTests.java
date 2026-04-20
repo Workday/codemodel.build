@@ -27,10 +27,10 @@ import build.codemodel.foundation.descriptor.RequiresModuleDescriptor;
 import build.codemodel.foundation.naming.NonCachingNameProvider;
 import build.codemodel.jdk.descriptor.ExportsDescriptor;
 import build.codemodel.jdk.descriptor.JDKModuleDescriptor;
+import build.codemodel.jdk.descriptor.ModuleModifier;
 import build.codemodel.jdk.descriptor.OpenModule;
 import build.codemodel.jdk.descriptor.OpensDescriptor;
 import build.codemodel.jdk.descriptor.ProvidesDescriptor;
-import build.codemodel.jdk.descriptor.ModuleModifier;
 import build.codemodel.jdk.descriptor.RequiresModifier;
 import build.codemodel.jdk.descriptor.UsesDescriptor;
 import build.codemodel.jdk.descriptor.VersionTrait;
@@ -272,6 +272,57 @@ class JDKModuleDescriptorTests {
             }
             """);
         assertThat(md.moduleName().toString()).isEqualTo("com.example");
+    }
+
+    // ---- annotations -----------------------------------------------------
+
+    @Test
+    void parseSimpleAnnotationOnModule() throws ParseException {
+        final var md = parse("@SomeAnnotation module com.example { }");
+        assertThat(md.annotationClauses()
+            .map(a -> a.typeName().toString())
+            .toList())
+            .containsExactly("SomeAnnotation");
+    }
+
+    @Test
+    void parseAnnotationWithArguments() throws ParseException {
+        final var md = parse("@SomeAnnotation(\"foo\") module com.example { }");
+        assertThat(md.annotationClauses().count()).isEqualTo(1);
+        assertThat(md.annotationClauses()
+            .map(a -> a.typeName().toString())
+            .toList())
+            .containsExactly("SomeAnnotation");
+    }
+
+    @Test
+    void parseQualifiedAnnotationOnModule() throws ParseException {
+        final var md = parse("@some.pkg.Ann module com.example { }");
+        assertThat(md.annotationClauses()
+            .map(a -> a.typeName().toString())
+            .toList())
+            .containsExactly("some.pkg.Ann");
+    }
+
+    @Test
+    void parseMultipleAnnotationsOnModule() throws ParseException {
+        final var md = parse("@First @Second module com.example { }");
+        assertThat(md.annotationClauses()
+            .map(a -> a.typeName().toString())
+            .toList())
+            .containsExactlyInAnyOrder("First", "Second");
+    }
+
+    @Test
+    void parseAnnotationWithOpenModule() throws ParseException {
+        final var md = parse("@Ann open module com.example { }");
+        assertThat(md.annotationClauses().count()).isEqualTo(1);
+        assertThat(md.isOpen()).isTrue();
+    }
+
+    @Test
+    void annotationClausesEmptyForUnannotatedModule() throws ParseException {
+        assertThat(parse("module com.example { }").annotationClauses().count()).isEqualTo(0);
     }
 
     // ---- error handling --------------------------------------------------
