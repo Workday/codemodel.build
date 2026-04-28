@@ -37,8 +37,10 @@ import build.codemodel.foundation.naming.TypeName;
 import build.codemodel.foundation.usage.NamedTypeUsage;
 import build.codemodel.foundation.usage.TypeUsage;
 
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -100,10 +102,9 @@ public interface CodeModel
      * @param supplier the {@link BiFunction} to supply the {@link TypeDescriptor} implementation
      * @return the {@link TypeDescriptor}
      */
-    default <T extends TypeDescriptor> T createTypeDescriptor(
-        final TypeName typeName,
-        final BiFunction<? super CodeModel, ? super TypeName, T> supplier) {
-        return createTypeDescriptor(typeName, supplier, Streamable.empty());
+    default <T extends TypeDescriptor> T createTypeDescriptor(final TypeName typeName,
+                                                              final BiFunction<? super CodeModel, ? super TypeName, T> supplier) {
+        return createTypeDescriptor(typeName, supplier, t -> {});
     }
 
     /**
@@ -112,18 +113,28 @@ public interface CodeModel
      * additional {@link Trait}s applied atomically during creation.
      * <p>
      * Should a {@link TypeDescriptor} for the specified {@link TypeName} already exist, the
-     * existing {@link TypeDescriptor} is returned.
+     * existing {@link TypeDescriptor} is returned and {@code populate} is not called.
      *
-     * @param typeName       the {@link TypeName}
-     * @param supplier       the {@link BiFunction} to supply the {@link TypeDescriptor} implementation
-     * @param traitSuppliers the {@link Streamable} of {@link Function}s to supply {@link Trait}s to apply to the
-     *                       {@link TypeDescriptor}
+     * @param typeName the {@link TypeName}
+     * @param supplier the {@link BiFunction} to supply the {@link TypeDescriptor} implementation
+     * @param populate the {@link Consumer} that adds traits to the newly-created descriptor; runs
+     *                 atomically inside the cache-insertion so no other thread can observe a
+     *                 partially-built descriptor.
      * @return the {@link TypeDescriptor}
      */
-    <T extends TypeDescriptor> T createTypeDescriptor(
-        TypeName typeName,
-        BiFunction<? super CodeModel, ? super TypeName, T> supplier,
-        Streamable<? extends Function<? super T, ? extends Trait>> traitSuppliers);
+    <T extends TypeDescriptor> T createTypeDescriptor(TypeName typeName,
+                                                      BiFunction<? super CodeModel, ? super TypeName, T> supplier,
+                                                      Consumer<? super T> populate);
+
+    /**
+     * Streamable-of-trait-suppliers convenience over
+     * {@link #createTypeDescriptor(TypeName, BiFunction, Consumer)}.
+     */
+    default <T extends TypeDescriptor> T createTypeDescriptor(final TypeName typeName,
+                                                              final BiFunction<? super CodeModel, ? super TypeName, T> supplier,
+                                                              final Streamable<? extends Function<? super T, ? extends Trait>> traitSuppliers) {
+        return createTypeDescriptor(typeName, supplier, applyTraitSuppliers(traitSuppliers));
+    }
 
     /**
      * Attempts to obtain the {@link TypeDescriptor} with the specified {@link TypeName}.
@@ -221,10 +232,9 @@ public interface CodeModel
      * @param supplier   the {@link BiFunction} to supply the {@link ModuleDescriptor} implementation
      * @return the {@link ModuleDescriptor}
      */
-    default <M extends ModuleDescriptor> M createModuleDescriptor(
-        final ModuleName moduleName,
-        final BiFunction<? super CodeModel, ? super ModuleName, M> supplier) {
-        return createModuleDescriptor(moduleName, supplier, Streamable.empty());
+    default <M extends ModuleDescriptor> M createModuleDescriptor(final ModuleName moduleName,
+                                                                  final BiFunction<? super CodeModel, ? super ModuleName, M> supplier) {
+        return createModuleDescriptor(moduleName, supplier, m -> {});
     }
 
     /**
@@ -233,18 +243,27 @@ public interface CodeModel
      * additional {@link Trait}s applied atomically during creation.
      * <p>
      * Should a {@link ModuleDescriptor} for the specified {@link ModuleName} already exist, the
-     * existing {@link ModuleDescriptor} is returned.
+     * existing {@link ModuleDescriptor} is returned and {@code populate} is not called.
      *
-     * @param moduleName     the {@link ModuleName}
-     * @param supplier       the {@link BiFunction} to supply the {@link ModuleDescriptor} implementation
-     * @param traitSuppliers the {@link Streamable} of {@link Function}s to supply {@link Trait}s to apply to the
-     *                       {@link ModuleDescriptor}
+     * @param moduleName the {@link ModuleName}
+     * @param supplier   the {@link BiFunction} to supply the {@link ModuleDescriptor} implementation
+     * @param populate   the {@link Consumer} that adds traits to the newly-created descriptor; runs
+     *                   atomically inside the cache-insertion.
      * @return the {@link ModuleDescriptor}
      */
-    <M extends ModuleDescriptor> M createModuleDescriptor(
-        ModuleName moduleName,
-        BiFunction<? super CodeModel, ? super ModuleName, M> supplier,
-        Streamable<? extends Function<? super M, ? extends Trait>> traitSuppliers);
+    <M extends ModuleDescriptor> M createModuleDescriptor(ModuleName moduleName,
+                                                          BiFunction<? super CodeModel, ? super ModuleName, M> supplier,
+                                                          Consumer<? super M> populate);
+
+    /**
+     * Streamable-of-trait-suppliers convenience over
+     * {@link #createModuleDescriptor(ModuleName, BiFunction, Consumer)}.
+     */
+    default <M extends ModuleDescriptor> M createModuleDescriptor(final ModuleName moduleName,
+                                                                  final BiFunction<? super CodeModel, ? super ModuleName, M> supplier,
+                                                                  final Streamable<? extends Function<? super M, ? extends Trait>> traitSuppliers) {
+        return createModuleDescriptor(moduleName, supplier, applyTraitSuppliers(traitSuppliers));
+    }
 
     /**
      * Obtains a {@link Stream} of known {@link ModuleDescriptor}s.
@@ -300,11 +319,9 @@ public interface CodeModel
      * @param supplier  the {@link BiFunction} to supply the {@link NamespaceDescriptor} implementation
      * @return the {@link NamespaceDescriptor}
      */
-    default <N extends NamespaceDescriptor> N createNamespaceDescriptor(
-        final Namespace namespace,
-        final BiFunction<? super CodeModel, ? super Namespace, N> supplier) {
-
-        return createNamespaceDescriptor(namespace, supplier, Streamable.empty());
+    default <N extends NamespaceDescriptor> N createNamespaceDescriptor(final Namespace namespace,
+                                                                        final BiFunction<? super CodeModel, ? super Namespace, N> supplier) {
+        return createNamespaceDescriptor(namespace, supplier, n -> {});
     }
 
     /**
@@ -313,18 +330,27 @@ public interface CodeModel
      * additional {@link Trait}s applied atomically during creation.
      * <p>
      * Should a {@link NamespaceDescriptor} for the specified {@link Namespace} already exist, the
-     * existing {@link NamespaceDescriptor} is returned.
+     * existing {@link NamespaceDescriptor} is returned and {@code populate} is not called.
      *
-     * @param namespace      the {@link Namespace}
-     * @param supplier       the {@link BiFunction} to supply the {@link NamespaceDescriptor} implementation
-     * @param traitSuppliers the {@link Streamable} of {@link Function}s to supply {@link Trait}s to apply to the
-     *                       {@link NamespaceDescriptor}
+     * @param namespace the {@link Namespace}
+     * @param supplier  the {@link BiFunction} to supply the {@link NamespaceDescriptor} implementation
+     * @param populate  the {@link Consumer} that adds traits to the newly-created descriptor; runs
+     *                  atomically inside the cache-insertion.
      * @return the {@link NamespaceDescriptor}
      */
-    <N extends NamespaceDescriptor> N createNamespaceDescriptor(
-        Namespace namespace,
-        BiFunction<? super CodeModel, ? super Namespace, N> supplier,
-        Streamable<? extends Function<? super N, ? extends Trait>> traitSuppliers);
+    <N extends NamespaceDescriptor> N createNamespaceDescriptor(Namespace namespace,
+                                                                BiFunction<? super CodeModel, ? super Namespace, N> supplier,
+                                                                Consumer<? super N> populate);
+
+    /**
+     * Streamable-of-trait-suppliers convenience over
+     * {@link #createNamespaceDescriptor(Namespace, BiFunction, Consumer)}.
+     */
+    default <N extends NamespaceDescriptor> N createNamespaceDescriptor(final Namespace namespace,
+                                                                        final BiFunction<? super CodeModel, ? super Namespace, N> supplier,
+                                                                        final Streamable<? extends Function<? super N, ? extends Trait>> traitSuppliers) {
+        return createNamespaceDescriptor(namespace, supplier, applyTraitSuppliers(traitSuppliers));
+    }
 
     /**
      * Creates a new concrete {@link Traitable}, managed by the {@link CodeModel}, on behalf of the specified
@@ -334,19 +360,42 @@ public interface CodeModel
      * @return the new {@link Traitable} for the {@link Object} in the {@link CodeModel}
      */
     default Traitable createTraitable(final Traitable object) {
-        return createTraitable(object, Streamable.empty());
+        return createTraitable(object, t -> {});
     }
 
     /**
      * Creates a new concrete {@link Traitable}, managed by the {@link CodeModel}, on behalf of the specified
      * {@link Traitable} {@link Object}, with additional {@link Trait}s applied atomically during creation.
      *
-     * @param object         the {@link Traitable} {@link Object}
-     * @param traitSuppliers the {@link Streamable} of {@link Function}s to supply {@link Trait}s to apply to the
-     *                       {@link Traitable}
+     * @param object   the {@link Traitable} {@link Object}
+     * @param populate the {@link Consumer} that adds traits to the newly-created {@link Traitable}; runs
+     *                 atomically during construction.
      * @return the new {@link Traitable} for the {@link Object} in the {@link CodeModel}
      */
-    Traitable createTraitable(
-        Traitable object,
-        Streamable<? extends Function<? super Traitable, ? extends Trait>> traitSuppliers);
+    Traitable createTraitable(Traitable object,
+                              Consumer<? super Traitable> populate);
+
+    /**
+     * Streamable-of-trait-suppliers convenience over {@link #createTraitable(Traitable, Consumer)}.
+     */
+    default Traitable createTraitable(final Traitable object,
+                                      final Streamable<? extends Function<? super Traitable, ? extends Trait>> traitSuppliers) {
+        return createTraitable(object, applyTraitSuppliers(traitSuppliers));
+    }
+
+    /**
+     * Adapts a {@link Streamable} of trait-supplier {@link Function}s into a populate {@link Consumer}.
+     */
+    private static <T extends Traitable> Consumer<T> applyTraitSuppliers(final Streamable<? extends Function<? super T, ? extends Trait>> traitSuppliers) {
+        Objects.requireNonNull(traitSuppliers, "The traitSuppliers must not be null");
+        return target -> {
+            for (final var traitSupplier : traitSuppliers) {
+                Objects.requireNonNull(traitSupplier, "Trait suppliers must not be null");
+                final var trait = traitSupplier.apply(target);
+                if (trait != null) {
+                    target.addTrait(trait);
+                }
+            }
+        };
+    }
 }

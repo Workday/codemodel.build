@@ -377,19 +377,21 @@ public class JDKCodeModel
     private Optional<JDKTypeDescriptor> getJDKTypeDescriptor(final Class<?> classType,
                                                              final Consumer<? super Class<?>> consumer) {
 
+        final var typeName = getNameProvider().getTypeName(classType);
+
+        // The populate runs atomically inside computeIfAbsent so no other thread can observe a
+        // partially-built descriptor.
+        final var typeDescriptor = createTypeDescriptor(typeName, JDKTypeDescriptor.supplier(classType), descriptor -> populateJDKTypeDescriptor(descriptor, classType, consumer));
+
+        return Optional.of(typeDescriptor);
+    }
+
+    private void populateJDKTypeDescriptor(final JDKTypeDescriptor typeDescriptor,
+                                           final Class<?> classType,
+                                           final Consumer<? super Class<?>> consumer) {
+
         final var nameProvider = getNameProvider();
-
-        final var typeName = nameProvider.getTypeName(classType);
-        final var existingTypeDescriptor = getTypeDescriptor(typeName);
-
-        if (existingTypeDescriptor.isPresent()) {
-            return existingTypeDescriptor
-                .filter(JDKTypeDescriptor.class::isInstance)
-                .map(JDKTypeDescriptor.class::cast);
-        }
-
-        // create the TypeDescriptor for the Class
-        final var typeDescriptor = createTypeDescriptor(typeName, JDKTypeDescriptor.supplier(classType));
+        final var typeName = typeDescriptor.typeName();
 
         // include the JDKType in the TypeDescriptor
         typeDescriptor.addTrait(new JDKType(classType));
@@ -564,9 +566,6 @@ public class JDKCodeModel
         // include the annotations on the TypeDescriptor (from the Class Type)
         getAnnotations(classType)
             .forEach(typeDescriptor::addTrait);
-
-        return Optional.of(typeDescriptor);
-
     }
 
     /**

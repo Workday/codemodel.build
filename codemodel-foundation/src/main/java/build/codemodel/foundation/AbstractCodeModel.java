@@ -21,7 +21,6 @@ package build.codemodel.foundation;
  */
 
 import build.base.foundation.iterator.Iterators;
-import build.base.foundation.stream.Streamable;
 import build.base.marshalling.Marshal;
 import build.base.marshalling.Marshalled;
 import build.base.marshalling.Marshaller;
@@ -45,6 +44,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -255,29 +255,20 @@ public abstract class AbstractCodeModel
 
     @Override
     @SuppressWarnings("unchecked")
-    public final <T extends TypeDescriptor> T createTypeDescriptor(
-        final TypeName typeName,
-        final BiFunction<? super CodeModel, ? super TypeName, T> supplier,
-        final Streamable<? extends Function<? super T, ? extends Trait>> traitSuppliers) {
+    public final <T extends TypeDescriptor> T createTypeDescriptor(final TypeName typeName,
+                                                                   final BiFunction<? super CodeModel, ? super TypeName, T> supplier,
+                                                                   final Consumer<? super T> populate) {
 
         Objects.requireNonNull(typeName, "The TypeName must not be null");
         Objects.requireNonNull(supplier, "The Supplier must not be null");
+        Objects.requireNonNull(populate, "The populate Consumer must not be null");
 
         return (T) this.typeDescriptors.computeIfAbsent(typeName, _ -> {
             final var descriptor = Objects.requireNonNull(
                 supplier.apply(this, typeName),
                 "The TypeDescriptor Supplier produced a null value");
 
-            if (traitSuppliers != null) {
-                for (final var traitSupplier : traitSuppliers) {
-                    if (traitSupplier != null) {
-                        final var trait = traitSupplier.apply(descriptor);
-                        if (trait != null) {
-                            descriptor.addTrait(trait);
-                        }
-                    }
-                }
-            }
+            populate.accept(descriptor);
 
             onCreatedTypeDescriptor(descriptor);
             this.index.index(descriptor);
@@ -298,29 +289,20 @@ public abstract class AbstractCodeModel
 
     @Override
     @SuppressWarnings("unchecked")
-    public final <M extends ModuleDescriptor> M createModuleDescriptor(
-        final ModuleName moduleName,
-        final BiFunction<? super CodeModel, ? super ModuleName, M> supplier,
-        final Streamable<? extends Function<? super M, ? extends Trait>> traitSuppliers) {
+    public final <M extends ModuleDescriptor> M createModuleDescriptor(final ModuleName moduleName,
+                                                                       final BiFunction<? super CodeModel, ? super ModuleName, M> supplier,
+                                                                       final Consumer<? super M> populate) {
 
         Objects.requireNonNull(moduleName, "The ModuleName must not be null");
         Objects.requireNonNull(supplier, "The Supplier must not be null");
+        Objects.requireNonNull(populate, "The populate Consumer must not be null");
 
         return (M) this.moduleDescriptors.computeIfAbsent(moduleName, _ -> {
             final var descriptor = Objects.requireNonNull(
                 supplier.apply(this, moduleName),
                 "The ModuleDescriptor Supplier produced a null value");
 
-            if (traitSuppliers != null) {
-                for (final var traitSupplier : traitSuppliers) {
-                    if (traitSupplier != null) {
-                        final var trait = traitSupplier.apply(descriptor);
-                        if (trait != null) {
-                            descriptor.addTrait(trait);
-                        }
-                    }
-                }
-            }
+            populate.accept(descriptor);
 
             this.index.index(descriptor);
 
@@ -330,29 +312,20 @@ public abstract class AbstractCodeModel
 
     @Override
     @SuppressWarnings("unchecked")
-    public final <N extends NamespaceDescriptor> N createNamespaceDescriptor(
-        final Namespace namespace,
-        final BiFunction<? super CodeModel, ? super Namespace, N> supplier,
-        final Streamable<? extends Function<? super N, ? extends Trait>> traitSuppliers) {
+    public final <N extends NamespaceDescriptor> N createNamespaceDescriptor(final Namespace namespace,
+                                                                             final BiFunction<? super CodeModel, ? super Namespace, N> supplier,
+                                                                             final Consumer<? super N> populate) {
 
         Objects.requireNonNull(namespace, "The Namespace must not be null");
         Objects.requireNonNull(supplier, "The Supplier must not be null");
+        Objects.requireNonNull(populate, "The populate Consumer must not be null");
 
         return (N) this.namespaceDescriptors.computeIfAbsent(namespace, _ -> {
             final var descriptor = Objects.requireNonNull(
                 supplier.apply(this, namespace),
                 "The NamespaceDescriptor Supplier produced a null value");
 
-            if (traitSuppliers != null) {
-                for (final var traitSupplier : traitSuppliers) {
-                    if (traitSupplier != null) {
-                        final var trait = traitSupplier.apply(descriptor);
-                        if (trait != null) {
-                            descriptor.addTrait(trait);
-                        }
-                    }
-                }
-            }
+            populate.accept(descriptor);
 
             this.index.index(descriptor);
 
@@ -439,24 +412,15 @@ public abstract class AbstractCodeModel
     }
 
     @Override
-    public final Traitable createTraitable(
-        final Traitable object,
-        final Streamable<? extends Function<? super Traitable, ? extends Trait>> traitSuppliers) {
+    public final Traitable createTraitable(final Traitable object,
+                                           final Consumer<? super Traitable> populate) {
 
         Objects.requireNonNull(object, "The object must not be null");
+        Objects.requireNonNull(populate, "The populate Consumer must not be null");
 
         final var traitable = new CodeModelTraitable(this, object);
 
-        if (traitSuppliers != null) {
-            for (final var traitSupplier : traitSuppliers) {
-                if (traitSupplier != null) {
-                    final var trait = traitSupplier.apply(traitable);
-                    if (trait != null) {
-                        traitable.addTrait(trait);
-                    }
-                }
-            }
-        }
+        populate.accept(traitable);
 
         return traitable;
     }

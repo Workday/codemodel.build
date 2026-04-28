@@ -141,7 +141,8 @@ public abstract class AbstractTraitable
 
         if (local == null) {
             synchronized (this) {
-                if (this.lazyTraitable == null) {
+                local = this.lazyTraitable;
+                if (local == null) {
                     local = codeModel().createTraitable(this);
                     this.lazyTraitable = local;
                 }
