@@ -74,7 +74,6 @@ import build.codemodel.objectoriented.descriptor.ImplementsTypeDescriptor;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
 import build.codemodel.objectoriented.descriptor.ParameterizedTypeDescriptor;
 import build.codemodel.objectoriented.naming.MethodName;
-import com.google.auto.service.AutoService;
 
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
@@ -130,7 +129,6 @@ import javax.lang.model.type.WildcardType;
  * @since Jan-2024
  */
 @SupportedSourceVersion(SourceVersion.RELEASE_25)
-@AutoService(Processor.class)
 public class AnnotationProcessor
     extends AbstractProcessor {
 

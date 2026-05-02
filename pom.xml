@@ -68,7 +68,6 @@
 
         <!-- Module Dependency Versions -->
         <assertj.version>3.27.7</assertj.version>
-        <auto-service.version>1.1.1</auto-service.version>
         <base.version>0.24.0</base.version>
         <byte-buddy.version>1.18.4</byte-buddy.version>
         <compile-testing.version>0.23.0</compile-testing.version>
@@ -244,11 +243,6 @@
                 <groupId>net.bytebuddy</groupId>
                 <artifactId>byte-buddy</artifactId>
                 <version>${byte-buddy.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.google.auto.service</groupId>
-                <artifactId>auto-service-annotations</artifactId>
-                <version>${auto-service.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.google.guava</groupId>

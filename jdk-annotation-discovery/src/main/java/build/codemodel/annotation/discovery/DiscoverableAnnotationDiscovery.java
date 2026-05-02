@@ -20,8 +20,6 @@ package build.codemodel.annotation.discovery;
  * #L%
  */
 
-import com.google.auto.service.AutoService;
-
 import java.lang.annotation.Annotation;
 import java.util.stream.Stream;
 
@@ -31,7 +29,6 @@ import java.util.stream.Stream;
  * @author brian.oliver
  * @since Mar-2024
  */
-@AutoService(AnnotationDiscovery.class)
 public class DiscoverableAnnotationDiscovery
     implements AnnotationDiscovery {
 

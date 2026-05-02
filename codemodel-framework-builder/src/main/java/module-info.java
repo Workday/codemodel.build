@@ -26,8 +26,6 @@ import build.codemodel.framework.Framework;
  * @since Feb-2024
  */
 module build.codemodel.framework.builder {
-    requires com.google.auto.service;
-
     requires jakarta.inject;
 
     requires build.base.foundation;

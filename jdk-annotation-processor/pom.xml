@@ -17,11 +17,6 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.google.auto.service</groupId>
-            <artifactId>auto-service-annotations</artifactId>
-        </dependency>
-
-        <dependency>
             <groupId>jakarta.inject</groupId>
             <artifactId>jakarta.inject-api</artifactId>
         </dependency>
@@ -131,7 +126,6 @@
                     <ignoredUnusedDeclaredDependencies>
                         <!-- required in module-info.java but no direct class imports -->
                         <ignoredUnusedDeclaredDependency>jakarta.inject:jakarta.inject-api</ignoredUnusedDeclaredDependency>
-                        <ignoredUnusedDeclaredDependency>com.google.auto.service:auto-service-annotations</ignoredUnusedDeclaredDependency>
                         <ignoredUnusedDeclaredDependency>build.base:base-marshalling</ignoredUnusedDeclaredDependency>
                         <ignoredUnusedDeclaredDependency>build.base:base-query</ignoredUnusedDeclaredDependency>
                     </ignoredUnusedDeclaredDependencies>
@@ -145,19 +139,6 @@
                         <!-- transitive via objectoriented-codemodel; referenced in method signatures picked up by bytecode analysis -->
                         <ignoredNonTestScopedDependency>build.codemodel:expression-codemodel</ignoredNonTestScopedDependency>
                     </ignoredNonTestScopedDependencies>
-                </configuration>
-            </plugin>
-
-            <plugin>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <configuration>
-                    <annotationProcessorPaths>
-                        <path>
-                            <groupId>com.google.auto.service</groupId>
-                            <artifactId>auto-service</artifactId>
-                            <version>${auto-service.version}</version>
-                        </path>
-                    </annotationProcessorPaths>
                 </configuration>
             </plugin>
         </plugins>
