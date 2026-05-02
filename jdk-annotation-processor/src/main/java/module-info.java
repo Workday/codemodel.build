@@ -38,8 +38,6 @@ import javax.annotation.processing.Processor;
 module build.codemodel.jdk.annotation.processor {
     requires java.compiler;
 
-    requires com.google.auto.service;
-
     requires jakarta.inject;
 
     requires build.codemodel.jdk.annotation.discovery;

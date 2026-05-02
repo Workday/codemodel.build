@@ -25,8 +25,6 @@
  * @since Apr-2024
  */
 module build.codemodel.jdk.annotation.discovery {
-    requires com.google.auto.service;
-
     exports build.codemodel.annotation.discovery;
 
     provides build.codemodel.annotation.discovery.AnnotationDiscovery
