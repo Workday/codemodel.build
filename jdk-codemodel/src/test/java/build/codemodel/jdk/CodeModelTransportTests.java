@@ -11,8 +11,6 @@ import build.codemodel.foundation.naming.TypeName;
 import build.codemodel.foundation.transport.ModuleNameTransformer;
 import build.codemodel.foundation.transport.NamespaceTransformer;
 import build.codemodel.foundation.transport.TypeNameTransformer;
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.StreamReadFeature;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -63,26 +61,17 @@ class CodeModelTransportTests {
         transport.register(new NamespaceTransformer(nameProvider));
         transport.register(new TypeNameTransformer(nameProvider));
 
-        // establish a JsonFactory for writing/reading Json
-        final var factory = JsonFactory.builder()
-            .enable(StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION)
-            .build();
-
         // establish a String-based Writer into which to write the Json
         final var writer = new StringWriter();
-        final var generator = factory.createGenerator(writer);
 
         // write the Marshalled<CodeModel> using the Transport
-        transport.write(marshalled, generator);
-
-        generator.close();
+        transport.write(marshalled, writer);
 
         // establish a String-based Reader from which to read (parse) the Json
         final var reader = new StringReader(writer.toString());
-        final var parser = factory.createParser(reader);
 
         // read the Marshalled<CodeModel> using the Transport
-        final Marshalled<CodeModel> transported = transport.read(parser, marshaller);
+        final Marshalled<CodeModel> transported = transport.read(reader, marshaller);
 
         // unmarshal the CodeModel from the Marshalled<CodeModel>
         final var unmarshalled = marshaller.unmarshal(transported);
