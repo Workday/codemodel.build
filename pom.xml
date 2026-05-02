@@ -69,11 +69,10 @@
         <!-- Module Dependency Versions -->
         <assertj.version>3.27.7</assertj.version>
         <auto-service.version>1.1.1</auto-service.version>
-        <base.version>0.23.1</base.version>
+        <base.version>0.24.0</base.version>
         <byte-buddy.version>1.18.4</byte-buddy.version>
         <compile-testing.version>0.23.0</compile-testing.version>
         <guava.version>33.4.8-jre</guava.version>
-        <jackson-core.version>2.21.2</jackson-core.version>
         <junit.version>6.0.3</junit.version>
         <jakarta-inject.version>2.0.1</jakarta-inject.version>
         <mockito.version>5.23.0</mockito.version>
@@ -261,11 +260,6 @@
                 <artifactId>compile-testing</artifactId>
                 <version>${compile-testing.version}</version>
                 <scope>test</scope>
-            </dependency>
-            <dependency>
-                <groupId>com.fasterxml.jackson.core</groupId>
-                <artifactId>jackson-core</artifactId>
-                <version>${jackson-core.version}</version>
             </dependency>
             <dependency>
                 <groupId>jakarta.inject</groupId>

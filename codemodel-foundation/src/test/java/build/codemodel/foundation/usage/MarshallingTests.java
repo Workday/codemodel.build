@@ -16,8 +16,6 @@ import build.codemodel.foundation.transport.IrreducibleNameTransformer;
 import build.codemodel.foundation.transport.ModuleNameTransformer;
 import build.codemodel.foundation.transport.NamespaceTransformer;
 import build.codemodel.foundation.transport.TypeNameTransformer;
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.StreamReadFeature;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -220,18 +218,14 @@ class MarshallingTests {
         transport.register(new NamespaceTransformer(nameProvider));
         transport.register(new TypeNameTransformer(nameProvider));
 
-        final var factory = JsonFactory.builder()
-            .enable(StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION)
-            .build();
-
         final var writer = new StringWriter();
-        transport.write(marshalled, factory.createGenerator(writer));
+        transport.write(marshalled, writer);
 
         final var otherCodeModel = new ConceptualCodeModel(nameProvider);
         marshaller.bind(CodeModel.class).to(otherCodeModel);
 
-        final Marshalled<WildcardTypeUsage> transported =
-            transport.read(factory.createParser(new StringReader(writer.toString())), marshaller);
+        final var reader = new StringReader(writer.toString());
+        final Marshalled<WildcardTypeUsage> transported = transport.read(reader, marshaller);
         final var unmarshalled = marshaller.unmarshal(transported);
 
         assertEquals(original, unmarshalled);
@@ -255,19 +249,11 @@ class MarshallingTests {
         transport.register(new NamespaceTransformer(nameProvider));
         transport.register(new TypeNameTransformer(nameProvider));
 
-        // establish a JsonFactory for writing/reading Json
-        final var factory = JsonFactory.builder()
-            .enable(StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION)
-            .build();
-
         // establish a String-based Writer into which to write the Json
         final var writer = new StringWriter();
-        final var generator = factory.createGenerator(writer);
 
         // write the Marshalled<CodeModel> using the Transport
-        transport.write(marshalled, generator);
-
-        generator.close();
+        transport.write(marshalled, writer);
 
         final var otherCodeModel = new ConceptualCodeModel(nameProvider);
         marshaller.bind(CodeModel.class).to(otherCodeModel);
@@ -275,8 +261,7 @@ class MarshallingTests {
         // establish a String-based Reader from which to read (parse) the Json
         final var reader = new StringReader(writer.toString());
 
-        final var parser = factory.createParser(reader);
-        final Marshalled<T> transported = transport.read(parser, marshaller);
+        final Marshalled<T> transported = transport.read(reader, marshaller);
 
         final var unmarshalled = marshaller.unmarshal(transported);
 
