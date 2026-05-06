@@ -20,7 +20,6 @@ package build.codemodel.objectoriented.descriptor;
  * #L%
  */
 
-import build.base.foundation.stream.Streams;
 import build.base.marshalling.Bound;
 import build.base.marshalling.Marshal;
 import build.base.marshalling.Marshalled;
@@ -29,7 +28,6 @@ import build.base.marshalling.Marshalling;
 import build.base.marshalling.Out;
 import build.base.marshalling.Unmarshal;
 import build.codemodel.foundation.CodeModel;
-import build.codemodel.foundation.Dependent;
 import build.codemodel.foundation.descriptor.AbstractTraitable;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.descriptor.Traitable;
@@ -38,6 +36,8 @@ import build.codemodel.foundation.naming.IrreducibleName;
 import build.codemodel.foundation.usage.TypeUsage;
 
 import java.lang.invoke.MethodHandles;
+import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
 
@@ -50,7 +50,7 @@ import java.util.stream.Stream;
  */
 public final class FieldDescriptor
     extends AbstractTraitable
-    implements Trait, Dependent, Traitable {
+    implements Trait, Traitable {
 
     /**
      * The {@link IrreducibleName}.
@@ -145,11 +145,8 @@ public final class FieldDescriptor
     }
 
     @Override
-    public Stream<TypeUsage> dependencies() {
-        return Streams.concat(
-            Stream.of(type()),
-            traits(Dependent.class)
-                .flatMap(Dependent::dependencies));
+    public Collection<?> otherParts() {
+        return List.of(type());
     }
 
     @Override

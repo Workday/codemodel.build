@@ -35,6 +35,7 @@ import build.codemodel.imperative.Statement;
 
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -152,6 +153,12 @@ public final class For
      */
     public Statement body() {
         return this.body;
+    }
+
+    @Override
+    public Collection<?> otherParts() {
+        return Stream.concat(Stream.concat(initializers.stream(), condition.stream()),
+                             Stream.concat(updates.stream(), Stream.of(body))).toList();
     }
 
     @Override

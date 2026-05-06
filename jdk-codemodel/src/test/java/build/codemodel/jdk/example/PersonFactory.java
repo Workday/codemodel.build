@@ -1,6 +1,8 @@
+package build.codemodel.jdk.example;
+
 /*-
  * #%L
- * Hierarchical Code Model
+ * JDK Code Model
  * %%
  * Copyright (C) 2026 Workday, Inc.
  * %%
@@ -17,20 +19,14 @@
  * limitations under the License.
  * #L%
  */
-/**
- * Provides <i>Hierarchical</i> Concepts and {@code Trait}s for {@code CodeModel}s
- *
- * @author brian.oliver
- * @since Mar-2025
- */
-open module build.codemodel.hierarchical {
 
-    requires transitive build.codemodel.foundation;
+public class PersonFactory {
 
-    requires build.base.foundation;
-    requires build.base.marshalling;
-    requires build.base.mereology;
+    private PersonFactory() {
+    }
 
-    exports build.codemodel.hierarchical;
-    exports build.codemodel.hierarchical.descriptor;
+    public static AbstractPerson of() {
+        final var newPerson = new NonAbstractPerson("first", "last");
+        return newPerson;
+    }
 }

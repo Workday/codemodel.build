@@ -20,9 +20,8 @@ package build.codemodel.foundation.descriptor;
  * #L%
  */
 
-import build.base.foundation.stream.Streams;
+import build.base.mereology.Composite;
 import build.codemodel.foundation.CodeModel;
-import build.codemodel.foundation.Dependent;
 import build.codemodel.foundation.naming.CallableName;
 import build.codemodel.foundation.usage.TypeUsage;
 
@@ -39,7 +38,7 @@ import java.util.stream.Stream;
  * @since Jan-2024
  */
 public interface CallableDescriptor
-    extends Trait, Dependent, Traitable {
+    extends Trait, Composite, Traitable {
 
     /**
      * Obtains the {@link TypeDescriptor} in which the {@link CallableDescriptor} is defined.
@@ -108,14 +107,4 @@ public interface CallableDescriptor
             : Stream.empty();
     }
 
-    @Override
-    default Stream<TypeUsage> dependencies() {
-        return Streams.concat(
-            Stream.of(returnType()),
-            formalParameters()
-                .map(FormalParameterDescriptor::type),
-            throwables(),
-            traits(Dependent.class)
-                .flatMap(Dependent::dependencies));
-    }
 }

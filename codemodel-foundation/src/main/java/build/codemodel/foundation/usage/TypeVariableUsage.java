@@ -21,7 +21,6 @@ package build.codemodel.foundation.usage;
  */
 
 import build.base.foundation.Lazy;
-import build.base.foundation.stream.Streams;
 import build.base.marshalling.Bound;
 import build.base.marshalling.Marshal;
 import build.base.marshalling.Marshalled;
@@ -30,13 +29,14 @@ import build.base.marshalling.Marshalling;
 import build.base.marshalling.Out;
 import build.base.marshalling.Unmarshal;
 import build.codemodel.foundation.CodeModel;
-import build.codemodel.foundation.Dependent;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.descriptor.Traitable;
 import build.codemodel.foundation.descriptor.TypeDescriptor;
 import build.codemodel.foundation.naming.TypeName;
 
 import java.lang.invoke.MethodHandles;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -147,12 +147,11 @@ public class TypeVariableUsage
     }
 
     @Override
-    public Stream<TypeUsage> dependencies() {
-        return Streams.concat(
-            lowerBound().stream(),
-            upperBound().stream(),
-            traits(Dependent.class)
-                .flatMap(Dependent::dependencies));
+    public Collection<?> otherParts() {
+        final var parts = new ArrayList<>();
+        lowerBound().ifPresent(parts::add);
+        upperBound().ifPresent(parts::add);
+        return parts;
     }
 
     @Override

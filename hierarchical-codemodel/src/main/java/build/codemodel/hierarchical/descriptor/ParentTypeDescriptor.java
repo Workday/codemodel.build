@@ -20,16 +20,13 @@ package build.codemodel.hierarchical.descriptor;
  * #L%
  */
 
+import build.base.mereology.Composite;
 import build.codemodel.foundation.CodeModel;
-import build.codemodel.foundation.Dependent;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.descriptor.Traitable;
 import build.codemodel.foundation.descriptor.TypeDescriptor;
 import build.codemodel.foundation.naming.TypeName;
 import build.codemodel.foundation.usage.NamedTypeUsage;
-import build.codemodel.foundation.usage.TypeUsage;
-
-import java.util.stream.Stream;
 
 /**
  * A {@link Trait} defining the <i>parent</i> {@link TypeDescriptor} of a {@link TypeDescriptor} in a
@@ -41,7 +38,7 @@ import java.util.stream.Stream;
  * @since May-2024
  */
 public interface ParentTypeDescriptor
-    extends Trait, Dependent, Traitable {
+    extends Trait, Composite, Traitable {
 
     /**
      * Obtains the {@link NamedTypeUsage} defining the <i>parent</i> type.
@@ -71,8 +68,4 @@ public interface ParentTypeDescriptor
                 () -> new IllegalStateException("Failed to find the parent TypeDescriptor [" + parentTypeName() + "]"));
     }
 
-    @Override
-    default Stream<TypeUsage> dependencies() {
-        return Stream.of(parentTypeUsage());
-    }
 }

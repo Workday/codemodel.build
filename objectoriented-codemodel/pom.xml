@@ -87,6 +87,9 @@
                         <!-- required in module-info.java but no direct class imports -->
                         <ignoredUnusedDeclaredDependency>build.codemodel:imperative-codemodel</ignoredUnusedDeclaredDependency>
                     </ignoredUnusedDeclaredDependencies>
+                    <ignoredNonTestScopedDependencies>
+                        <ignoredUnusedDeclaredDependency>build.base:base-foundation</ignoredUnusedDeclaredDependency>
+                    </ignoredNonTestScopedDependencies>
                 </configuration>
             </plugin>
         </plugins>

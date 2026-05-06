@@ -32,6 +32,8 @@ import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.Trait;
 
 import java.lang.invoke.MethodHandles;
+import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -124,6 +126,11 @@ public class Return
      */
     public static Return of(final CodeModel codeModel) {
         return new Return(Objects.requireNonNull(codeModel, "codeModel must not be null"), Optional.empty());
+    }
+
+    @Override
+    public Collection<?> otherParts() {
+        return expression.map(List::of).orElse(List.of());
     }
 
     @Override

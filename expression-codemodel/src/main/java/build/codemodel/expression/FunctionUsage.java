@@ -34,6 +34,7 @@ import build.codemodel.foundation.usage.TypeUsage;
 
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -140,6 +141,11 @@ public class FunctionUsage
      */
     public Stream<Expression> arguments() {
         return this.arguments.stream();
+    }
+
+    @Override
+    public Collection<?> otherParts() {
+        return arguments;
     }
 
     public boolean equals(final Object object) {

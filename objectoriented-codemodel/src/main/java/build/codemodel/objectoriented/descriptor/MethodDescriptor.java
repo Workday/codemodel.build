@@ -39,6 +39,7 @@ import build.codemodel.objectoriented.naming.MethodName;
 
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -241,6 +242,15 @@ public final class MethodDescriptor
         builder.append(')');
 
         return builder.toString();
+    }
+
+    @Override
+    public Collection<?> otherParts() {
+        final var parts = new ArrayList<>();
+        parts.add(returnType());
+        formalParameters().map(FormalParameterDescriptor::type).forEach(parts::add);
+        throwables().forEach(parts::add);
+        return parts;
     }
 
     @Override

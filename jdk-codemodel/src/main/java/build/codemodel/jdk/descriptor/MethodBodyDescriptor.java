@@ -20,9 +20,13 @@ package build.codemodel.jdk.descriptor;
  * #L%
  */
 
+import build.base.foundation.iterator.Iterators;
+import build.base.mereology.Composite;
+import build.codemodel.foundation.descriptor.Singular;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.imperative.Block;
 
+import java.util.Iterator;
 import java.util.Objects;
 
 /**
@@ -31,8 +35,9 @@ import java.util.Objects;
  * @author reed.vonredwitz
  * @since Mar-2026
  */
+@Singular
 public final class MethodBodyDescriptor
-    implements Trait {
+    implements Composite, Trait {
 
     private final Block body;
 
@@ -52,5 +57,12 @@ public final class MethodBodyDescriptor
      */
     public Block body() {
         return this.body;
+    }
+
+    @Override
+    public <T> Iterator<T> iterator(final Class<T> type) {
+        return type.isInstance(body)
+            ? Iterators.of(type.cast(body))
+            : Iterators.empty();
     }
 }

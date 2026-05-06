@@ -58,14 +58,14 @@ class IntersectionTypeUsageTests {
 
         final var intersection = IntersectionTypeUsage.of(this.codeModel, serializable, comparable);
 
-        assertThat(intersection.dependencies())
+        assertThat(intersection.parts(TypeUsage.class))
             .as("IntersectionTypeUsage.dependencies() should include all member types")
             .containsExactly(serializable, comparable);
     }
 
     /**
-     * Ensures that {@link IntersectionTypeUsage#dependencies()} is consistent with
-     * {@link UnionTypeUsage#dependencies()} for the same member types.
+     * Ensures that {@link IntersectionTypeUsage#parts)()} is consistent with
+     * {@link UnionTypeUsage#parts()} for the same member types.
      */
     @Test
     void shouldHaveSameDependencyBehaviorAsUnionTypeUsage() {
@@ -80,8 +80,8 @@ class IntersectionTypeUsageTests {
         final var intersection = IntersectionTypeUsage.of(this.codeModel, foo, bar);
         final var union = UnionTypeUsage.of(this.codeModel, foo, bar);
 
-        assertThat(intersection.dependencies().toList())
-            .as("IntersectionTypeUsage and UnionTypeUsage should both include member types in dependencies()")
-            .isEqualTo(union.dependencies().toList());
+        assertThat(intersection.parts(TypeUsage.class).toList())
+            .as("IntersectionTypeUsage and UnionTypeUsage should both include member types in parts(TypeUsage.class)")
+            .isEqualTo(union.parts(TypeUsage.class).toList());
     }
 }

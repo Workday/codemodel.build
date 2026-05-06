@@ -28,7 +28,6 @@ import build.base.marshalling.Marshalling;
 import build.base.marshalling.Out;
 import build.base.marshalling.Unmarshal;
 import build.codemodel.foundation.CodeModel;
-import build.codemodel.foundation.Dependent;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.descriptor.TypeDescriptor;
 import build.codemodel.foundation.naming.TypeName;
@@ -46,8 +45,7 @@ import java.util.stream.Stream;
  * @since Jan-2024
  */
 public class VoidTypeUsage
-    extends AbstractNamedTypeUsage
-    implements Dependent {
+    extends AbstractNamedTypeUsage {
 
     /**
      * Constructs a {@link VoidTypeUsage}.
@@ -93,12 +91,6 @@ public class VoidTypeUsage
                            final Out<Stream<Marshalled<Trait>>> traits) {
 
         super.destructor(marshaller, typeName, traits);
-    }
-
-    @Override
-    public Stream<TypeUsage> dependencies() {
-        return traits(Dependent.class)
-            .flatMap(Dependent::dependencies);
     }
 
     @Override

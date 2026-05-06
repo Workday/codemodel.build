@@ -28,10 +28,11 @@ import build.base.marshalling.Marshalling;
 import build.base.marshalling.Out;
 import build.base.marshalling.Unmarshal;
 import build.codemodel.foundation.CodeModel;
-import build.codemodel.foundation.Dependent;
 import build.codemodel.foundation.usage.TypeUsage;
 
 import java.lang.invoke.MethodHandles;
+import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
 
@@ -45,7 +46,7 @@ import java.util.stream.Stream;
  */
 public class ThrowableDescriptor
     extends AbstractTraitable
-    implements Trait, Dependent {
+    implements Trait {
 
     /**
      * The <i>Throwable</i> {@link TypeUsage}.
@@ -108,8 +109,8 @@ public class ThrowableDescriptor
     }
 
     @Override
-    public Stream<TypeUsage> dependencies() {
-        return Stream.of(throwable());
+    public Collection<?> otherParts() {
+        return List.of(throwable());
     }
 
     @Override
