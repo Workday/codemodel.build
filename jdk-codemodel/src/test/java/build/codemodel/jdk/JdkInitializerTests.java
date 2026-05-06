@@ -3,8 +3,13 @@ package build.codemodel.jdk;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.naming.NonCachingNameProvider;
 import build.codemodel.foundation.usage.AnnotationTypeUsage;
+import build.codemodel.foundation.usage.GenericTypeUsage;
+import build.codemodel.foundation.usage.NamedTypeUsage;
+import build.codemodel.foundation.usage.SpecificTypeUsage;
 import build.codemodel.foundation.usage.TypeUsage;
 import build.codemodel.foundation.usage.UnknownTypeUsage;
+import build.codemodel.jdk.expression.NewObject;
+import build.codemodel.jdk.statement.LocalVariableDeclaration;
 import build.codemodel.objectoriented.descriptor.AccessModifier;
 import build.codemodel.objectoriented.descriptor.Classification;
 import build.codemodel.objectoriented.descriptor.ConstructorDescriptor;
@@ -248,6 +253,128 @@ class JdkInitializerTests {
             .contains("Deprecated");
     }
 
+    // -------------------------------------------------------------------------
+    // Mereology integration — parts() and composition() over initialized descriptors
+    // -------------------------------------------------------------------------
+
+    @Test
+    void typeDescriptorPartsContainsItsTraitsAfterInitialization() {
+        final var sources = List.of(
+            new File("src/test/java/build/codemodel/jdk/example/AbstractPerson.java"),
+            new File("src/test/java/build/codemodel/jdk/example/Description.java"),
+            new File("src/test/java/build/codemodel/jdk/example/NonAbstractPerson.java"));
+
+        final var nameProvider = new NonCachingNameProvider();
+        final var codeModel = new JDKCodeModel(nameProvider);
+        new JdkInitializer(sources, List.of(), List.of()).initialize(codeModel);
+
+        final var typeName = nameProvider.getTypeName(Optional.empty(),
+            "build.codemodel.jdk.example.AbstractPerson");
+        final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
+
+        final var parts = descriptor.parts().toList();
+        assertThat(parts).isNotEmpty();
+        assertThat(parts).anyMatch(p -> p instanceof FieldDescriptor f
+            && f.fieldName().toString().equals("firstName"));
+        assertThat(parts).anyMatch(p -> p instanceof MethodDescriptor m
+            && m.methodName().name().toString().equals("getFirstName"));
+    }
+
+    @Test
+    void fieldDescriptorPartsContainsItsTypeUsage() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Box",
+            "package com.example; public class Box { public String label; }");
+        final var codeModel = runInternal(new JdkInitializer(List.of(), List.of(), List.of(source)));
+        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Box");
+        final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
+
+        final var field = descriptor.traits(FieldDescriptor.class)
+            .filter(f -> f.fieldName().toString().equals("label"))
+            .findFirst().orElseThrow();
+
+        final var parts = field.parts().toList();
+        assertThat(parts).isNotEmpty();
+        assertThat(parts).anyMatch(p -> p instanceof SpecificTypeUsage s
+            && s.typeName().name().toString().equals("String"));
+    }
+
+    @Test
+    void genericFieldPartsContainsTypeParameter() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Wrapper",
+            "package com.example; import java.util.List; public class Wrapper { public List<String> items; }");
+        final var codeModel = runInternal(new JdkInitializer(List.of(), List.of(), List.of(source)));
+        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Wrapper");
+        final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
+
+        final var field = descriptor.traits(FieldDescriptor.class)
+            .filter(f -> f.fieldName().toString().equals("items"))
+            .findFirst().orElseThrow();
+
+        assertThat(field.type()).isInstanceOf(GenericTypeUsage.class);
+        final var generic = (GenericTypeUsage) field.type();
+        assertThat(generic.parts().toList()).isNotEmpty();
+        assertThat(generic.parts().toList()).anyMatch(p -> p instanceof SpecificTypeUsage s
+            && s.typeName().name().toString().equals("String"));
+    }
+
+    @Test
+    void typeDescriptorCompositionTransitivelyReachesFieldTypeUsages() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Pair",
+            "package com.example; import java.util.List; public class Pair { public String first; public List<Integer> second; }");
+        final var codeModel = runInternal(new JdkInitializer(List.of(), List.of(), List.of(source)));
+        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Pair");
+        final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
+
+        final var allTypeUsages = descriptor.composition(TypeUsage.class).toList();
+        assertThat(allTypeUsages).isNotEmpty();
+        // String field contributes a SpecificTypeUsage
+        assertThat(allTypeUsages).anyMatch(u -> u instanceof SpecificTypeUsage s
+            && s.typeName().name().toString().equals("String"));
+        // List<Integer> contributes a GenericTypeUsage for List and a SpecificTypeUsage for Integer
+        assertThat(allTypeUsages).anyMatch(u -> u instanceof GenericTypeUsage g
+            && g.typeName().name().toString().equals("List"));
+        assertThat(allTypeUsages).anyMatch(u -> u instanceof SpecificTypeUsage s
+            && s.typeName().name().toString().equals("Integer"));
+    }
+
+    @Test
+    void localVariableInitializerTypeIsCorrectInPersonFactory() {
+        final var sources = List.of(
+            new File("src/test/java/build/codemodel/jdk/example/AbstractPerson.java"),
+            new File("src/test/java/build/codemodel/jdk/example/Description.java"),
+            new File("src/test/java/build/codemodel/jdk/example/NonAbstractPerson.java"),
+            new File("src/test/java/build/codemodel/jdk/example/PersonFactory.java"));
+
+        final var nameProvider = new NonCachingNameProvider();
+        final var codeModel = new JDKCodeModel(nameProvider);
+        new JdkInitializer(sources, List.of(), List.of()).initialize(codeModel);
+
+        final var factoryName = nameProvider.getTypeName(Optional.empty(),
+            "build.codemodel.jdk.example.PersonFactory");
+        final var factoryDescriptor = codeModel.getTypeDescriptor(factoryName).orElseThrow();
+
+        final var newPersonDecl = factoryDescriptor.composition(LocalVariableDeclaration.class)
+            .findFirst()
+            .orElseThrow();
+        // The inferred var type should resolve to NonAbstractPerson
+        assertThat(newPersonDecl.type()).isInstanceOf(SpecificTypeUsage.class);
+        assertThat(((SpecificTypeUsage) newPersonDecl.type()).typeName().name().toString())
+            .isEqualTo("NonAbstractPerson");
+
+        // The initializer should be a NewObject whose type is also NonAbstractPerson
+        // we could of course get this from the declaration, but that's not the point
+        final var initializer = factoryDescriptor.composition(NewObject.class)
+            .findFirst()
+            .orElseThrow();
+        final var initializerType = initializer.type().orElseThrow();
+        assertThat(initializerType).isInstanceOf(SpecificTypeUsage.class);
+        assertThat(initializerType.as(NamedTypeUsage.class).orElseThrow().typeName().name().toString())
+            .isEqualTo("NonAbstractPerson");
+    }
+
     @Test
     void shouldTraverseMethods() {
         final var sources = List.of(
@@ -266,6 +393,7 @@ class JdkInitializerTests {
             "build.codemodel.jdk.example.PersonFactory");
         final var personFactoryTd = codeModel.getTypeDescriptor(personFactoryName).orElseThrow();
         final var parts = personFactoryTd.parts().toList();
+        final var composition = personFactoryTd.composition().toList();
         final var typeUsages = personFactoryTd.parts(TypeUsage.class).toList();
         final var allTypeUsages = personFactoryTd.composition(TypeUsage.class).toList();
         System.out.println();

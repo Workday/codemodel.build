@@ -32,6 +32,8 @@ import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.usage.TypeUsage;
 
 import java.lang.invoke.MethodHandles;
+import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -109,6 +111,11 @@ public class Cast
 
         targetType.set(marshaller.marshal(this.targetType));
         expression.set(marshaller.marshal(this.expression));
+    }
+
+    @Override
+    public Collection<?> otherParts() {
+        return List.of(targetType, expression);
     }
 
     @Override

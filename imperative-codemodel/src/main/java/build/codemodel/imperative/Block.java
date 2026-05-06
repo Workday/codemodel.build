@@ -32,6 +32,8 @@ import build.codemodel.foundation.descriptor.Trait;
 
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -138,6 +140,11 @@ public class Block
         }
 
         return new Block(statements[0].codeModel(), Stream.of(statements));
+    }
+
+    @Override
+    public Collection<Statement> otherParts() {
+        return List.copyOf(statements);
     }
 
     @Override

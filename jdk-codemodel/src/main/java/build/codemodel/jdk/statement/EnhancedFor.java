@@ -35,6 +35,8 @@ import build.codemodel.imperative.AbstractStatement;
 import build.codemodel.imperative.Statement;
 
 import java.lang.invoke.MethodHandles;
+import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
 
@@ -162,6 +164,11 @@ public final class EnhancedFor
      */
     public Statement body() {
         return this.body;
+    }
+
+    @Override
+    public Collection<?> otherParts() {
+        return List.of(type, iterable, body);
     }
 
     @Override

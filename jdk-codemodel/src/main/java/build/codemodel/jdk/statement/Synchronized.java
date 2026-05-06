@@ -34,6 +34,8 @@ import build.codemodel.imperative.AbstractStatement;
 import build.codemodel.imperative.Block;
 
 import java.lang.invoke.MethodHandles;
+import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
 
@@ -99,6 +101,11 @@ public final class Synchronized
      */
     public Block body() {
         return this.body;
+    }
+
+    @Override
+    public Collection<?> otherParts() {
+        return List.of(lock, body);
     }
 
     @Override

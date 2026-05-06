@@ -32,6 +32,8 @@ import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.Trait;
 
 import java.lang.invoke.MethodHandles;
+import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
 
@@ -138,6 +140,11 @@ public class While
                            final Statement statement) {
 
         return new While(condition, statement);
+    }
+
+    @Override
+    public Collection<?> otherParts() {
+        return List.of(condition, statement);
     }
 
     @Override

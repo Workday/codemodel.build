@@ -33,6 +33,8 @@ import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.imperative.AbstractStatement;
 
 import java.lang.invoke.MethodHandles;
+import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
 
@@ -79,6 +81,11 @@ public final class Throw
      */
     public Expression expression() {
         return this.expression;
+    }
+
+    @Override
+    public Collection<?> otherParts() {
+        return List.of(expression);
     }
 
     @Override

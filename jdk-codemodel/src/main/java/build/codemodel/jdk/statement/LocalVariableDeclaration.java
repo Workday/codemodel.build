@@ -34,6 +34,7 @@ import build.codemodel.foundation.usage.TypeUsage;
 import build.codemodel.imperative.AbstractStatement;
 
 import java.lang.invoke.MethodHandles;
+import java.util.Collection;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -142,6 +143,11 @@ public final class LocalVariableDeclaration
      */
     public Optional<Expression> initializer() {
         return this.initializer;
+    }
+
+    @Override
+    public Collection<?> otherParts() {
+        return Stream.concat(Stream.of(type), initializer.stream()).toList();
     }
 
     @Override

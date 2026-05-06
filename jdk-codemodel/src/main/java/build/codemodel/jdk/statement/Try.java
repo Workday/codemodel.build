@@ -35,6 +35,7 @@ import build.codemodel.imperative.Statement;
 
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -152,6 +153,12 @@ public final class Try
      */
     public Optional<Block> finallyBlock() {
         return this.finallyBlock;
+    }
+
+    @Override
+    public Collection<?> otherParts() {
+        return Stream.concat(Stream.concat(resources.stream(), Stream.of(body)),
+                             Stream.concat(catches.stream(), finallyBlock.stream())).toList();
     }
 
     @Override

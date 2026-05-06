@@ -33,6 +33,7 @@ import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.imperative.AbstractStatement;
 
 import java.lang.invoke.MethodHandles;
+import java.util.Collection;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -99,6 +100,11 @@ public final class Assert
      */
     public Optional<Expression> message() {
         return this.message;
+    }
+
+    @Override
+    public Collection<?> otherParts() {
+        return Stream.concat(Stream.of(condition), message.stream()).toList();
     }
 
     @Override

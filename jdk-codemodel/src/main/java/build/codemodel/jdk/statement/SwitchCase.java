@@ -35,6 +35,7 @@ import build.codemodel.imperative.Statement;
 
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -113,6 +114,11 @@ public final class SwitchCase
      */
     public Stream<Statement> statements() {
         return this.statements.stream();
+    }
+
+    @Override
+    public Collection<?> otherParts() {
+        return Stream.concat(labels.stream(), statements.stream()).toList();
     }
 
     @Override
