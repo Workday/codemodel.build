@@ -30,7 +30,6 @@ import build.base.marshalling.Marshalling;
 import build.base.marshalling.Out;
 import build.base.marshalling.Unmarshal;
 import build.codemodel.foundation.CodeModel;
-import build.codemodel.foundation.Dependent;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.descriptor.Traitable;
 import build.codemodel.foundation.naming.TypeName;
@@ -49,7 +48,7 @@ import java.util.stream.Stream;
  */
 public class AnnotationTypeUsage
     extends AbstractNamedTypeUsage
-    implements Trait, Dependent, Comparable<AnnotationTypeUsage> {
+    implements Trait, Comparable<AnnotationTypeUsage> {
 
     /**
      * The {@link AnnotationValue}s.
@@ -122,12 +121,6 @@ public class AnnotationTypeUsage
      */
     public Stream<AnnotationValue> values() {
         return this.values.stream();
-    }
-
-    @Override
-    public Stream<TypeUsage> dependencies() {
-        return traits(Dependent.class)
-            .flatMap(Dependent::dependencies);
     }
 
     @Override

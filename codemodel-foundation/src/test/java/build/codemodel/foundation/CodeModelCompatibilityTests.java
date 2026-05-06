@@ -13,6 +13,7 @@ import build.codemodel.foundation.descriptor.TypeDescriptor;
 import build.codemodel.foundation.naming.ModuleName;
 import build.codemodel.foundation.naming.Namespace;
 import build.codemodel.foundation.naming.TypeName;
+import build.codemodel.foundation.usage.TypeUsage;
 import org.junit.jupiter.api.Test;
 
 import java.util.Objects;
@@ -90,7 +91,7 @@ public interface CodeModelCompatibilityTests
         assertThat(aTypeDescriptor.traits())
             .isEmpty();
 
-        assertThat(aTypeDescriptor.dependencies())
+        assertThat(aTypeDescriptor.parts(TypeUsage.class))
             .isEmpty();
 
         assertThat(codeModel.typeDescriptors())

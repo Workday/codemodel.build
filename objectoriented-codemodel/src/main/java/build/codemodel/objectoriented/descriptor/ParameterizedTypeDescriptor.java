@@ -28,16 +28,15 @@ import build.base.marshalling.Marshalling;
 import build.base.marshalling.Out;
 import build.base.marshalling.Unmarshal;
 import build.codemodel.foundation.CodeModel;
-import build.codemodel.foundation.Dependent;
 import build.codemodel.foundation.descriptor.AbstractTraitable;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.descriptor.Traitable;
 import build.codemodel.foundation.descriptor.TypeDescriptor;
-import build.codemodel.foundation.usage.TypeUsage;
 import build.codemodel.foundation.usage.TypeVariableUsage;
 
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -50,7 +49,7 @@ import java.util.stream.Stream;
  */
 public final class ParameterizedTypeDescriptor
     extends AbstractTraitable
-    implements Trait, Dependent, Traitable {
+    implements Trait, Traitable {
 
     /**
      * The <i>type variables</i> defined by the <i>type</i>.
@@ -123,8 +122,8 @@ public final class ParameterizedTypeDescriptor
     }
 
     @Override
-    public Stream<TypeUsage> dependencies() {
-        return typeVariables().map(TypeUsage.class::cast);
+    public Collection<?> otherParts() {
+        return typeVariables().collect(Collectors.toList());
     }
 
     @Override

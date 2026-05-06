@@ -20,12 +20,11 @@ package build.codemodel.foundation.usage;
  * #L%
  */
 
+import build.base.mereology.Composite;
 import build.codemodel.foundation.CodeModel;
-import build.codemodel.foundation.Dependent;
 import build.codemodel.foundation.descriptor.Traitable;
 import build.codemodel.foundation.descriptor.TypeDescriptor;
 
-import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collector;
@@ -39,7 +38,7 @@ import java.util.stream.Collector;
  * @since Jan-2024
  */
 public interface TypeUsage
-    extends Dependent, Traitable {
+    extends Composite, Traitable {
 
     /**
      * Attempts to obtain an {@link Optional} representation of or the first part of the {@link TypeUsage} assignable
@@ -60,26 +59,11 @@ public interface TypeUsage
      * of the {@link TypeUsage}s on which this {@link TypeUsage} directly and indirectly depends.
      *
      * @param visitor the {@link TypeUsageVisitor}
-     * @see #dependencies()
      */
     default void visit(final TypeUsageVisitor visitor) {
         if (Objects.nonNull(visitor)) {
-            final var pending = new LinkedHashSet<TypeUsage>();
-            final var visited = new LinkedHashSet<TypeUsage>();
-            pending.add(this);
-
-            while (!pending.isEmpty()) {
-                final var next = pending.removeFirst();
-
-                if (!visited.contains(next)) {
-                    visitor.visit(next);
-                    visited.add(next);
-
-                    next.dependencies()
-                        .filter(typeUsage -> !visited.contains(typeUsage) && !pending.contains(typeUsage))
-                        .forEach(pending::add);
-                }
-            }
+            visitor.visit(this);
+            composition(TypeUsage.class).forEach(visitor::visit);
         }
     }
 
@@ -97,7 +81,8 @@ public interface TypeUsage
         Objects.requireNonNull(collector, "The Collector must not be null");
 
         final var accumulator = collector.supplier().get();
-        visit(typeUsage -> collector.accumulator().accept(accumulator, typeUsage));
+        collector.accumulator().accept(accumulator, this);
+        composition(TypeUsage.class).forEach(u -> collector.accumulator().accept(accumulator, u));
         return collector.finisher().apply(accumulator);
     }
 }

@@ -30,13 +30,13 @@ import build.base.marshalling.Marshalling;
 import build.base.marshalling.Out;
 import build.base.marshalling.Unmarshal;
 import build.codemodel.foundation.CodeModel;
-import build.codemodel.foundation.Dependent;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.descriptor.Traitable;
 import build.codemodel.foundation.descriptor.TypeDescriptor;
 
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -119,11 +119,8 @@ public class IntersectionTypeUsage
     }
 
     @Override
-    public Stream<TypeUsage> dependencies() {
-        return Streams.concat(
-            types(),
-            traits(Dependent.class)
-                .flatMap(Dependent::dependencies));
+    public Collection<?> otherParts() {
+        return types().collect(Collectors.toList());
     }
 
     @Override

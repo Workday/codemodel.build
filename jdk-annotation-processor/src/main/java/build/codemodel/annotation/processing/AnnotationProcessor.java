@@ -887,7 +887,7 @@ public class AnnotationProcessor
             .ifPresent(fieldDescriptor::addTrait);
 
         // ensure the discovery of types used by the FieldDescriptor
-        fieldDescriptor.dependencies()
+        fieldDescriptor.parts(TypeUsage.class)
             .forEach(typeUsage -> include(codeModel, typeUsage, fieldElement, pending));
 
         return fieldDescriptor;
@@ -969,7 +969,7 @@ public class AnnotationProcessor
         typeDescriptor.addTrait(methodDescriptor);
 
         // ensure the discovery of types used by the MethodPrototype
-        methodDescriptor.dependencies()
+        methodDescriptor.parts(TypeUsage.class)
             .forEach(typeUsage -> include(codeModel, typeUsage, methodElement, pending));
 
         return methodDescriptor;
@@ -1073,7 +1073,7 @@ public class AnnotationProcessor
                 .forEach(typeDescriptor::addTrait);
 
             // ensure the discovery of types used by the TypePrototype
-            typeDescriptor.dependencies()
+            typeDescriptor.composition(TypeUsage.class)
                 .forEach(typeUsage -> include(codeModel, typeUsage, typeElement, pending));
 
             return typeDescriptor;

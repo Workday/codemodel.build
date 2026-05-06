@@ -3,6 +3,7 @@ package build.codemodel.jdk;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.naming.NonCachingNameProvider;
 import build.codemodel.foundation.usage.AnnotationTypeUsage;
+import build.codemodel.foundation.usage.TypeUsage;
 import build.codemodel.foundation.usage.UnknownTypeUsage;
 import build.codemodel.objectoriented.descriptor.AccessModifier;
 import build.codemodel.objectoriented.descriptor.Classification;
@@ -154,11 +155,11 @@ class JdkInitializerTests {
         final var source = JavaFileObjects.forSourceString(
             "com.example.Foo",
             """
-            package com.example;
-            public class Foo {
-                private com.example.Missing dependency;
-            }
-            """);
+                package com.example;
+                public class Foo {
+                    private com.example.Missing dependency;
+                }
+                """);
 
         final var captured = new ByteArrayOutputStream();
         final var original = System.err;
@@ -195,18 +196,19 @@ class JdkInitializerTests {
             "package com.example; public class Helper {}");
         final var compiler = ToolProvider.getSystemJavaCompiler();
         try (final var fm = compiler.getStandardFileManager(null, null, null)) {
-            compiler.getTask(null, fm, diagnostic -> {},
+            compiler.getTask(null, fm, diagnostic -> {
+                },
                 List.of("-d", classpathDir.toString()), null, List.of(helperSource)).call();
         }
 
         final var consumer = JavaFileObjects.forSourceString(
             "com.example.Consumer",
             """
-            package com.example;
-            public class Consumer {
-                private com.example.Helper helper;
-            }
-            """);
+                package com.example;
+                public class Consumer {
+                    private com.example.Helper helper;
+                }
+                """);
 
         final var codeModel = runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(consumer), List.of(classpathDir), List.of()));
@@ -228,11 +230,11 @@ class JdkInitializerTests {
         final var source = JavaFileObjects.forSourceString(
             "com.example.Foo",
             """
-            package com.example;
-            public class Foo {
-                public void bar(@Deprecated String x) {}
-            }
-            """);
+                package com.example;
+                public class Foo {
+                    public void bar(@Deprecated String x) {}
+                }
+                """);
         final var codeModel = runInternal(new JdkInitializer(List.of(), List.of(), List.of(source)));
         final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
@@ -244,5 +246,28 @@ class JdkInitializerTests {
             .map(a -> a.typeName().name().toString())
             .toList())
             .contains("Deprecated");
+    }
+
+    @Test
+    void shouldTraverseMethods() {
+        final var sources = List.of(
+            new File("src/test/java/build/codemodel/jdk/example/AbstractPerson.java"),
+            new File("src/test/java/build/codemodel/jdk/example/Description.java"),
+            new File("src/test/java/build/codemodel/jdk/example/NonAbstractPerson.java"),
+            new File("src/test/java/build/codemodel/jdk/example/PersonFactory.java"));
+
+        final var nameProvider = new NonCachingNameProvider();
+        final var codeModel = new JDKCodeModel(nameProvider);
+
+        final var initializer = new JdkInitializer(sources, List.of(), List.of());
+        initializer.initialize(codeModel);
+
+        final var personFactoryName = nameProvider.getTypeName(Optional.empty(),
+            "build.codemodel.jdk.example.PersonFactory");
+        final var personFactoryTd = codeModel.getTypeDescriptor(personFactoryName).orElseThrow();
+        final var parts = personFactoryTd.parts().toList();
+        final var typeUsages = personFactoryTd.parts(TypeUsage.class).toList();
+        final var allTypeUsages = personFactoryTd.composition(TypeUsage.class).toList();
+        System.out.println();
     }
 }

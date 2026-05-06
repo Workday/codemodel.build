@@ -20,11 +20,9 @@ package build.codemodel.foundation.descriptor;
  * #L%
  */
 
-import build.codemodel.foundation.Dependent;
+import build.base.mereology.Composite;
 import build.codemodel.foundation.naming.TypeName;
 import build.codemodel.foundation.usage.TypeUsage;
-
-import java.util.stream.Stream;
 
 /**
  * Provides type information concerning the <i>definition</i> of a type.
@@ -35,7 +33,7 @@ import java.util.stream.Stream;
  * @since Jan-2024
  */
 public interface TypeDescriptor
-    extends Dependent, Traitable {
+    extends Composite, Traitable {
 
     /**
      * The {@link TypeName} for the <i>Type</i>.
@@ -43,11 +41,4 @@ public interface TypeDescriptor
      * @return the {@link TypeName}
      */
     TypeName typeName();
-
-    @Override
-    default Stream<TypeUsage> dependencies() {
-        return traits(Dependent.class)
-            .flatMap(Dependent::dependencies)
-            .distinct();
-    }
 }

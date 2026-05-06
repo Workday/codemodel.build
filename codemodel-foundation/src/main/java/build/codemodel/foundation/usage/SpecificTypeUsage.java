@@ -28,7 +28,6 @@ import build.base.marshalling.Marshalling;
 import build.base.marshalling.Out;
 import build.base.marshalling.Unmarshal;
 import build.codemodel.foundation.CodeModel;
-import build.codemodel.foundation.Dependent;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.naming.TypeName;
 
@@ -95,13 +94,6 @@ public class SpecificTypeUsage
         }
         return object instanceof SpecificTypeUsage other
             && super.equals(other);
-    }
-
-    @Override
-    public Stream<TypeUsage> dependencies() {
-        // the direct dependencies are those of the annotations
-        return traits(Dependent.class)
-            .flatMap(Dependent::dependencies);
     }
 
     /**
