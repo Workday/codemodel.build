@@ -29,6 +29,7 @@ import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.usage.SpecificTypeUsage;
 import build.codemodel.foundation.usage.TypeUsage;
 
+import java.util.Collection;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -151,6 +152,11 @@ public class Literal<T>
     @Override
     public int hashCode() {
         return Objects.hash(this.value);
+    }
+
+    @Override
+    public Collection<?> otherParts() {
+        return Stream.concat(type.stream(), Stream.of(value)).toList();
     }
 
     /**

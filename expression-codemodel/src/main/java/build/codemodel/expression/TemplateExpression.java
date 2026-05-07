@@ -35,6 +35,7 @@ import build.codemodel.foundation.usage.TypeUsage;
 
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -117,6 +118,11 @@ public class TemplateExpression
     @Override
     public Optional<TypeUsage> type() {
         return Optional.of(type);
+    }
+
+    @Override
+    public Collection<?> otherParts() {
+        return Stream.concat(Stream.of(type), expressions.stream()).toList();
     }
 
     public static TemplateExpression of(final List<Expression> expressions) {

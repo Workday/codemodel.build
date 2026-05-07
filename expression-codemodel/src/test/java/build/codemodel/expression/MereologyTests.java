@@ -27,6 +27,7 @@ import build.codemodel.foundation.naming.IrreducibleName;
 import build.codemodel.foundation.naming.ModuleName;
 import build.codemodel.foundation.naming.NonCachingNameProvider;
 import build.codemodel.foundation.usage.SpecificTypeUsage;
+import build.codemodel.foundation.usage.TypeUsage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -76,17 +77,17 @@ class MereologyTests {
 
     @Test
     void numericLiteralPartsIsEmpty() {
-        assertTrue(num(1).parts().toList().isEmpty());
+        assertEquals(2, num(1).parts().count());
     }
 
     @Test
-    void booleanLiteralPartsIsEmpty() {
-        assertTrue(bool(true).parts().toList().isEmpty());
+    void booleanLiteralPartsIsTwo() {
+        assertEquals(2, bool(true).parts().count());
     }
 
     @Test
     void stringLiteralPartsIsEmpty() {
-        assertTrue(StringLiteral.of(codeModel, "hello").parts().toList().isEmpty());
+        assertEquals(2, StringLiteral.of(codeModel, "hello").parts().count());
     }
 
     @Test
@@ -272,5 +273,40 @@ class MereologyTests {
         assertTrue(composition.contains(a));
         assertTrue(composition.contains(b));
         assertTrue(composition.contains(c));
+    }
+
+    @Test
+    void templateExpressionPartsContainsAllSubExpressions() {
+        final var a = num(1);
+        final var b = num(2);
+        final var expr = TemplateExpression.of(java.util.List.of(a, b));
+        final var parts = expr.parts().toList();
+        assertEquals(3, parts.size());
+        assertTrue(parts.contains(a));
+        assertTrue(parts.contains(b));
+    }
+
+    @Test
+    void templateExpressionCompositionReachesNestedExpressions() {
+        final var a = num(1);
+        final var b = num(2);
+        final var inner = Addition.of(a, b);
+        final var expr = TemplateExpression.of(java.util.List.of(inner));
+        final var composition = expr.composition().toList();
+        assertTrue(composition.contains(inner));
+        assertTrue(composition.contains(a));
+        assertTrue(composition.contains(b));
+    }
+
+    @Test
+    void templateExpressionPartsContainsType() {
+        final var a = num(1);
+        final var b = num(2);
+        final var inner = Addition.of(a, b);
+        final var expr = TemplateExpression.of(java.util.List.of(inner));
+        final var typeUsages = expr.parts(TypeUsage.class).toList();
+        assertEquals(1, typeUsages.size());
+        final var allTypeUsages = expr.composition(TypeUsage.class).toList();
+        assertEquals(3, allTypeUsages.size());
     }
 }
