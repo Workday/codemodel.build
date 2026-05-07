@@ -45,7 +45,7 @@ class ModuleNameResolutionTests {
 
     private static final String MODULE_NAME = "build.codemodel.jdk.example";
     private static final String OUTER_FQN = MODULE_NAME + ".NestedExample";
-    private static final String INNER_FQN = OUTER_FQN + "$Inner$VeryInner";
+    private static final String INNER_BINARY_NAME = OUTER_FQN + "$Inner$VeryInner";
 
     private static JDKCodeModel buildCodeModel(final boolean withModule) {
         final var sources = List.of(
@@ -58,7 +58,7 @@ class ModuleNameResolutionTests {
 
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
-    void getJDKTypeDescriptorByFqnFindsType(final boolean withModule) {
+    void getJDKTypeDescriptorByBinaryNameFindsType(final boolean withModule) {
         final var codeModel = buildCodeModel(withModule);
 
         final var descriptor = codeModel.getJDKTypeDescriptor(OUTER_FQN);
@@ -69,15 +69,15 @@ class ModuleNameResolutionTests {
                 .as("TypeName should carry the module from module-info.java")
                 .hasValueSatisfying(mn -> assertThat(mn.toString()).isEqualTo(MODULE_NAME));
 
-            final var innerTypeName = codeModel.getJDKTypeDescriptor(INNER_FQN).orElseThrow().typeName();
-            assertThat(innerTypeName.toString()).isEqualTo(MODULE_NAME + "/" + INNER_FQN);
+            final var innerTypeName = codeModel.getJDKTypeDescriptor(INNER_BINARY_NAME).orElseThrow().typeName();
+            assertThat(innerTypeName.toString()).isEqualTo(MODULE_NAME + "/" + INNER_BINARY_NAME);
         } else {
             assertThat(descriptor.orElseThrow().typeName().moduleName())
                 .as("TypeName should have no module when no module-info.java is present")
                 .isEmpty();
 
-            final var innerTypeName = codeModel.getJDKTypeDescriptor(INNER_FQN).orElseThrow().typeName();
-            assertThat(innerTypeName.toString()).isEqualTo(INNER_FQN);
+            final var innerTypeName = codeModel.getJDKTypeDescriptor(INNER_BINARY_NAME).orElseThrow().typeName();
+            assertThat(innerTypeName.toString()).isEqualTo(INNER_BINARY_NAME);
         }
     }
 
@@ -92,10 +92,10 @@ class ModuleNameResolutionTests {
             : Optional.<ModuleName>empty();
 
         // source path: TypeName built by JdkInitializer via resolveTypeName (element walking)
-        final var fromSource = codeModel.getJDKTypeDescriptor(INNER_FQN).orElseThrow().typeName();
+        final var fromSource = codeModel.getJDKTypeDescriptor(INNER_BINARY_NAME).orElseThrow().typeName();
 
-        // string path: TypeName built by NameProvider.getTypeName(moduleName, fqn) directly
-        final var fromString = nameProvider.getTypeName(moduleName, INNER_FQN);
+        // string path: TypeName built by NameProvider.getTypeNameFromBinary directly
+        final var fromString = nameProvider.getTypeNameFromBinary(moduleName, INNER_BINARY_NAME);
 
         assertThat(fromSource.toString()).isEqualTo(fromString.toString());
         assertThat(fromSource.canonicalName()).isEqualTo(fromString.canonicalName());

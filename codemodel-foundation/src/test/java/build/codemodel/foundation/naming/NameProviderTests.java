@@ -313,7 +313,7 @@ interface NameProviderTests {
     @Test
     default void getTypeNameFromFqnWithDollarShouldParseEnclosingType() {
         final var nameProvider = getNameProvider();
-        final var typeName = nameProvider.getTypeName(Optional.empty(), "com.example.Outer$Inner");
+        final var typeName = nameProvider.getTypeNameFromBinary(Optional.empty(), "com.example.Outer$Inner");
 
         assertThat(typeName.name().toString()).isEqualTo("Inner");
         assertThat(typeName.namespace()).isPresent().map(Object::toString).contains("com.example");
@@ -330,7 +330,7 @@ interface NameProviderTests {
     default void getTypeNameFromFqnWithDollarShouldCarryModule() {
         final var nameProvider = getNameProvider();
         final var module = nameProvider.getModuleName("com.example").orElseThrow();
-        final var typeName = nameProvider.getTypeName(Optional.of(module), "com.example.Outer$Inner");
+        final var typeName = nameProvider.getTypeNameFromBinary(Optional.of(module), "com.example.Outer$Inner");
 
         assertThat(typeName.moduleName()).isPresent().map(Object::toString).contains("com.example");
         assertThat(typeName.enclosingTypeName())
@@ -342,7 +342,7 @@ interface NameProviderTests {
     @Test
     default void getTypeNameFromFqnWithDeeplyNestedDollarShouldResolveFullChain() {
         final var nameProvider = getNameProvider();
-        final var typeName = nameProvider.getTypeName(Optional.empty(), "com.example.Outer$Middle$Inner");
+        final var typeName = nameProvider.getTypeNameFromBinary(Optional.empty(), "com.example.Outer$Middle$Inner");
 
         assertThat(typeName.name().toString()).isEqualTo("Inner");
         assertThat(typeName.enclosingTypeName())

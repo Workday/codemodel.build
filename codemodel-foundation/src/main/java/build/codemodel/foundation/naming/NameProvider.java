@@ -135,18 +135,39 @@ public interface NameProvider {
         Objects.requireNonNull(fullyQualifiedTypeName,
             "The fully-qualified-type-name must not be null");
 
-        final var dollarIndex = fullyQualifiedTypeName.lastIndexOf('$');
-        if (dollarIndex >= 0) {
-            final var enclosing = getTypeName(moduleName, fullyQualifiedTypeName.substring(0, dollarIndex));
-            return getTypeName(moduleName, enclosing.namespace(), Optional.of(enclosing),
-                getIrreducibleName(fullyQualifiedTypeName.substring(dollarIndex + 1)));
-        }
-
         final var dotIndex = fullyQualifiedTypeName.lastIndexOf('.');
         return getTypeName(moduleName,
             dotIndex < 0 ? Optional.empty() : getNamespace(fullyQualifiedTypeName.substring(0, dotIndex)),
             Optional.empty(),
-            getIrreducibleName(fullyQualifiedTypeName.substring(dotIndex + 1)));
+            getIrreducibleName(dotIndex < 0 ? fullyQualifiedTypeName : fullyQualifiedTypeName.substring(dotIndex + 1)));
+    }
+
+    /**
+     * Creates a {@link TypeName} from a JVM binary name (e.g. {@code com.example.Outer$Inner}),
+     * resolving {@code $} separators into the enclosing type chain.
+     *
+     * @param moduleName     the {@link Optional} {@link ModuleName}
+     * @param binaryTypeName the JVM binary type name
+     * @return the {@link TypeName}
+     */
+    default TypeName getTypeNameFromBinary(final Optional<ModuleName> moduleName,
+                                           final String binaryTypeName) {
+
+        Objects.requireNonNull(moduleName, "The ModuleName must not be null");
+        Objects.requireNonNull(binaryTypeName, "The binary type name must not be null");
+
+        final var dollarIndex = binaryTypeName.lastIndexOf('$');
+        if (dollarIndex >= 0) {
+            final var enclosing = getTypeNameFromBinary(moduleName, binaryTypeName.substring(0, dollarIndex));
+            return getTypeName(moduleName, enclosing.namespace(), Optional.of(enclosing),
+                getIrreducibleName(binaryTypeName.substring(dollarIndex + 1)));
+        }
+
+        final var dotIndex = binaryTypeName.lastIndexOf('.');
+        return getTypeName(moduleName,
+            dotIndex < 0 ? Optional.empty() : getNamespace(binaryTypeName.substring(0, dotIndex)),
+            Optional.empty(),
+            getIrreducibleName(dotIndex < 0 ? binaryTypeName : binaryTypeName.substring(dotIndex + 1)));
     }
 
     /**
@@ -197,6 +218,6 @@ public interface NameProvider {
             ? getModuleName(encodedTypeName.substring(0, slashIndex))
             : Optional.<ModuleName>empty();
         final var binaryName = encodedTypeName.substring(slashIndex + 1);
-        return getTypeName(moduleName, binaryName);
+        return getTypeNameFromBinary(moduleName, binaryName);
     }
 }
