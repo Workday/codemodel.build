@@ -173,8 +173,8 @@ public class TypeVariableUsage
     @Override
     public String toString() {
         return typeName()
-            + lowerBound().map(lowerBound -> " extends " + lowerBound).orElse("")
-            + upperBound().map(upperBound -> " super " + upperBound).orElse("")
+            + upperBound().map(upperBound -> " extends " + upperBound).orElse("")
+            + lowerBound().map(lowerBound -> " super " + lowerBound).orElse("")
             + Traitable.toString(this);
     }
 
