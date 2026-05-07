@@ -24,7 +24,10 @@ import build.base.foundation.Lazy;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.FormalParameterDescriptor;
 import build.codemodel.foundation.descriptor.ThrowableDescriptor;
+import build.codemodel.foundation.naming.ModuleName;
 import build.codemodel.foundation.naming.NameProvider;
+import build.codemodel.foundation.naming.Namespace;
+import build.codemodel.foundation.naming.TypeName;
 import build.codemodel.foundation.usage.AnnotationTypeUsage;
 import build.codemodel.foundation.usage.AnnotationValue;
 import build.codemodel.foundation.usage.ArrayTypeUsage;
@@ -83,13 +86,17 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
+import javax.lang.model.element.ModuleElement;
+import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.RecordComponentElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
@@ -634,8 +641,40 @@ public class JdkInitializer
 
     // --- Naming ---
 
-    private build.codemodel.foundation.naming.TypeName resolveTypeName(final TypeElement typeElement) {
-        return nameProvider.getTypeName(Optional.empty(), typeElement.getQualifiedName().toString());
+    private TypeName resolveTypeName(final TypeElement typeElement) {
+        final var moduleName = resolveModuleName(typeElement);
+        final var namespace = resolveNamespace(typeElement);
+        final var enclosingTypeName = resolveEnclosingTypeName(typeElement);
+        final var irreducibleName = nameProvider.getIrreducibleName(typeElement.getSimpleName().toString());
+        return nameProvider.getTypeName(moduleName, namespace, enclosingTypeName, irreducibleName);
+    }
+
+    private Optional<ModuleName> resolveModuleName(final TypeElement typeElement) {
+        return Stream.iterate(typeElement.getEnclosingElement(), Objects::nonNull, Element::getEnclosingElement)
+            .filter(ModuleElement.class::isInstance)
+            .map(ModuleElement.class::cast)
+            .findFirst()
+            .flatMap(me -> switch (me) {
+                case ModuleElement m when !m.isUnnamed() -> nameProvider.getModuleName(m.getQualifiedName().toString());
+                default -> Optional.empty();
+            });
+    }
+
+    private Optional<Namespace> resolveNamespace(final TypeElement typeElement) {
+        return Stream.iterate(typeElement.getEnclosingElement(), Objects::nonNull, Element::getEnclosingElement)
+            .filter(PackageElement.class::isInstance)
+            .map(PackageElement.class::cast)
+            .findFirst()
+            .map(p -> p.getQualifiedName().toString())
+            .filter(name -> !name.isEmpty())
+            .flatMap(nameProvider::getNamespace);
+    }
+
+    private Optional<TypeName> resolveEnclosingTypeName(final TypeElement typeElement) {
+        return switch (typeElement.getEnclosingElement()) {
+            case TypeElement enclosing -> Optional.of(resolveTypeName(enclosing));
+            default -> Optional.empty();
+        };
     }
 
     // --- Annotation creation ---

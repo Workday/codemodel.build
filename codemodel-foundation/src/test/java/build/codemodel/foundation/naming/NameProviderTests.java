@@ -299,6 +299,72 @@ interface NameProviderTests {
         assertThat(typeName.enclosingTypeName()).isEmpty();
     }
 
+    @Test
+    default void getTypeNameFromFqnShouldParseNamespaceAndSimpleName() {
+        final var nameProvider = getNameProvider();
+        final var typeName = nameProvider.getTypeName(Optional.empty(), "com.example.Foo");
+
+        assertThat(typeName.namespace()).isPresent().map(Object::toString).contains("com.example");
+        assertThat(typeName.name().toString()).isEqualTo("Foo");
+        assertThat(typeName.enclosingTypeName()).isEmpty();
+        assertThat(typeName.moduleName()).isEmpty();
+    }
+
+    @Test
+    default void getTypeNameFromFqnWithDollarShouldParseEnclosingType() {
+        final var nameProvider = getNameProvider();
+        final var typeName = nameProvider.getTypeNameFromBinary(Optional.empty(), "com.example.Outer$Inner");
+
+        assertThat(typeName.name().toString()).isEqualTo("Inner");
+        assertThat(typeName.namespace()).isPresent().map(Object::toString).contains("com.example");
+        assertThat(typeName.enclosingTypeName())
+            .isPresent()
+            .hasValueSatisfying(enclosing -> {
+                assertThat(enclosing.name().toString()).isEqualTo("Outer");
+                assertThat(enclosing.namespace()).isPresent().map(Object::toString).contains("com.example");
+            });
+        assertThat(typeName.moduleName()).isEmpty();
+    }
+
+    @Test
+    default void getTypeNameFromFqnWithDollarShouldCarryModule() {
+        final var nameProvider = getNameProvider();
+        final var module = nameProvider.getModuleName("com.example").orElseThrow();
+        final var typeName = nameProvider.getTypeNameFromBinary(Optional.of(module), "com.example.Outer$Inner");
+
+        assertThat(typeName.moduleName()).isPresent().map(Object::toString).contains("com.example");
+        assertThat(typeName.enclosingTypeName())
+            .isPresent()
+            .hasValueSatisfying(enclosing ->
+                assertThat(enclosing.moduleName()).isPresent().map(Object::toString).contains("com.example"));
+    }
+
+    @Test
+    default void getTypeNameFromFqnWithDeeplyNestedDollarShouldResolveFullChain() {
+        final var nameProvider = getNameProvider();
+        final var typeName = nameProvider.getTypeNameFromBinary(Optional.empty(), "com.example.Outer$Middle$Inner");
+
+        assertThat(typeName.name().toString()).isEqualTo("Inner");
+        assertThat(typeName.enclosingTypeName())
+            .isPresent()
+            .hasValueSatisfying(middle -> {
+                assertThat(middle.name().toString()).isEqualTo("Middle");
+                assertThat(middle.enclosingTypeName())
+                    .isPresent()
+                    .hasValueSatisfying(outer -> assertThat(outer.name().toString()).isEqualTo("Outer"));
+            });
+    }
+
+    @Test
+    default void getTypeNameFromFqnWithNoPackageShouldHaveEmptyNamespace() {
+        final var nameProvider = getNameProvider();
+        final var typeName = nameProvider.getTypeName(Optional.empty(), "Foo");
+
+        assertThat(typeName.name().toString()).isEqualTo("Foo");
+        assertThat(typeName.namespace()).isEmpty();
+        assertThat(typeName.enclosingTypeName()).isEmpty();
+    }
+
     /**
      * Ensure an empty {@link TypeName} can be created.
      */

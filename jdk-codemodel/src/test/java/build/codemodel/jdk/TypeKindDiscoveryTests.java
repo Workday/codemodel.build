@@ -162,7 +162,7 @@ class TypeKindDiscoveryTests {
 
         // Nested classes are registered under their canonical name (dot separator)
         final var innerName = codeModel.getNameProvider()
-            .getTypeName(Optional.empty(), "com.example.Outer.Inner");
+            .getTypeName(Optional.empty(), "com.example.Outer$Inner");
         final var innerDescriptor = codeModel.getTypeDescriptor(innerName).orElseThrow();
         assertThat(innerDescriptor.hasTrait(build.codemodel.jdk.descriptor.EnclosingTypeDescriptor.class))
             .isTrue();

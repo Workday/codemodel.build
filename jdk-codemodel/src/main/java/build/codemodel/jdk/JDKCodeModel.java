@@ -639,7 +639,7 @@ public class JDKCodeModel
 
         try {
             final var typeUsageClass = Thread.currentThread().getContextClassLoader()
-                .loadClass(typeName.canonicalName());
+                .loadClass(typeName.binaryName());
 
             return getJDKTypeDescriptor(typeUsageClass);
         }
@@ -703,6 +703,30 @@ public class JDKCodeModel
             });
 
         return AnnotationTypeUsage.of(this, typeName, annotationValues);
+    }
+
+    /**
+     * Attempts to obtain the {@link JDKTypeDescriptor} for the specified fully-qualified type name.
+     * <p>
+     * Tries the unnamed-module lookup first, then retries against each known module — so callers
+     * don't need to know which module the type belongs to.
+     *
+     * @param binaryName the JVM binary type name (e.g. {@code com.example.Outer$Inner})
+     * @return the {@link Optional} {@link JDKTypeDescriptor}, or {@link Optional#empty()} if not found
+     */
+    public Optional<JDKTypeDescriptor> getJDKTypeDescriptor(final String binaryName) {
+        final var np = getNameProvider();
+
+        final var unqualified = getTypeDescriptor(np.getTypeNameFromBinary(Optional.empty(), binaryName));
+        if (unqualified.isPresent()) {
+            return unqualified.map(JDKTypeDescriptor.class::cast);
+        }
+
+        return moduleDescriptors()
+            .map(md -> getTypeDescriptor(np.getTypeNameFromBinary(Optional.of(md.moduleName()), binaryName)))
+            .filter(Optional::isPresent)
+            .map(opt -> (JDKTypeDescriptor) opt.get())
+            .findFirst();
     }
 
     /**
