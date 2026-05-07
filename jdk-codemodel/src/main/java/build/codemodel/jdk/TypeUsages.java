@@ -188,7 +188,7 @@ public final class TypeUsages {
         }
 
         final var className = namedTypeUsage.typeName()
-            .canonicalName();
+            .binaryName();
 
         try {
             return Optional.ofNullable(classLoader.loadClass(className));

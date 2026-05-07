@@ -144,7 +144,7 @@ class MethodInvocationReceiverTypeTests {
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
         final var innerTypeName = codeModel.getNameProvider()
-            .getTypeName(Optional.empty(), "build.codemodel.jdk.example.Outer.Inner");
+            .getTypeName(Optional.empty(), "build.codemodel.jdk.example.Outer$Inner");
         final var innerDescriptor = codeModel.getTypeDescriptor(innerTypeName).orElseThrow();
 
         final var run = innerDescriptor.traits(MethodDescriptor.class)

@@ -84,35 +84,7 @@ public final class TypeName
         this.irreducibleName =
             Objects.requireNonNull(irreducibleName, "The name of the type must not be null");
 
-        // construct the internal string representation of the TypeName
-        final var builder = new StringBuilder();
-
-        this.enclosingTypeName
-            .ifPresent(enclosingType -> {
-                builder.append(enclosingType.canonicalName());
-                builder.append(":");
-            });
-
-        if (builder.isEmpty()) {
-            this.moduleName
-                .ifPresent(name -> {
-                    builder.append(name);
-                    builder.append("/");
-                });
-        }
-
-        this.namespace
-            .ifPresent(name -> {
-                name.parts()
-                    .forEach(part -> {
-                        builder.append(part);
-                        builder.append(".");
-                    });
-            });
-
-        builder.append(this.irreducibleName);
-
-        this.string = builder.toString();
+        this.string = this.moduleName.map(m -> m + "/").orElse("") + binaryName(this.namespace, this.enclosingTypeName, this.irreducibleName);
     }
 
     /**
@@ -153,18 +125,34 @@ public final class TypeName
     }
 
     /**
-     * Obtains the <i>canonical-name</i>.
+     * Obtains the <i>canonical-name</i> (dot-separated, Java source form).
      *
      * @return the canonical name
      */
     public String canonicalName() {
-        return namespace()
-            .map(p -> p + ".")
-            .orElse("")
-            + enclosingTypeName()
-            .map(e -> e.name() + "$")
-            .orElse("")
+        return enclosingTypeName()
+            .map(e -> e.canonicalName() + ".")
+            .orElseGet(() -> namespace().map(ns -> ns + ".").orElse(""))
             + name().toString();
+    }
+
+    private static String binaryName(final Optional<Namespace> namespace,
+                                     final Optional<TypeName> enclosingTypeName,
+                                     final IrreducibleName irreducibleName) {
+        final var prefix = enclosingTypeName
+            .map(e -> e.binaryName() + "$")
+            .orElseGet(() -> namespace.map(ns -> ns + ".").orElse(""));
+        return prefix + irreducibleName;
+    }
+
+    /**
+     * Obtains the <i>binary-name</i> (dot-separated package, {@code $}-separated nested types),
+     * suitable for use with Class#forName.
+     *
+     * @return the binary name
+     */
+    public String binaryName() {
+        return binaryName(this.namespace, this.enclosingTypeName, this.irreducibleName);
     }
 
     @Override

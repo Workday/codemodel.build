@@ -45,7 +45,7 @@ class JdkInitializerTests {
      * @param initializer the initializer to run
      * @return the populated type system
      */
-    public static build.codemodel.foundation.CodeModel runInternal(final JdkInitializer initializer) {
+    public static JDKCodeModel runInternal(final JdkInitializer initializer) {
         final var nameProvider = new NonCachingNameProvider();
         final var codeModel = new JDKCodeModel(nameProvider);
         initializer.initialize(codeModel);

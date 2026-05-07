@@ -565,7 +565,7 @@ class InjectionContext
         // auto-singleton: a @Singleton class that can be bound on-demand
         if (dependency.typeUsage() instanceof NamedTypeUsage namedTypeUsage) {
             try {
-                final var clazz = Class.forName(namedTypeUsage.typeName().canonicalName());
+                final var clazz = Class.forName(namedTypeUsage.typeName().binaryName());
                 return this.injectionFramework.codeModel()
                     .getJDKTypeDescriptor(clazz)
                     .map(this.injectionFramework::isSingleton)
@@ -782,7 +782,7 @@ class InjectionContext
     private <T> Class<T> resolveClassFrom(final Dependency dependency) {
         if (dependency.typeUsage() instanceof NamedTypeUsage namedTypeUsage) {
             try {
-                return (Class<T>) Class.forName(namedTypeUsage.typeName().canonicalName());
+                return (Class<T>) Class.forName(namedTypeUsage.typeName().binaryName());
             } catch (final ClassNotFoundException e) {
                 throw new UnsatisfiedDependencyException(dependency, e);
             }

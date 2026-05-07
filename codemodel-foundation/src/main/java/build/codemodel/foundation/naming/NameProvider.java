@@ -135,21 +135,18 @@ public interface NameProvider {
         Objects.requireNonNull(fullyQualifiedTypeName,
             "The fully-qualified-type-name must not be null");
 
-        final var nameStart = fullyQualifiedTypeName.lastIndexOf('.');
-        if (nameStart < 0) {
-            return getTypeName(moduleName,
-                Optional.empty(),
-                Optional.empty(),
-                getIrreducibleName(fullyQualifiedTypeName));
+        final var dollarIndex = fullyQualifiedTypeName.lastIndexOf('$');
+        if (dollarIndex >= 0) {
+            final var enclosing = getTypeName(moduleName, fullyQualifiedTypeName.substring(0, dollarIndex));
+            return getTypeName(moduleName, enclosing.namespace(), Optional.of(enclosing),
+                getIrreducibleName(fullyQualifiedTypeName.substring(dollarIndex + 1)));
         }
-        else {
-            final var namespace = fullyQualifiedTypeName.substring(0, nameStart);
-            final var typeName = fullyQualifiedTypeName.substring(nameStart + 1);
-            return getTypeName(moduleName,
-                getNamespace(namespace),
-                Optional.empty(),
-                getIrreducibleName(typeName));
-        }
+
+        final var dotIndex = fullyQualifiedTypeName.lastIndexOf('.');
+        return getTypeName(moduleName,
+            dotIndex < 0 ? Optional.empty() : getNamespace(fullyQualifiedTypeName.substring(0, dotIndex)),
+            Optional.empty(),
+            getIrreducibleName(fullyQualifiedTypeName.substring(dotIndex + 1)));
     }
 
     /**
@@ -187,35 +184,19 @@ public interface NameProvider {
     }
 
     /**
-     * Parses the {@link TypeName#toString()} encoded form of a{@link TypeName} {@link String} into a {@link TypeName}.
+     * Parses the {@link TypeName#toString()} encoded form of a {@link TypeName} into a {@link TypeName}.
+     * <p>
+     * The format is {@code [module/]namespace.Outer$Inner}, matching the JVM binary name convention.
      *
      * @param encodedTypeName the {@link TypeName#toString()} encoded type name
      * @return the {@link TypeName}
      */
     default TypeName getTypeName(final String encodedTypeName) {
-        final var enclosingTypeIndex = encodedTypeName.indexOf(':');
-        final var enclosingTypeName = enclosingTypeIndex >= 0
-            ? Optional.of(getTypeName(encodedTypeName.substring(0, enclosingTypeIndex)))
-            : Optional.<TypeName>empty();
-
-        String remaining = encodedTypeName.substring(enclosingTypeIndex + 1);
-
-        final var moduleNameIndex = remaining.indexOf('/');
-        final var moduleName = moduleNameIndex >= 0
-            ? getModuleName(remaining.substring(0, moduleNameIndex))
+        final var slashIndex = encodedTypeName.indexOf('/');
+        final var moduleName = slashIndex >= 0
+            ? getModuleName(encodedTypeName.substring(0, slashIndex))
             : Optional.<ModuleName>empty();
-
-        remaining = remaining.substring(moduleNameIndex + 1);
-
-        final var namespaceIndex = remaining.lastIndexOf('.');
-        final var namespace = namespaceIndex >= 0
-            ? getNamespace(remaining.substring(0, namespaceIndex))
-            : Optional.<Namespace>empty();
-
-        remaining = remaining.substring(namespaceIndex + 1);
-
-        final var name = getIrreducibleName(remaining);
-
-        return getTypeName(moduleName, namespace, enclosingTypeName, name);
+        final var binaryName = encodedTypeName.substring(slashIndex + 1);
+        return getTypeName(moduleName, binaryName);
     }
 }
