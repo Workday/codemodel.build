@@ -173,6 +173,38 @@ public class GenericsDiscoveryTests {
     }
 
     @Test
+    void genericTypeNameShouldIncludeModule() {
+        // Regression: visitDeclared was constructing TypeNames with Optional.empty() module,
+        // causing generic raw types to not match descriptors registered with a JPMS module.
+        final var source = JavaFileObjects.forSourceString("build.codemodel.jdk.example.Wrapper", """
+            package build.codemodel.jdk.example;
+            import java.util.List;
+            public class Wrapper {
+                public List<String> items;
+            }
+            """);
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var naming = codeModel.getNameProvider();
+        final var typeName = naming.getTypeName(Optional.empty(), "build.codemodel.jdk.example.Wrapper");
+        final var field = codeModel.getTypeDescriptor(typeName).orElseThrow()
+            .traits(FieldDescriptor.class).findFirst().orElseThrow();
+
+        final var generic = (GenericTypeUsage) field.type();
+
+        // The raw type must carry the java.base module
+        final var javaBase = naming.getModuleName("java.base");
+        final var expectedListName = naming.getTypeName(javaBase, "java.util.List");
+        assertThat(generic.typeName()).isEqualTo(expectedListName);
+
+        // The type argument (String) must also carry java.base
+        final var stringArg = (NamedTypeUsage) generic.parameters().findFirst().orElseThrow();
+        final var expectedStringName = naming.getTypeName(javaBase, "java.lang.String");
+        assertThat(stringArg.typeName()).isEqualTo(expectedStringName);
+    }
+
+    @Test
     void shouldDiscoverGenericMethodTypeParameter() {
         final var source = JavaFileObjects.forSourceString("Discoverable", """
             public class Discoverable {

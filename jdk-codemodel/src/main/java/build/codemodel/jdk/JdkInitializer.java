@@ -889,8 +889,7 @@ public class JdkInitializer
             @Override
             public Lazy<TypeUsage> visitDeclared(final DeclaredType t, final Lazy<TypeUsage> lazy) {
                 final var typeElement = (TypeElement) t.asElement();
-                final var fqn = typeElement.getQualifiedName().toString();
-                final var typeName = nameProvider.getTypeName(Optional.empty(), fqn);
+                final var typeName = resolveTypeName(typeElement);
 
                 if (typeElement.getTypeParameters().isEmpty()) {
                     final var usage = SpecificTypeUsage.of(codeModel, typeName);

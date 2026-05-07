@@ -40,8 +40,9 @@ public class FieldDiscoveryTests {
         assertThat(typeDescriptor.traits(MethodDescriptor.class)).isEmpty();
         assertThat(typeDescriptor.traits(FieldDescriptor.class)).hasSize(4);
 
-        // All fields are String
-        final var stringTypeName = naming.getTypeName(Optional.empty(), "java.lang.String");
+        // All fields are String — type names are resolved with their JPMS module
+        final var javaBase = naming.getModuleName("java.base");
+        final var stringTypeName = naming.getTypeName(javaBase, "java.lang.String");
         assertThat(typeDescriptor.traits(FieldDescriptor.class)
             .map(FieldDescriptor::type)
             .filter(NamedTypeUsage.class::isInstance)
