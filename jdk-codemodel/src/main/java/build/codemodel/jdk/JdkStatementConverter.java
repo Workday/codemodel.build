@@ -112,12 +112,15 @@ public class JdkStatementConverter
         if (tree == null) {
             return Block.empty(codeModel);
         }
-        final var stmts = tree.getStatements().stream()
-            .map(this::convert)
-            .toList();
-        return stmts.isEmpty()
-            ? Block.empty(codeModel)
-            : Block.of(stmts.toArray(Statement[]::new));
+        return convertStatements(tree.getStatements());
+    }
+
+    public Block convertStatements(final List<? extends StatementTree> statementTrees) {
+        if (statementTrees == null || statementTrees.isEmpty()) {
+            return Block.empty(codeModel);
+        }
+        final var stmts = statementTrees.stream().map(this::convert).toList();
+        return stmts.isEmpty() ? Block.empty(codeModel) : Block.of(stmts.toArray(Statement[]::new));
     }
 
     @Override
@@ -268,8 +271,8 @@ public class JdkStatementConverter
         final var labels = c.getExpressions() == null
             ? List.<Expression>of()
             : c.getExpressions().stream()
-                .map(e -> exprConverter.convert((ExpressionTree) e))
-                .toList();
+              .map(e -> exprConverter.convert((ExpressionTree) e))
+              .toList();
         final List<Statement> stmts;
         if (c.getStatements() != null && !c.getStatements().isEmpty()) {
             stmts = c.getStatements().stream().map(this::convert).toList();

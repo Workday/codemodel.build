@@ -73,6 +73,7 @@ import com.sun.source.tree.MethodTree;
 import com.sun.source.tree.ModuleTree;
 import com.sun.source.tree.VariableTree;
 import com.sun.source.util.JavacTask;
+import com.sun.source.util.SourcePositions;
 import com.sun.source.util.TreePath;
 import com.sun.source.util.TreeScanner;
 import com.sun.source.util.Trees;
@@ -115,6 +116,7 @@ import javax.lang.model.type.TypeVariable;
 import javax.lang.model.type.TypeVisitor;
 import javax.lang.model.type.UnionType;
 import javax.lang.model.type.WildcardType;
+import javax.tools.Diagnostic;
 import javax.tools.JavaCompiler;
 import javax.tools.JavaFileObject;
 import javax.tools.StandardJavaFileManager;
@@ -342,14 +344,10 @@ public class JdkInitializer
         addModifiers(typeDescriptor, typeElement);
         addSuperclass(typeDescriptor, typeElement);
         addInterfaces(typeDescriptor, typeElement);
-        addFields(typeDescriptor, typeElement, classTree, cut);
-        if (typeElement.getKind() == ElementKind.ENUM) {
-            addEnumConstants(typeDescriptor, typeElement);
-        }
+        processMembers(typeDescriptor, typeElement, classTree, cut);
         if (typeElement.getKind() == ElementKind.RECORD) {
             addRecordComponents(typeDescriptor, typeElement);
         }
-        addMethods(typeDescriptor, typeElement, classTree, cut);
         addTypeAnnotations(typeDescriptor, typeElement);
     }
 
@@ -417,48 +415,63 @@ public class JdkInitializer
         }
     }
 
-    private void addFields(final JDKTypeDescriptor typeDescriptor,
-                           final TypeElement typeElement,
-                           final ClassTree classTree,
-                           final CompilationUnitTree cut) {
-        final var fieldTrees = buildFieldTreeMap(classTree, cut);
-        typeElement.getEnclosedElements().stream()
-            .filter(e -> e.getKind() == ElementKind.FIELD)
-            .map(VariableElement.class::cast)
-            .forEach(fieldElement -> {
-                final var fieldName = nameProvider.getIrreducibleName(fieldElement.getSimpleName());
-                final var fieldType = resolveTypeUsage(fieldElement.asType(), fieldElement);
-                final var fieldDescriptor = FieldDescriptor.of(codeModel, fieldName, fieldType);
-
-                final var fieldModifiers = fieldElement.getModifiers();
-                if (fieldModifiers.contains(Modifier.STATIC)) {
-                    fieldDescriptor.addTrait(Static.STATIC);
+    private void processMembers(final JDKTypeDescriptor typeDescriptor,
+                                final TypeElement typeElement,
+                                final ClassTree classTree,
+                                final CompilationUnitTree cut) {
+        if (classTree == null || cut == null) {
+            return;
+        }
+        final var srcPositions = trees.getSourcePositions();
+        final var sortedMembers = classTree.getMembers().stream()
+            .sorted(java.util.Comparator.comparingLong(m -> srcPositions.getStartPosition(cut, m)))
+            .toList();
+        for (final var member : sortedMembers) {
+            final var path = TreePath.getPath(cut, member);
+            if (path == null) {
+                continue;
+            }
+            final var elem = trees.getElement(path);
+            if (member instanceof VariableTree vt && elem instanceof VariableElement ve) {
+                if (ve.getKind() == ElementKind.FIELD) {
+                    processField(typeDescriptor, ve, vt, cut);
+                } else if (ve.getKind() == ElementKind.ENUM_CONSTANT) {
+                    final var name = nameProvider.getIrreducibleName(ve.getSimpleName());
+                    typeDescriptor.addTrait(EnumConstantDescriptor.of(name));
                 }
-                getAccessModifier(fieldModifiers).ifPresent(fieldDescriptor::addTrait);
-
-                fieldElement.getAnnotationMirrors().stream()
-                    .map(mirror -> createAnnotationTypeUsage(fieldElement, mirror))
-                    .forEach(fieldDescriptor::addTrait);
-
-                typeDescriptor.addTrait(fieldDescriptor);
-
-                final var varTree = fieldTrees.get(fieldElement);
-                if (varTree != null && varTree.getInitializer() != null) {
-                    fieldDescriptor.addTrait(
-                        new FieldInitializerDescriptor(exprConverter.convert(varTree.getInitializer())));
+            } else if (member instanceof MethodTree mt && elem instanceof ExecutableElement ee) {
+                if (ee.getKind() == ElementKind.CONSTRUCTOR) {
+                    processConstructor(typeDescriptor, ee, mt, cut, srcPositions);
+                } else if (ee.getKind() == ElementKind.METHOD) {
+                    processMethod(typeDescriptor, ee, mt, cut);
                 }
-            });
+            }
+        }
     }
 
-    private void addEnumConstants(final JDKTypeDescriptor typeDescriptor,
-                                  final TypeElement typeElement) {
-        typeElement.getEnclosedElements().stream()
-            .filter(e -> e.getKind() == ElementKind.ENUM_CONSTANT)
-            .map(VariableElement.class::cast)
-            .forEach(element -> {
-                final var name = nameProvider.getIrreducibleName(element.getSimpleName());
-                typeDescriptor.addTrait(EnumConstantDescriptor.of(name));
-            });
+    private void processField(final JDKTypeDescriptor typeDescriptor,
+                              final VariableElement fieldElement,
+                              final VariableTree varTree,
+                              final CompilationUnitTree cut) {
+        final var fieldName = nameProvider.getIrreducibleName(fieldElement.getSimpleName());
+        final var fieldType = resolveTypeUsage(fieldElement.asType(), fieldElement);
+        final var fieldDescriptor = FieldDescriptor.of(codeModel, fieldName, fieldType);
+
+        final var fieldModifiers = fieldElement.getModifiers();
+        if (fieldModifiers.contains(Modifier.STATIC)) {
+            fieldDescriptor.addTrait(Static.STATIC);
+        }
+        getAccessModifier(fieldModifiers).ifPresent(fieldDescriptor::addTrait);
+        fieldElement.getAnnotationMirrors().stream()
+            .map(mirror -> createAnnotationTypeUsage(fieldElement, mirror))
+            .forEach(fieldDescriptor::addTrait);
+
+        typeDescriptor.addTrait(fieldDescriptor);
+
+        if (varTree.getInitializer() != null) {
+            fieldDescriptor.addTrait(
+                new FieldInitializerDescriptor(exprConverter.convert(varTree.getInitializer())));
+        }
     }
 
     private void addRecordComponents(final JDKTypeDescriptor typeDescriptor,
@@ -470,167 +483,100 @@ public class JdkInitializer
         }
     }
 
-    private void addMethods(final JDKTypeDescriptor typeDescriptor,
-                            final TypeElement typeElement,
-                            final ClassTree classTree,
-                            final CompilationUnitTree cut) {
-        final var methodTrees = buildMethodTreeMap(classTree, cut);
+    private void processConstructor(final JDKTypeDescriptor typeDescriptor,
+                                    final ExecutableElement methodElement,
+                                    final MethodTree ctorTree,
+                                    final CompilationUnitTree cut,
+                                    final SourcePositions srcPositions) {
+        final var formalParameters = getFormalParameters(methodElement);
 
-        typeElement.getEnclosedElements().stream()
-            .filter(e -> e.getKind() == ElementKind.CONSTRUCTOR)
-            .map(ExecutableElement.class::cast)
-            .forEach(methodElement -> {
-                final var formalParameters = methodElement.getParameters().stream()
-                    .map(param -> {
-                        final var pd = FormalParameterDescriptor.of(
-                            codeModel,
-                            Optional.of(nameProvider.getIrreducibleName(param.getSimpleName())),
-                            resolveTypeUsage(param.asType(), param));
-                        if (param.getModifiers().contains(Modifier.FINAL)) {
-                            pd.addTrait(Final.FINAL);
-                        }
-                        param.getAnnotationMirrors().stream()
-                            .map(mirror -> createAnnotationTypeUsage(param, mirror))
-                            .forEach(pd::addTrait);
-                        return pd;
-                    });
+        final var constructorDescriptor = ConstructorDescriptor.of(typeDescriptor, formalParameters);
+        getAccessModifier(methodElement.getModifiers()).ifPresent(constructorDescriptor::addTrait);
+        methodElement.getAnnotationMirrors().stream()
+            .map(mirror -> createAnnotationTypeUsage(methodElement, mirror))
+            .forEach(constructorDescriptor::addTrait);
 
-                final var constructorDescriptor = ConstructorDescriptor.of(typeDescriptor, formalParameters);
+        typeDescriptor.addTrait(constructorDescriptor);
 
-                final var methodModifiers = methodElement.getModifiers();
-                getAccessModifier(methodModifiers).ifPresent(constructorDescriptor::addTrait);
-
-                methodElement.getAnnotationMirrors().stream()
-                    .map(mirror -> createAnnotationTypeUsage(methodElement, mirror))
-                    .forEach(constructorDescriptor::addTrait);
-
-                typeDescriptor.addTrait(constructorDescriptor);
-
-                final var ctorTree = methodTrees.get(methodElement);
-                if (ctorTree != null && ctorTree.getBody() != null) {
-                    constructorDescriptor.addTrait(
-                        new MethodBodyDescriptor(stmtConverter.convertBlock(ctorTree.getBody())));
-                }
-            });
-
-        typeElement.getEnclosedElements().stream()
-            .filter(e -> e.getKind() == ElementKind.METHOD)
-            .map(ExecutableElement.class::cast)
-            .forEach(methodElement -> {
-                final var methodSimpleName = nameProvider.getIrreducibleName(methodElement.getSimpleName());
-                final var returnType = resolveTypeUsage(methodElement.getReturnType(), methodElement);
-                final var methodName = MethodName.of(
-                    typeDescriptor.typeName().moduleName(),
-                    typeDescriptor.typeName().namespace(),
-                    Optional.of(typeDescriptor.typeName()),
-                    methodSimpleName);
-
-                final var formalParameters = methodElement.getParameters().stream()
-                    .map(param -> {
-                        final var pd = FormalParameterDescriptor.of(
-                            codeModel,
-                            Optional.of(nameProvider.getIrreducibleName(param.getSimpleName())),
-                            resolveTypeUsage(param.asType(), param));
-                        if (param.getModifiers().contains(Modifier.FINAL)) {
-                            pd.addTrait(Final.FINAL);
-                        }
-                        param.getAnnotationMirrors().stream()
-                            .map(mirror -> createAnnotationTypeUsage(param, mirror))
-                            .forEach(pd::addTrait);
-                        return pd;
-                    });
-
-                final var methodDescriptor = MethodDescriptor.of(
-                    typeDescriptor, methodName, returnType, formalParameters);
-
-                final var jdkDefault = methodElement.getDefaultValue();
-                if (jdkDefault != null) {
-                    methodDescriptor.addTrait(new AnnotationMemberDefaultValue(jdkDefault.getValue()));
-                }
-
-                if (!methodElement.getTypeParameters().isEmpty()) {
-                    final var typeVars = methodElement.getTypeParameters().stream()
-                        .map(tp -> resolveTypeParameter(tp, methodElement))
-                        .toList();
-                    methodDescriptor.addTrait(ParameterizedTypeDescriptor.of(codeModel, typeVars.stream()));
-                }
-
-                methodElement.getThrownTypes().stream()
-                    .map(t -> resolveTypeUsage(t, methodElement))
-                    .map(ThrowableDescriptor::of)
-                    .forEach(methodDescriptor::addTrait);
-
-                if (methodElement.isDefault()) {
-                    methodDescriptor.addTrait(new MethodImplementationDescriptor(methodDescriptor));
-                }
-
-                final var methodModifiers = methodElement.getModifiers();
-                if (methodModifiers.contains(Modifier.STATIC)) {
-                    methodDescriptor.addTrait(Static.STATIC);
-                }
-                getAccessModifier(methodModifiers).ifPresent(methodDescriptor::addTrait);
-                methodDescriptor.addTrait(getClassification(methodModifiers));
-
-                methodElement.getAnnotationMirrors().stream()
-                    .map(mirror -> createAnnotationTypeUsage(methodElement, mirror))
-                    .forEach(methodDescriptor::addTrait);
-
-                typeDescriptor.addTrait(methodDescriptor);
-
-                final var methodTree = methodTrees.get(methodElement);
-                if (methodTree != null && methodTree.getBody() != null) {
-                    methodDescriptor.addTrait(
-                        new MethodBodyDescriptor(stmtConverter.convertBlock(methodTree.getBody())));
-                }
-            });
+        if (ctorTree.getBody() != null) {
+            final var bodyStart = srcPositions.getStartPosition(cut, ctorTree.getBody());
+            final var realStmts = ctorTree.getBody().getStatements().stream()
+                .filter(stmt -> {
+                    final var pos = srcPositions.getStartPosition(cut, stmt);
+                    return pos != Diagnostic.NOPOS && pos > bodyStart;
+                })
+                .toList();
+            constructorDescriptor.addTrait(new MethodBodyDescriptor(stmtConverter.convertStatements(realStmts)));
+        }
     }
 
-    /**
-     * Builds an element→MethodTree map from the class tree using tree-side lookup.
-     * This is reliable even when element symbols were loaded from class files, because
-     * {@code trees.getElement(TreePath)} always resolves from the source tree.
-     */
-    private HashMap<Element, MethodTree> buildMethodTreeMap(final ClassTree classTree,
-                                                            final CompilationUnitTree cut) {
-        final var map = new HashMap<Element, MethodTree>();
-        if (classTree == null || cut == null) {
-            return map;
-        }
-        for (final var member : classTree.getMembers()) {
-            if (member instanceof MethodTree mt) {
-                final var path = TreePath.getPath(cut, mt);
-                if (path != null) {
-                    final var elem = trees.getElement(path);
-                    if (elem != null) {
-                        map.put(elem, mt);
-                    }
-                }
+    private Stream<FormalParameterDescriptor> getFormalParameters(final ExecutableElement methodElement) {
+        final var params = methodElement.getParameters();
+        return params.stream().map(variableElement -> {
+            final var param = variableElement;
+            final var pd = FormalParameterDescriptor.of(
+                codeModel,
+                Optional.of(nameProvider.getIrreducibleName(param.getSimpleName())),
+                resolveTypeUsage(param.asType(), param));
+            if (param.getModifiers().contains(Modifier.FINAL)) {
+                pd.addTrait(Final.FINAL);
             }
-        }
-        return map;
+            param.getAnnotationMirrors().stream()
+                .map(mirror -> createAnnotationTypeUsage(param, mirror))
+                .forEach(pd::addTrait);
+            return pd;
+        });
     }
 
-    /**
-     * Builds an element→VariableTree map for fields from the class tree using tree-side lookup.
-     */
-    private HashMap<Element, VariableTree> buildFieldTreeMap(final ClassTree classTree,
-                                                             final CompilationUnitTree cut) {
-        final var map = new HashMap<Element, VariableTree>();
-        if (classTree == null || cut == null) {
-            return map;
+    private void processMethod(final JDKTypeDescriptor typeDescriptor,
+                               final ExecutableElement methodElement,
+                               final MethodTree methodTree,
+                               final CompilationUnitTree cut) {
+        final var methodSimpleName = nameProvider.getIrreducibleName(methodElement.getSimpleName());
+        final var returnType = resolveTypeUsage(methodElement.getReturnType(), methodElement);
+        final var methodName = MethodName.of(
+            typeDescriptor.typeName().moduleName(),
+            typeDescriptor.typeName().namespace(),
+            Optional.of(typeDescriptor.typeName()),
+            methodSimpleName);
+
+        final var formalParameters = getFormalParameters(methodElement);
+
+        final var methodDescriptor = MethodDescriptor.of(typeDescriptor, methodName, returnType, formalParameters);
+
+        final var jdkDefault = methodElement.getDefaultValue();
+        if (jdkDefault != null) {
+            methodDescriptor.addTrait(new AnnotationMemberDefaultValue(jdkDefault.getValue()));
         }
-        for (final var member : classTree.getMembers()) {
-            if (member instanceof VariableTree vt) {
-                final var path = TreePath.getPath(cut, vt);
-                if (path != null) {
-                    final var elem = trees.getElement(path);
-                    if (elem != null) {
-                        map.put(elem, vt);
-                    }
-                }
-            }
+        if (!methodElement.getTypeParameters().isEmpty()) {
+            final var typeVars = methodElement.getTypeParameters().stream()
+                .map(tp -> resolveTypeParameter(tp, methodElement))
+                .toList();
+            methodDescriptor.addTrait(ParameterizedTypeDescriptor.of(codeModel, typeVars.stream()));
         }
-        return map;
+        methodElement.getThrownTypes().stream()
+            .map(t -> resolveTypeUsage(t, methodElement))
+            .map(ThrowableDescriptor::of)
+            .forEach(methodDescriptor::addTrait);
+        if (methodElement.isDefault()) {
+            methodDescriptor.addTrait(new MethodImplementationDescriptor(methodDescriptor));
+        }
+
+        final var methodModifiers = methodElement.getModifiers();
+        if (methodModifiers.contains(Modifier.STATIC)) {
+            methodDescriptor.addTrait(Static.STATIC);
+        }
+        getAccessModifier(methodModifiers).ifPresent(methodDescriptor::addTrait);
+        methodDescriptor.addTrait(getClassification(methodModifiers));
+        methodElement.getAnnotationMirrors().stream()
+            .map(mirror -> createAnnotationTypeUsage(methodElement, mirror))
+            .forEach(methodDescriptor::addTrait);
+
+        typeDescriptor.addTrait(methodDescriptor);
+
+        if (methodTree.getBody() != null) {
+            methodDescriptor.addTrait(new MethodBodyDescriptor(stmtConverter.convertBlock(methodTree.getBody())));
+        }
     }
 
     private void addTypeAnnotations(final JDKTypeDescriptor typeDescriptor, final TypeElement typeElement) {
