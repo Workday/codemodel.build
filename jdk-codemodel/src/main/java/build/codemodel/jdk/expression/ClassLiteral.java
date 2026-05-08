@@ -33,6 +33,8 @@ import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.usage.TypeUsage;
 
 import java.lang.invoke.MethodHandles;
+import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
 
@@ -41,7 +43,7 @@ import java.util.stream.Stream;
  * Carries the {@link TypeUsage} of the type named before {@code .class}.
  *
  * @author reed.vonredwitz
- * @since Apr-2026
+ * @since May-2026
  */
 public final class ClassLiteral
     extends AbstractExpression {
@@ -72,6 +74,11 @@ public final class ClassLiteral
 
     public TypeUsage referencedType() {
         return referencedType;
+    }
+
+    @Override
+    public Collection<?> otherParts() {
+        return List.of(referencedType);
     }
 
     @Override

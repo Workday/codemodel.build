@@ -20,10 +20,13 @@ package build.codemodel.jdk.descriptor;
  * #L%
  */
 
+import build.base.foundation.iterator.Iterators;
+import build.base.mereology.Composite;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.naming.IrreducibleName;
 import build.codemodel.foundation.usage.TypeUsage;
 
+import java.util.Iterator;
 import java.util.Objects;
 
 /**
@@ -32,7 +35,7 @@ import java.util.Objects;
  * @author reed.vonredwitz
  * @since Mar-2026
  */
-public final class RecordComponentDescriptor implements Trait {
+public final class RecordComponentDescriptor implements Composite, Trait {
 
     /**
      * The {@link IrreducibleName} of the record component.
@@ -65,6 +68,14 @@ public final class RecordComponentDescriptor implements Trait {
      */
     public TypeUsage type() {
         return this.type;
+    }
+
+
+    @Override
+    public <T> Iterator<T> iterator(final Class<T> type) {
+        return type.isInstance(this.type)
+            ? Iterators.of(type.cast(this.type))
+            : Iterators.empty();
     }
 
     /**

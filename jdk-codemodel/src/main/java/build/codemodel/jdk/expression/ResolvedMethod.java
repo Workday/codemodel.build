@@ -20,9 +20,13 @@ package build.codemodel.jdk.expression;
  * #L%
  */
 
+import build.base.foundation.iterator.Iterators;
+import build.base.mereology.Composite;
 import build.codemodel.foundation.descriptor.Singular;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
+
+import java.util.Iterator;
 
 /**
  * A {@link Trait} on a {@link MethodInvocation} that captures the result of javac method
@@ -37,4 +41,12 @@ import build.codemodel.objectoriented.descriptor.MethodDescriptor;
  * @since Apr-2026
  */
 @Singular
-public record ResolvedMethod(MethodDescriptor descriptor) implements Trait {}
+public record ResolvedMethod(MethodDescriptor descriptor) implements Composite, Trait {
+
+    @Override
+    public <T> Iterator<T> iterator(final Class<T> type) {
+        return type.isInstance(descriptor)
+            ? Iterators.of(type.cast(descriptor))
+            : Iterators.empty();
+    }
+}

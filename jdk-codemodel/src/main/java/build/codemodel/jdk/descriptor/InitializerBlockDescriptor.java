@@ -20,19 +20,22 @@ package build.codemodel.jdk.descriptor;
  * #L%
  */
 
+import build.base.foundation.iterator.Iterators;
+import build.base.mereology.Composite;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.imperative.Block;
 
+import java.util.Iterator;
 import java.util.Objects;
 
 /**
  * A {@link Trait} on a type descriptor representing a static or instance initializer block.
  *
  * @author reed.vonredwitz
- * @since Apr-2026
+ * @since May-2026
  */
 public final class InitializerBlockDescriptor
-    implements Trait {
+    implements Composite, Trait {
 
     private final boolean isStatic;
     private final Block body;
@@ -48,5 +51,12 @@ public final class InitializerBlockDescriptor
 
     public Block body() {
         return body;
+    }
+
+    @Override
+    public <T> Iterator<T> iterator(final Class<T> type) {
+        return type.isInstance(body)
+            ? Iterators.of(type.cast(body))
+            : Iterators.empty();
     }
 }

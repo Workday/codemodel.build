@@ -20,9 +20,12 @@ package build.codemodel.jdk.descriptor;
  * #L%
  */
 
+import build.base.foundation.iterator.Iterators;
+import build.base.mereology.Composite;
 import build.codemodel.expression.Expression;
 import build.codemodel.foundation.descriptor.Trait;
 
+import java.util.Iterator;
 import java.util.Objects;
 
 /**
@@ -32,7 +35,7 @@ import java.util.Objects;
  * @since Mar-2026
  */
 public final class FieldInitializerDescriptor
-    implements Trait {
+    implements Composite, Trait {
 
     private final Expression initializer;
 
@@ -52,5 +55,12 @@ public final class FieldInitializerDescriptor
      */
     public Expression initializer() {
         return this.initializer;
+    }
+
+    @Override
+    public <T> Iterator<T> iterator(final Class<T> type) {
+        return type.isInstance(initializer)
+            ? Iterators.of(type.cast(initializer))
+            : Iterators.empty();
     }
 }

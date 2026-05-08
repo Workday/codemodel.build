@@ -29,7 +29,7 @@ import java.util.Objects;
  * Traits of this kind are ordered as they appear in source.
  *
  * @author reed.vonredwitz
- * @since Apr-2026
+ * @since May-2026
  */
 public final class ImportDeclaration
     implements Trait {

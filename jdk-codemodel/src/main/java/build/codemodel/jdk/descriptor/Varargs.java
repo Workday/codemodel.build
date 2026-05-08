@@ -27,7 +27,7 @@ import build.codemodel.foundation.descriptor.Trait;
  * A {@link Trait} indicating that a parameter is declared as a varargs ({@code ...}) parameter.
  *
  * @author reed.vonredwitz
- * @since Apr-2026
+ * @since May-2026
  */
 public enum Varargs
     implements Trait {

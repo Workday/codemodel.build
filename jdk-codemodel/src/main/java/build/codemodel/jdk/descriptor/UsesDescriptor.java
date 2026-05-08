@@ -20,9 +20,13 @@ package build.codemodel.jdk.descriptor;
  * #L%
  */
 
+import build.base.foundation.iterator.Iterators;
+import build.base.mereology.Composite;
 import build.codemodel.foundation.descriptor.NonSingular;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.usage.TypeUsage;
+
+import java.util.Iterator;
 
 /**
  * A {@link Trait} representing a {@code uses} directive in a {@code module-info.java}.
@@ -32,7 +36,14 @@ import build.codemodel.foundation.usage.TypeUsage;
  * @since Apr-2026
  */
 @NonSingular
-public record UsesDescriptor(TypeUsage serviceType) implements Trait {
+public record UsesDescriptor(TypeUsage serviceType) implements Composite, Trait {
+
+    @Override
+    public <T> Iterator<T> iterator(final Class<T> type) {
+        return type.isInstance(serviceType)
+            ? Iterators.of(type.cast(serviceType))
+            : Iterators.empty();
+    }
 
     public static UsesDescriptor of(final TypeUsage serviceType) {
         return new UsesDescriptor(serviceType);

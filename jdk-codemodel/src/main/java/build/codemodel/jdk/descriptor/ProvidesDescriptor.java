@@ -20,10 +20,13 @@ package build.codemodel.jdk.descriptor;
  * #L%
  */
 
+import build.base.foundation.iterator.Iterators;
+import build.base.mereology.Composite;
 import build.codemodel.foundation.descriptor.NonSingular;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.usage.TypeUsage;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -37,10 +40,17 @@ import java.util.stream.Stream;
  */
 @NonSingular
 public record ProvidesDescriptor(TypeUsage serviceType, List<TypeUsage> implementationTypes)
-    implements Trait {
+    implements Composite, Trait {
 
     public ProvidesDescriptor {
         implementationTypes = List.copyOf(implementationTypes);
+    }
+
+    @Override
+    public <T> Iterator<T> iterator(final Class<T> type) {
+        return Iterators.concat(type,
+            type.isInstance(serviceType) ? Iterators.of(type.cast(serviceType)) : Iterators.empty(),
+            implementationTypes.stream().filter(type::isInstance).map(type::cast).iterator());
     }
 
     public static ProvidesDescriptor of(final TypeUsage serviceType,

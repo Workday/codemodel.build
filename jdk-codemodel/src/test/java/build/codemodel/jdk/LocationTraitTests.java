@@ -35,7 +35,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Tests for source position capture ({@link LocationTrait}) via {@link JdkInitializer}.
  *
  * @author reed.vonredwitz
- * @since Apr-2026
+ * @since May-2026
  */
 class LocationTraitTests {
 

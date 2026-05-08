@@ -31,7 +31,7 @@ import java.net.URI;
  * offsets from the start of the source file identified by {@code uri}.
  *
  * @author reed.vonredwitz
- * @since Apr-2026
+ * @since May-2026
  */
 public record LocationTrait(URI uri, long startPosition, long endPosition)
     implements Trait, Location {
