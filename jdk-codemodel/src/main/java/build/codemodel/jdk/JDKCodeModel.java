@@ -637,6 +637,11 @@ public class JDKCodeModel
             return Optional.empty();
         }
 
+        final var existing = getTypeDescriptor(typeName);
+        if (existing.isPresent()) {
+            return existing.map(JDKTypeDescriptor.class::cast);
+        }
+
         try {
             final var typeUsageClass = Thread.currentThread().getContextClassLoader()
                 .loadClass(typeName.binaryName());

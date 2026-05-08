@@ -1,6 +1,7 @@
 package build.codemodel.jdk;
 
 import build.codemodel.foundation.usage.NamedTypeUsage;
+import build.codemodel.jdk.descriptor.MemberTypeDescriptor;
 import build.codemodel.jdk.descriptor.MethodBodyDescriptor;
 import build.codemodel.jdk.expression.MethodInvocation;
 import build.codemodel.jdk.statement.ExpressionStatement;
@@ -143,8 +144,13 @@ class MethodInvocationReceiverTypeTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var innerTypeName = codeModel.getNameProvider()
-            .getTypeName(Optional.empty(), "build.codemodel.jdk.example.Outer$Inner");
+        final var outerTypeName = codeModel.getNameProvider()
+            .getTypeName(Optional.empty(), "build.codemodel.jdk.example.Outer");
+        final var outerDescriptor = codeModel.getTypeDescriptor(outerTypeName).orElseThrow();
+        final var innerTypeName = outerDescriptor.traits(MemberTypeDescriptor.class)
+            .map(MemberTypeDescriptor::memberTypeName)
+            .filter(n -> n.name().toString().equals("Inner"))
+            .findFirst().orElseThrow();
         final var innerDescriptor = codeModel.getTypeDescriptor(innerTypeName).orElseThrow();
 
         final var run = innerDescriptor.traits(MethodDescriptor.class)

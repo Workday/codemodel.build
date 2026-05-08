@@ -2,6 +2,7 @@ package build.codemodel.jdk;
 
 import build.codemodel.foundation.usage.VoidTypeUsage;
 import build.codemodel.jdk.descriptor.MethodImplementationDescriptor;
+import build.codemodel.jdk.descriptor.Varargs;
 import build.codemodel.objectoriented.descriptor.Classification;
 import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
@@ -70,5 +71,38 @@ public class MethodDiscoveryTests {
             .filter(m -> !m.methodName().name().toString().equals("findableDefaultMethod"))
             .allMatch(m -> m.traits(MethodImplementationDescriptor.class).findFirst().isEmpty()))
             .isTrue();
+    }
+
+    @Test
+    void shouldMarkVarargsParameterWithVarargsTrait() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Printer", """
+                package com.example;
+                public class Printer {
+                    public void print(String prefix, String... lines) {}
+                    public void fixed(String a, String b) {}
+                }
+                """);
+
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Printer");
+        final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
+
+        final var printMethod = descriptor.traits(MethodDescriptor.class)
+            .filter(m -> m.methodName().name().toString().equals("print"))
+            .findFirst().orElseThrow();
+        final var params = printMethod.formalParameters().toList();
+
+        assertThat(params.get(0).hasTrait(Varargs.class)).as("prefix is not varargs").isFalse();
+        assertThat(params.get(1).hasTrait(Varargs.class)).as("lines is varargs").isTrue();
+
+        // fixed() has no varargs parameters at all
+        final var fixedMethod = descriptor.traits(MethodDescriptor.class)
+            .filter(m -> m.methodName().name().toString().equals("fixed"))
+            .findFirst().orElseThrow();
+        assertThat(fixedMethod.formalParameters().noneMatch(p -> p.hasTrait(Varargs.class)))
+            .as("fixed() has no varargs params").isTrue();
     }
 }

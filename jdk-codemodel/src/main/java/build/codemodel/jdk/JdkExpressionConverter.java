@@ -52,6 +52,7 @@ import build.codemodel.jdk.expression.AssignmentOperator;
 import build.codemodel.jdk.expression.BitwiseBinary;
 import build.codemodel.jdk.expression.BitwiseOperator;
 import build.codemodel.jdk.expression.CharLiteral;
+import build.codemodel.jdk.expression.ClassLiteral;
 import build.codemodel.jdk.expression.CompoundAssignment;
 import build.codemodel.jdk.expression.FieldAccess;
 import build.codemodel.jdk.expression.Identifier;
@@ -328,7 +329,7 @@ public class JdkExpressionConverter
             final var receiverExpr = ms.getExpression();
             target = convert(receiverExpr);
             methodName = ms.getIdentifier().toString();
-            receiverType = resolveReceiverType(receiverExpr);
+            receiverType = resolveReceiverType(receiverExpr).or(target::type);
         } else {
             target = null;
             methodName = t.getMethodSelect().toString();
@@ -382,6 +383,9 @@ public class JdkExpressionConverter
 
     @Override
     public Expression visitMemberSelect(final MemberSelectTree t, final Void v) {
+        if ("class".equals(t.getIdentifier().toString())) {
+            return ClassLiteral.of(codeModel, resolveTypeUsage(t.getExpression()));
+        }
         final var receiverExpr = t.getExpression();
         return FieldAccess.of(
             convert(receiverExpr),

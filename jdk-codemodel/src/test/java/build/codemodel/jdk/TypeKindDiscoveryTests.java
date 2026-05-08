@@ -160,9 +160,13 @@ class TypeKindDiscoveryTests {
         new JdkInitializer(List.of(), List.of(), List.of(source))
             .initialize(codeModel);
 
-        // Nested classes are registered under their canonical name (dot separator)
-        final var innerName = codeModel.getNameProvider()
-            .getTypeName(Optional.empty(), "com.example.Outer$Inner");
+        final var outerName = codeModel.getNameProvider()
+            .getTypeName(Optional.empty(), "com.example.Outer");
+        final var outerDescriptor = codeModel.getTypeDescriptor(outerName).orElseThrow();
+        final var innerName = outerDescriptor.traits(build.codemodel.jdk.descriptor.MemberTypeDescriptor.class)
+            .map(build.codemodel.jdk.descriptor.MemberTypeDescriptor::memberTypeName)
+            .filter(n -> n.name().toString().equals("Inner"))
+            .findFirst().orElseThrow();
         final var innerDescriptor = codeModel.getTypeDescriptor(innerName).orElseThrow();
         assertThat(innerDescriptor.hasTrait(build.codemodel.jdk.descriptor.EnclosingTypeDescriptor.class))
             .isTrue();
@@ -172,5 +176,27 @@ class TypeKindDiscoveryTests {
             .orElseThrow()
             .enclosingType();
         assertThat(enclosing.name().toString()).isEqualTo("Outer");
+    }
+
+    @Test
+    void enumConstantsShouldBeReturnedInSourceDeclarationOrder() {
+        final var source = com.google.testing.compile.JavaFileObjects.forSourceString(
+            "com.example.Planet",
+            """
+            package com.example;
+            public enum Planet { MERCURY, VENUS, EARTH, MARS, JUPITER, SATURN, URANUS, NEPTUNE }
+            """);
+        final var codeModel = new JDKCodeModel(new NonCachingNameProvider());
+        new JdkInitializer(List.of(), List.of(), List.of(source))
+            .initialize(codeModel);
+        final var typeName = codeModel.getNameProvider()
+            .getTypeName(Optional.empty(), "com.example.Planet");
+        final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
+        final var constants = descriptor.traits(build.codemodel.jdk.descriptor.EnumConstantDescriptor.class)
+            .sorted(java.util.Comparator.comparingInt(build.codemodel.jdk.descriptor.EnumConstantDescriptor::order))
+            .map(c -> c.name().toString())
+            .toList();
+        assertThat(constants).containsExactly(
+            "MERCURY", "VENUS", "EARTH", "MARS", "JUPITER", "SATURN", "URANUS", "NEPTUNE");
     }
 }

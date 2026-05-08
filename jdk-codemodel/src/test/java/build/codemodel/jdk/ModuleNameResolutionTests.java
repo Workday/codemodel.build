@@ -22,9 +22,11 @@ package build.codemodel.jdk;
 
 
 import build.codemodel.foundation.naming.ModuleName;
+import build.codemodel.jdk.descriptor.MemberTypeDescriptor;
 import com.google.testing.compile.JavaFileObjects;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.List;
@@ -111,5 +113,34 @@ class ModuleNameResolutionTests {
                     .isPresent()
                     .hasValueSatisfying(outer -> assertThat(outer.name().toString()).isEqualTo("NestedExample"));
             });
+    }
+
+    @Test
+    void getJDKTypeDescriptorByFqnFindsNestedTypeInNamedModule() {
+        final var moduleInfo = JavaFileObjects.forSourceString("module-info", """
+            module com.example {
+            }
+            """);
+        final var typeSource = JavaFileObjects.forSourceString("com.example.Outer", """
+            package com.example;
+            public class Outer {
+                public static class Inner {}
+            }
+            """);
+
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(moduleInfo, typeSource)));
+
+        final var outerDescriptor = codeModel.getJDKTypeDescriptor("com.example.Outer").orElseThrow();
+        final var innerTypeName = outerDescriptor.traits(MemberTypeDescriptor.class)
+            .map(MemberTypeDescriptor::memberTypeName)
+            .filter(n -> n.name().toString().equals("Inner"))
+            .findFirst().orElseThrow();
+
+        final var descriptor = codeModel.getJDKTypeDescriptor(innerTypeName.binaryName());
+        assertThat(descriptor).isPresent();
+        assertThat(descriptor.orElseThrow().typeName().moduleName())
+            .as("nested TypeName should carry the module from module-info.java")
+            .hasValueSatisfying(mn -> assertThat(mn.toString()).isEqualTo("com.example"));
     }
 }
