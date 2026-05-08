@@ -35,6 +35,7 @@ open module build.codemodel.jdk {
 
     requires java.compiler;
     requires jdk.compiler;
+    requires build.base.telemetry;
     requires build.base.telemetry.foundation;
 
     requires build.base.marshalling;

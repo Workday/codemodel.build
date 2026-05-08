@@ -4,6 +4,7 @@ import build.codemodel.imperative.Return;
 import build.codemodel.jdk.expression.MethodInvocation;
 import build.codemodel.jdk.expression.ResolvedMethod;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
+import build.codemodel.jdk.JdkInitializer;
 import com.google.testing.compile.JavaFileObjects;
 import org.junit.jupiter.api.Test;
 
@@ -129,5 +130,23 @@ class MethodResolutionTests {
 
         final var invocation = (MethodInvocation) ret.expression().orElseThrow();
         assertThat(invocation.getTrait(ResolvedMethod.class)).isEmpty();
+    }
+
+    @Test
+    void resolvedMethodPartsContainsMethodDescriptor() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Foo", """
+                package com.example;
+                public class Foo {
+                    public void hello() {}
+                }
+                """);
+        final var cm = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+        final var typeName = cm.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var method = cm.getTypeDescriptor(typeName).orElseThrow()
+            .traits(MethodDescriptor.class).findFirst().orElseThrow();
+        final var trait = new ResolvedMethod(method);
+        assertThat(trait.parts().toList()).containsExactly(method);
     }
 }

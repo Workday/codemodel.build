@@ -37,9 +37,11 @@ public final class EnumConstantDescriptor implements Trait {
      * The {@link IrreducibleName} of the enum constant.
      */
     private final IrreducibleName name;
+    private final int order;
 
-    private EnumConstantDescriptor(final IrreducibleName name) {
+    private EnumConstantDescriptor(final IrreducibleName name, final int order) {
         this.name = Objects.requireNonNull(name, "The name must not be null");
+        this.order = order;
     }
 
     /**
@@ -52,12 +54,22 @@ public final class EnumConstantDescriptor implements Trait {
     }
 
     /**
+     * Obtains the zero-based declaration order of this enum constant within its type.
+     *
+     * @return the declaration order
+     */
+    public int order() {
+        return this.order;
+    }
+
+    /**
      * Creates an {@link EnumConstantDescriptor}.
      *
-     * @param name the {@link IrreducibleName} of the enum constant
+     * @param name  the {@link IrreducibleName} of the enum constant
+     * @param order the zero-based declaration order
      * @return a new {@link EnumConstantDescriptor}
      */
-    public static EnumConstantDescriptor of(final IrreducibleName name) {
-        return new EnumConstantDescriptor(name);
+    public static EnumConstantDescriptor of(final IrreducibleName name, final int order) {
+        return new EnumConstantDescriptor(name, order);
     }
 }

@@ -1,4 +1,4 @@
-package build.codemodel.jdk.expression;
+package build.codemodel.jdk.descriptor;
 
 /*-
  * #%L
@@ -22,31 +22,41 @@ package build.codemodel.jdk.expression;
 
 import build.base.foundation.iterator.Iterators;
 import build.base.mereology.Composite;
-import build.codemodel.foundation.descriptor.Singular;
 import build.codemodel.foundation.descriptor.Trait;
-import build.codemodel.objectoriented.descriptor.MethodDescriptor;
+import build.codemodel.imperative.Block;
 
 import java.util.Iterator;
+import java.util.Objects;
 
 /**
- * A {@link Trait} on a {@link MethodInvocation} that captures the result of javac method
- * resolution: the {@link MethodDescriptor} that the invocation refers to.
+ * A {@link Trait} on a type descriptor representing a static or instance initializer block.
  *
- * <p>Exactly one {@link ResolvedMethod} may be present on a {@link MethodInvocation}
- * ({@link Singular}). If the declaring type is not present in the
- * {@link build.codemodel.foundation.CodeModel}, no trait is attached.
- *
- * @param descriptor the resolved {@link MethodDescriptor}
  * @author reed.vonredwitz
- * @since Apr-2026
+ * @since May-2026
  */
-@Singular
-public record ResolvedMethod(MethodDescriptor descriptor) implements Composite, Trait {
+public final class InitializerBlockDescriptor
+    implements Composite, Trait {
+
+    private final boolean isStatic;
+    private final Block body;
+
+    public InitializerBlockDescriptor(final boolean isStatic, final Block body) {
+        this.isStatic = isStatic;
+        this.body = Objects.requireNonNull(body, "body");
+    }
+
+    public boolean isStatic() {
+        return isStatic;
+    }
+
+    public Block body() {
+        return body;
+    }
 
     @Override
     public <T> Iterator<T> iterator(final Class<T> type) {
-        return type.isInstance(descriptor)
-            ? Iterators.of(type.cast(descriptor))
+        return type.isInstance(body)
+            ? Iterators.of(type.cast(body))
             : Iterators.empty();
     }
 }

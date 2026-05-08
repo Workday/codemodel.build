@@ -290,4 +290,82 @@ class BodyCaptureTests {
 
         assertThat(returnStmt.expression()).isEmpty();
     }
+
+    @Test
+    void shouldNotCaptureImplicitSuperCallInConstructorBody() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Foo", """
+                package com.example;
+                public class Foo {
+                    public Foo() {
+                        int x = 1;
+                    }
+                }
+                """);
+
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
+        final var ctor = descriptor.traits(ConstructorDescriptor.class).findFirst().orElseThrow();
+        final var body = ctor.getTrait(MethodBodyDescriptor.class).orElseThrow().body();
+        final var statements = body.statements().toList();
+
+        // Only one statement (int x = 1) — the javac-injected super() must not appear
+        assertThat(statements).hasSize(1);
+        assertThat(statements.getFirst()).isInstanceOf(LocalVariableDeclaration.class);
+    }
+
+    @Test
+    void shouldCaptureStaticInitializerBlock() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Singleton", """
+                package com.example;
+                public class Singleton {
+                    private static final int VALUE;
+                    static {
+                        VALUE = 42;
+                    }
+                }
+                """);
+
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Singleton");
+        final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
+
+        final var staticInits = descriptor.traits(build.codemodel.jdk.descriptor.InitializerBlockDescriptor.class)
+            .filter(build.codemodel.jdk.descriptor.InitializerBlockDescriptor::isStatic)
+            .toList();
+        assertThat(staticInits).hasSize(1);
+        assertThat(staticInits.getFirst().body().statements()).isNotEmpty();
+    }
+
+    @Test
+    void shouldCaptureInstanceInitializerBlock() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Counter", """
+                package com.example;
+                public class Counter {
+                    private int count;
+                    {
+                        count = 0;
+                    }
+                }
+                """);
+
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Counter");
+        final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
+
+        final var instanceInits = descriptor.traits(build.codemodel.jdk.descriptor.InitializerBlockDescriptor.class)
+            .filter(b -> !b.isStatic())
+            .toList();
+        assertThat(instanceInits).hasSize(1);
+        assertThat(instanceInits.getFirst().body().statements()).isNotEmpty();
+    }
 }

@@ -49,15 +49,20 @@ import build.codemodel.jdk.descriptor.EnumConstantDescriptor;
 import build.codemodel.jdk.descriptor.EnumType;
 import build.codemodel.jdk.descriptor.FieldInitializerDescriptor;
 import build.codemodel.jdk.descriptor.Final;
+import build.codemodel.jdk.descriptor.ImportDeclaration;
+import build.codemodel.jdk.descriptor.InitializerBlockDescriptor;
 import build.codemodel.jdk.descriptor.JDKClassTypeDescriptor;
 import build.codemodel.jdk.descriptor.JDKInterfaceTypeDescriptor;
 import build.codemodel.jdk.descriptor.JDKModuleDescriptor;
 import build.codemodel.jdk.descriptor.JDKTypeDescriptor;
+import build.codemodel.jdk.descriptor.LocationTrait;
+import build.codemodel.jdk.descriptor.MemberTypeDescriptor;
 import build.codemodel.jdk.descriptor.MethodBodyDescriptor;
 import build.codemodel.jdk.descriptor.MethodImplementationDescriptor;
 import build.codemodel.jdk.descriptor.RecordComponentDescriptor;
 import build.codemodel.jdk.descriptor.RecordType;
 import build.codemodel.jdk.descriptor.Static;
+import build.codemodel.jdk.descriptor.Varargs;
 import build.codemodel.objectoriented.descriptor.AccessModifier;
 import build.codemodel.objectoriented.descriptor.Classification;
 import build.codemodel.objectoriented.descriptor.ConstructorDescriptor;
@@ -67,6 +72,7 @@ import build.codemodel.objectoriented.descriptor.ImplementsTypeDescriptor;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
 import build.codemodel.objectoriented.descriptor.ParameterizedTypeDescriptor;
 import build.codemodel.objectoriented.naming.MethodName;
+import com.sun.source.tree.BlockTree;
 import com.sun.source.tree.ClassTree;
 import com.sun.source.tree.CompilationUnitTree;
 import com.sun.source.tree.MethodTree;
@@ -90,6 +96,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
@@ -340,10 +347,23 @@ public class JdkInitializer
             typeDescriptor.addTrait(new EnclosingTypeDescriptor(resolveTypeName(enclosingElement)));
         }
 
+        if (classTree != null && cut != null) {
+            final var srcPositions = trees.getSourcePositions();
+            final var start = srcPositions.getStartPosition(cut, classTree);
+            final var end = srcPositions.getEndPosition(cut, classTree);
+            if (start != Diagnostic.NOPOS) {
+                typeDescriptor.addTrait(LocationTrait.of(cut.getSourceFile().toUri(), start, end));
+            }
+        }
+
         addTypeParameters(typeDescriptor, typeElement);
         addModifiers(typeDescriptor, typeElement);
         addSuperclass(typeDescriptor, typeElement);
         addInterfaces(typeDescriptor, typeElement);
+        addMemberTypes(typeDescriptor, typeElement);
+        if (!(typeElement.getEnclosingElement() instanceof TypeElement)) {
+            addImports(typeDescriptor, cut);
+        }
         processMembers(typeDescriptor, typeElement, classTree, cut);
         if (typeElement.getKind() == ElementKind.RECORD) {
             addRecordComponents(typeDescriptor, typeElement);
@@ -415,6 +435,36 @@ public class JdkInitializer
         }
     }
 
+    private void addMemberTypes(final JDKTypeDescriptor typeDescriptor, final TypeElement typeElement) {
+        typeElement.getEnclosedElements().stream()
+            .filter(e -> e.getKind().isClass() || e.getKind().isInterface())
+            .map(TypeElement.class::cast)
+            .forEach(nested -> typeDescriptor.addTrait(new MemberTypeDescriptor(resolveTypeName(nested))));
+    }
+
+    private void addImports(final JDKTypeDescriptor typeDescriptor, final CompilationUnitTree cut) {
+        if (cut == null) {
+            return;
+        }
+        final var imports = cut.getImports();
+        for (int i = 0; i < imports.size(); i++) {
+            final var importTree = imports.get(i);
+            final var qualifiedId = importTree.getQualifiedIdentifier().toString();
+            final boolean isStatic = importTree.isStatic();
+            final boolean isOnDemand = qualifiedId.endsWith(".*");
+            final var name = isOnDemand ? qualifiedId.substring(0, qualifiedId.length() - 2) : qualifiedId;
+            if (isStatic && isOnDemand) {
+                typeDescriptor.addTrait(ImportDeclaration.ofStaticOnDemand(name, i));
+            } else if (isStatic) {
+                typeDescriptor.addTrait(ImportDeclaration.ofStatic(name, i));
+            } else if (isOnDemand) {
+                typeDescriptor.addTrait(ImportDeclaration.ofOnDemand(name, i));
+            } else {
+                typeDescriptor.addTrait(ImportDeclaration.of(name, i));
+            }
+        }
+    }
+
     private void processMembers(final JDKTypeDescriptor typeDescriptor,
                                 final TypeElement typeElement,
                                 final ClassTree classTree,
@@ -426,6 +476,7 @@ public class JdkInitializer
         final var sortedMembers = classTree.getMembers().stream()
             .sorted(java.util.Comparator.comparingLong(m -> srcPositions.getStartPosition(cut, m)))
             .toList();
+        int enumConstantOrder = 0;
         for (final var member : sortedMembers) {
             final var path = TreePath.getPath(cut, member);
             if (path == null) {
@@ -434,17 +485,20 @@ public class JdkInitializer
             final var elem = trees.getElement(path);
             if (member instanceof VariableTree vt && elem instanceof VariableElement ve) {
                 if (ve.getKind() == ElementKind.FIELD) {
-                    processField(typeDescriptor, ve, vt, cut);
+                    processField(typeDescriptor, ve, vt, cut, srcPositions);
                 } else if (ve.getKind() == ElementKind.ENUM_CONSTANT) {
                     final var name = nameProvider.getIrreducibleName(ve.getSimpleName());
-                    typeDescriptor.addTrait(EnumConstantDescriptor.of(name));
+                    typeDescriptor.addTrait(EnumConstantDescriptor.of(name, enumConstantOrder++));
                 }
             } else if (member instanceof MethodTree mt && elem instanceof ExecutableElement ee) {
                 if (ee.getKind() == ElementKind.CONSTRUCTOR) {
                     processConstructor(typeDescriptor, ee, mt, cut, srcPositions);
                 } else if (ee.getKind() == ElementKind.METHOD) {
-                    processMethod(typeDescriptor, ee, mt, cut);
+                    processMethod(typeDescriptor, ee, mt, cut, srcPositions);
                 }
+            } else if (member instanceof BlockTree bt) {
+                typeDescriptor.addTrait(
+                    new InitializerBlockDescriptor(bt.isStatic(), stmtConverter.convertStatements(bt.getStatements())));
             }
         }
     }
@@ -452,7 +506,8 @@ public class JdkInitializer
     private void processField(final JDKTypeDescriptor typeDescriptor,
                               final VariableElement fieldElement,
                               final VariableTree varTree,
-                              final CompilationUnitTree cut) {
+                              final CompilationUnitTree cut,
+                              final SourcePositions srcPositions) {
         final var fieldName = nameProvider.getIrreducibleName(fieldElement.getSimpleName());
         final var fieldType = resolveTypeUsage(fieldElement.asType(), fieldElement);
         final var fieldDescriptor = FieldDescriptor.of(codeModel, fieldName, fieldType);
@@ -465,6 +520,12 @@ public class JdkInitializer
         fieldElement.getAnnotationMirrors().stream()
             .map(mirror -> createAnnotationTypeUsage(fieldElement, mirror))
             .forEach(fieldDescriptor::addTrait);
+
+        final var start = srcPositions.getStartPosition(cut, varTree);
+        final var end = srcPositions.getEndPosition(cut, varTree);
+        if (start != Diagnostic.NOPOS) {
+            fieldDescriptor.addTrait(LocationTrait.of(cut.getSourceFile().toUri(), start, end));
+        }
 
         typeDescriptor.addTrait(fieldDescriptor);
 
@@ -496,6 +557,12 @@ public class JdkInitializer
             .map(mirror -> createAnnotationTypeUsage(methodElement, mirror))
             .forEach(constructorDescriptor::addTrait);
 
+        final var start = srcPositions.getStartPosition(cut, ctorTree);
+        final var end = srcPositions.getEndPosition(cut, ctorTree);
+        if (start != Diagnostic.NOPOS) {
+            constructorDescriptor.addTrait(LocationTrait.of(cut.getSourceFile().toUri(), start, end));
+        }
+
         typeDescriptor.addTrait(constructorDescriptor);
 
         if (ctorTree.getBody() != null) {
@@ -512,14 +579,18 @@ public class JdkInitializer
 
     private Stream<FormalParameterDescriptor> getFormalParameters(final ExecutableElement methodElement) {
         final var params = methodElement.getParameters();
-        return params.stream().map(variableElement -> {
-            final var param = variableElement;
+        final int lastIdx = params.size() - 1;
+        return IntStream.range(0, params.size()).mapToObj(i -> {
+            final var param = params.get(i);
             final var pd = FormalParameterDescriptor.of(
                 codeModel,
                 Optional.of(nameProvider.getIrreducibleName(param.getSimpleName())),
                 resolveTypeUsage(param.asType(), param));
             if (param.getModifiers().contains(Modifier.FINAL)) {
                 pd.addTrait(Final.FINAL);
+            }
+            if (methodElement.isVarArgs() && i == lastIdx) {
+                pd.addTrait(Varargs.VARARGS);
             }
             param.getAnnotationMirrors().stream()
                 .map(mirror -> createAnnotationTypeUsage(param, mirror))
@@ -531,7 +602,8 @@ public class JdkInitializer
     private void processMethod(final JDKTypeDescriptor typeDescriptor,
                                final ExecutableElement methodElement,
                                final MethodTree methodTree,
-                               final CompilationUnitTree cut) {
+                               final CompilationUnitTree cut,
+                               final SourcePositions srcPositions) {
         final var methodSimpleName = nameProvider.getIrreducibleName(methodElement.getSimpleName());
         final var returnType = resolveTypeUsage(methodElement.getReturnType(), methodElement);
         final var methodName = MethodName.of(
@@ -571,6 +643,12 @@ public class JdkInitializer
         methodElement.getAnnotationMirrors().stream()
             .map(mirror -> createAnnotationTypeUsage(methodElement, mirror))
             .forEach(methodDescriptor::addTrait);
+
+        final var start = srcPositions.getStartPosition(cut, methodTree);
+        final var end = srcPositions.getEndPosition(cut, methodTree);
+        if (start != Diagnostic.NOPOS) {
+            methodDescriptor.addTrait(LocationTrait.of(cut.getSourceFile().toUri(), start, end));
+        }
 
         typeDescriptor.addTrait(methodDescriptor);
 

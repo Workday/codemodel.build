@@ -269,4 +269,73 @@ class ExpressionCaptureFidelityTests {
 
         assertThat(assign.operator()).isEqualTo(AssignmentOperator.PLUS);
     }
+
+    @Test
+    void shouldCaptureClassLiteralOnReferenceType() {
+        final var source = JavaFileObjects.forSourceString(
+            "build.codemodel.jdk.example.TypeTokens", """
+                package build.codemodel.jdk.example;
+                public class TypeTokens {
+                    public Class<?> stringClass() { return String.class; }
+                }
+                """);
+
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getNameProvider()
+            .getTypeName(Optional.empty(), "build.codemodel.jdk.example.TypeTokens");
+        final var body = codeModel.getTypeDescriptor(typeName).orElseThrow()
+            .traits(MethodDescriptor.class)
+            .filter(m -> m.methodName().name().toString().equals("stringClass"))
+            .findFirst().orElseThrow()
+            .getTrait(MethodBodyDescriptor.class).orElseThrow().body();
+        final var returnExpr = ((build.codemodel.imperative.Return) body.statements().findFirst().orElseThrow())
+            .expression().orElseThrow();
+
+        assertThat(returnExpr).isInstanceOf(build.codemodel.jdk.expression.ClassLiteral.class);
+        final var literal = (build.codemodel.jdk.expression.ClassLiteral) returnExpr;
+        assertThat(((NamedTypeUsage) literal.referencedType()).typeName().toString()).contains("String");
+    }
+
+    @Test
+    void shouldCaptureClassLiteralOnPrimitiveType() {
+        final var source = JavaFileObjects.forSourceString(
+            "build.codemodel.jdk.example.PrimitiveTokens", """
+                package build.codemodel.jdk.example;
+                public class PrimitiveTokens {
+                    public Class<?> intClass() { return int.class; }
+                    public Class<?> voidClass() { return void.class; }
+                }
+                """);
+
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getNameProvider()
+            .getTypeName(Optional.empty(), "build.codemodel.jdk.example.PrimitiveTokens");
+        final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
+
+        final var intClassBody = descriptor.traits(MethodDescriptor.class)
+            .filter(m -> m.methodName().name().toString().equals("intClass"))
+            .findFirst().orElseThrow()
+            .getTrait(MethodBodyDescriptor.class).orElseThrow().body();
+        final var intReturn = ((build.codemodel.imperative.Return) intClassBody.statements().findFirst().orElseThrow())
+            .expression().orElseThrow();
+
+        assertThat(intReturn)
+            .as("int.class should be a ClassLiteral, not a FieldAccess")
+            .isInstanceOf(build.codemodel.jdk.expression.ClassLiteral.class);
+
+        final var voidClassBody = descriptor.traits(MethodDescriptor.class)
+            .filter(m -> m.methodName().name().toString().equals("voidClass"))
+            .findFirst().orElseThrow()
+            .getTrait(MethodBodyDescriptor.class).orElseThrow().body();
+        final var voidReturn = ((build.codemodel.imperative.Return) voidClassBody.statements().findFirst().orElseThrow())
+            .expression().orElseThrow();
+
+        assertThat(voidReturn)
+            .as("void.class should be a ClassLiteral, not a FieldAccess")
+            .isInstanceOf(build.codemodel.jdk.expression.ClassLiteral.class);
+    }
 }

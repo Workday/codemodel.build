@@ -40,7 +40,7 @@ class JdkInitializerTests {
 
     /**
      * Helper used by DiscoveryTests, FieldDiscoveryTests, etc. to run a {@link JdkInitializer}
-     * against a fresh {@link JDKCodeModel} and return the resulting {@link build.codemodel.foundation.CodeModel}.
+     * against a fresh {@link JDKCodeModel} and return the resulting {@link JDKCodeModel}.
      *
      * @param initializer the initializer to run
      * @return the populated type system
