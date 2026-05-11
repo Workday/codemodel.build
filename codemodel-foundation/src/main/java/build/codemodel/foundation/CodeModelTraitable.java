@@ -132,8 +132,6 @@ class CodeModelTraitable
         // TODO: when the Type is an Object, we don't need to use an InstanceOfIterator
 
         // ouch... the required class isn't a registered class, so search them all!
-
-        // DOH!  This isn't right.  It needs to flatten the traitsByClass as it is a map of sets!
         return Iterators.isInstanceOf(
             Iterators.concat(
                 this.singularTraitsByClass.values().iterator(),
@@ -167,7 +165,6 @@ class CodeModelTraitable
                 }
 
                 this.codeModel.index().index(trait);
-                this.codeModel.index().index(this.object);
                 return trait;
             });
         }
@@ -186,7 +183,6 @@ class CodeModelTraitable
                     this.codeModel.index().index(trait);
                 }
 
-                this.codeModel.index().index(this.object);
                 return list;
             });
         }
@@ -287,13 +283,11 @@ class CodeModelTraitable
                     }
 
                     this.codeModel.index().index(newTrait);
-                    this.codeModel.index().index(this.object);
                     return newTrait;
                 }
                 else {
                     lazyTrait.set((T) existing);
 
-                    this.codeModel.index().index(this.object);
                     return existing;
                 }
             });
@@ -317,7 +311,6 @@ class CodeModelTraitable
 
                     this.codeModel.index().index(trait);
 
-                    this.codeModel.index().index(this.object);
                     return list;
                 }
 
@@ -381,8 +374,14 @@ class CodeModelTraitable
         }
         else {
             this.traitsByClass.compute(registrationClass, (_, existing) -> {
-                if (existing == null || existing.size() != 1) {
+                if (existing == null || existing.isEmpty()) {
                     return existing;
+                }
+
+                if (existing.size() != 1) {
+                    throw new IllegalArgumentException(
+                        "Attempted to compute a single trait of type [" + traitClass + "], with registration type ["
+                            + registrationClass + "], but there are " + existing.size());
                 }
 
                 final var existingTrait = existing.iterator().next();
