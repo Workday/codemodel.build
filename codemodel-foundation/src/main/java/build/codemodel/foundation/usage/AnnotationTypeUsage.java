@@ -31,12 +31,12 @@ import build.base.marshalling.Out;
 import build.base.marshalling.Unmarshal;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.Trait;
-import build.codemodel.foundation.descriptor.Traitable;
 import build.codemodel.foundation.naming.TypeName;
 
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.Objects;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -134,12 +134,12 @@ public class AnnotationTypeUsage
     }
 
     @Override
-    public String toString() {
-        return "@" + super.toString()
+    protected String render(final Function<TypeName, String> nameRenderer,
+                            final Function<TypeUsage, String> usageRenderer) {
+        return "@" + nameRenderer.apply(typeName())
             + values()
             .map(Object::toString)
-            .collect(Collectors.joining(",", "(", ")"))
-            + Traitable.toString(this);
+            .collect(Collectors.joining(",", "(", ")"));
     }
 
     @Override

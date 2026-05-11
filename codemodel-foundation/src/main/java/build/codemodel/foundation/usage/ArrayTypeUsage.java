@@ -30,12 +30,13 @@ import build.base.marshalling.Out;
 import build.base.marshalling.Unmarshal;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.Trait;
-import build.codemodel.foundation.descriptor.Traitable;
+import build.codemodel.foundation.naming.TypeName;
 
 import java.lang.invoke.MethodHandles;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 /**
@@ -130,8 +131,9 @@ public class ArrayTypeUsage
     }
 
     @Override
-    public String toString() {
-        return this.component.get() + "[]" + Traitable.toString(this);
+    protected String render(final Function<TypeName, String> nameRenderer,
+                            final Function<TypeUsage, String> usageRenderer) {
+        return usageRenderer.apply(type()) + "[]";
     }
 
     /**

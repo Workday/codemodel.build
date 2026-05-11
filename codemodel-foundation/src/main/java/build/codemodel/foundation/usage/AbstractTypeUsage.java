@@ -29,7 +29,10 @@ import build.base.marshalling.Unmarshal;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.AbstractTraitable;
 import build.codemodel.foundation.descriptor.Trait;
+import build.codemodel.foundation.descriptor.Traitable;
+import build.codemodel.foundation.naming.TypeName;
 
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 /**
@@ -76,4 +79,17 @@ public abstract class AbstractTypeUsage
 
         super.destructor(marshaller, traits);
     }
+
+    @Override
+    public String canonicalName() {
+        return render(TypeName::canonicalName, TypeUsage::canonicalName);
+    }
+
+    @Override
+    public String toString() {
+        return render(TypeName::toString, TypeUsage::toString) + Traitable.toString(this);
+    }
+
+    protected abstract String render(Function<TypeName, String> nameRenderer,
+                                     Function<TypeUsage, String> usageRenderer);
 }

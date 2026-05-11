@@ -31,12 +31,13 @@ import build.base.marshalling.Out;
 import build.base.marshalling.Unmarshal;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.Trait;
-import build.codemodel.foundation.descriptor.Traitable;
 import build.codemodel.foundation.descriptor.TypeDescriptor;
+import build.codemodel.foundation.naming.TypeName;
 
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -141,11 +142,9 @@ public class UnionTypeUsage
     }
 
     @Override
-    public String toString() {
-        return types()
-            .map(Object::toString)
-            .collect(Collectors.joining(" | ", " ", ""))
-            + Traitable.toString(this);
+    protected String render(final Function<TypeName, String> nameRenderer,
+                            final Function<TypeUsage, String> usageRenderer) {
+        return types().map(usageRenderer).collect(Collectors.joining(" | ", " ", ""));
     }
 
     /**

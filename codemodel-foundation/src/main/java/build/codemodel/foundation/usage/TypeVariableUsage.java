@@ -30,7 +30,6 @@ import build.base.marshalling.Out;
 import build.base.marshalling.Unmarshal;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.Trait;
-import build.codemodel.foundation.descriptor.Traitable;
 import build.codemodel.foundation.descriptor.TypeDescriptor;
 import build.codemodel.foundation.naming.TypeName;
 
@@ -39,6 +38,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 /**
@@ -165,17 +165,17 @@ public class TypeVariableUsage
             return true;
         }
         return object instanceof TypeVariableUsage other
-            && Objects.equals(lowerBound(), other.lowerBound())
-            && Objects.equals(upperBound(), other.upperBound())
+            && Objects.equals(lowerBound().map(TypeUsage::canonicalName), other.lowerBound().map(TypeUsage::canonicalName))
+            && Objects.equals(upperBound().map(TypeUsage::canonicalName), other.upperBound().map(TypeUsage::canonicalName))
             && super.equals(other);
     }
 
     @Override
-    public String toString() {
-        return typeName()
-            + upperBound().map(upperBound -> " extends " + upperBound).orElse("")
-            + lowerBound().map(lowerBound -> " super " + lowerBound).orElse("")
-            + Traitable.toString(this);
+    protected String render(final Function<TypeName, String> nameRenderer,
+                            final Function<TypeUsage, String> usageRenderer) {
+        return nameRenderer.apply(typeName())
+            + upperBound().map(b -> " extends " + usageRenderer.apply(b)).orElse("")
+            + lowerBound().map(b -> " super " + usageRenderer.apply(b)).orElse("");
     }
 
     /**
