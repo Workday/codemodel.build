@@ -25,6 +25,10 @@
             <groupId>build.base</groupId>
             <artifactId>base-marshalling</artifactId>
         </dependency>
+        <dependency>
+            <groupId>build.base</groupId>
+            <artifactId>base-mereology</artifactId>
+        </dependency>
 
         <dependency>
             <groupId>jakarta.inject</groupId>

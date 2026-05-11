@@ -20,6 +20,7 @@ package build.codemodel.jdk.statement;
  * #L%
  */
 
+import build.base.foundation.stream.Streams;
 import build.base.marshalling.Bound;
 import build.base.marshalling.Marshal;
 import build.base.marshalling.Marshalled;
@@ -27,6 +28,7 @@ import build.base.marshalling.Marshaller;
 import build.base.marshalling.Marshalling;
 import build.base.marshalling.Out;
 import build.base.marshalling.Unmarshal;
+import build.base.mereology.Composite;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.imperative.AbstractStatement;
@@ -35,7 +37,6 @@ import build.codemodel.imperative.Statement;
 
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -156,9 +157,13 @@ public final class Try
     }
 
     @Override
-    public Collection<?> otherParts() {
-        return Stream.concat(Stream.concat(resources.stream(), Stream.of(body)),
-                             Stream.concat(catches.stream(), finallyBlock.stream())).toList();
+    public Stream<? extends Composite> compositeChildren() {
+        return Streams.concat(
+            resources.stream(),
+            Stream.of(body),
+            catches.stream(),
+            finallyBlock.stream()
+        );
     }
 
     @Override

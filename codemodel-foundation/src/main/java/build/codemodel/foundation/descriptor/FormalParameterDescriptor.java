@@ -27,6 +27,7 @@ import build.base.marshalling.Marshaller;
 import build.base.marshalling.Marshalling;
 import build.base.marshalling.Out;
 import build.base.marshalling.Unmarshal;
+import build.base.mereology.Composite;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.naming.IrreducibleName;
 import build.codemodel.foundation.usage.TypeUsage;
@@ -136,6 +137,11 @@ public final class FormalParameterDescriptor
      */
     public TypeUsage type() {
         return this.type;
+    }
+
+    @Override
+    public Stream<? extends Composite> compositeChildren() {
+        return Stream.of(type);
     }
 
     @Override

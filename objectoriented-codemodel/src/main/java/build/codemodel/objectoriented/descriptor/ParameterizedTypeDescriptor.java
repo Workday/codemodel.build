@@ -27,6 +27,7 @@ import build.base.marshalling.Marshaller;
 import build.base.marshalling.Marshalling;
 import build.base.marshalling.Out;
 import build.base.marshalling.Unmarshal;
+import build.base.mereology.Composite;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.AbstractTraitable;
 import build.codemodel.foundation.descriptor.Trait;
@@ -36,7 +37,6 @@ import build.codemodel.foundation.usage.TypeVariableUsage;
 
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -122,8 +122,8 @@ public final class ParameterizedTypeDescriptor
     }
 
     @Override
-    public Collection<?> otherParts() {
-        return typeVariables().collect(Collectors.toList());
+    public Stream<? extends Composite> compositeChildren() {
+        return typeVariables();
     }
 
     @Override

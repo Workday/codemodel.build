@@ -20,8 +20,11 @@ package build.codemodel.jdk.expression;
  * #L%
  */
 
+import build.base.foundation.iterator.Iterators;
+import build.base.mereology.Composite;
 import build.codemodel.foundation.usage.TypeUsage;
 
+import java.util.Iterator;
 import java.util.Optional;
 
 /**
@@ -38,5 +41,12 @@ import java.util.Optional;
  * @author reed.vonredwitz
  * @since Apr-2026
  */
-public record LambdaParameter(Optional<TypeUsage> type, String name) {
+public record LambdaParameter(Optional<TypeUsage> type, String name) implements Composite {
+
+    @Override
+    public <T> Iterator<T> iterator(final Class<T> kind) {
+        return type.filter(kind::isInstance)
+            .map(t -> Iterators.of(kind.cast(t)))
+            .orElseGet(Iterators::empty);
+    }
 }

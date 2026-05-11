@@ -25,12 +25,11 @@ import build.base.marshalling.Marshalled;
 import build.base.marshalling.Marshaller;
 import build.base.marshalling.Out;
 import build.base.marshalling.Unmarshal;
+import build.base.mereology.Composite;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.usage.TypeUsage;
 
-import java.util.Collection;
-import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -116,8 +115,8 @@ public abstract class AbstractComparisonExpression
     }
 
     @Override
-    public Collection<?> otherParts() {
-        return List.of(left, right);
+    public Stream<? extends Composite> compositeChildren() {
+        return Stream.of(left, right);
     }
 
     @Override

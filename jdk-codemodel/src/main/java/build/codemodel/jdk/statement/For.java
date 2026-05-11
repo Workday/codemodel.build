@@ -9,9 +9,9 @@ package build.codemodel.jdk.statement;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,6 +20,7 @@ package build.codemodel.jdk.statement;
  * #L%
  */
 
+import build.base.foundation.stream.Streams;
 import build.base.marshalling.Bound;
 import build.base.marshalling.Marshal;
 import build.base.marshalling.Marshalled;
@@ -27,6 +28,7 @@ import build.base.marshalling.Marshaller;
 import build.base.marshalling.Marshalling;
 import build.base.marshalling.Out;
 import build.base.marshalling.Unmarshal;
+import build.base.mereology.Composite;
 import build.codemodel.expression.Expression;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.Trait;
@@ -35,7 +37,6 @@ import build.codemodel.imperative.Statement;
 
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -156,9 +157,13 @@ public final class For
     }
 
     @Override
-    public Collection<?> otherParts() {
-        return Stream.concat(Stream.concat(initializers.stream(), condition.stream()),
-                             Stream.concat(updates.stream(), Stream.of(body))).toList();
+    public Stream<? extends Composite> compositeChildren() {
+        return Streams.concat(
+            initializers.stream(),
+            condition.stream(),
+            updates.stream(),
+            Stream.of(body)
+        );
     }
 
     @Override

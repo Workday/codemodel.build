@@ -33,6 +33,11 @@
 
         <dependency>
             <groupId>build.base</groupId>
+            <artifactId>base-mereology</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>build.base</groupId>
             <artifactId>base-parsing</artifactId>
         </dependency>
 

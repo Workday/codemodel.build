@@ -27,10 +27,9 @@ import build.base.marshalling.Marshalled;
 import build.base.marshalling.Marshaller;
 import build.base.marshalling.Out;
 import build.base.marshalling.Unmarshal;
+import build.base.mereology.Composite;
 import build.codemodel.foundation.CodeModel;
 
-import java.util.Collection;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.Objects;
 import java.util.Optional;
@@ -125,15 +124,16 @@ public abstract class AbstractTraitable
         final var traitIterator = hasTraits()
             ? getDelegate().iterator(type)
             : Iterators.<T>empty();
-        final var otherIterator = otherParts().stream()
+        final var otherIterator = compositeChildren()
             .filter(type::isInstance)
             .map(type::cast)
             .iterator();
         return Iterators.concat(type, traitIterator, otherIterator);
     }
 
-    public Collection<?> otherParts() {
-        return Collections.emptySet();
+
+    protected Stream<? extends Composite> compositeChildren() {
+        return Stream.empty();
     }
 
     @Override

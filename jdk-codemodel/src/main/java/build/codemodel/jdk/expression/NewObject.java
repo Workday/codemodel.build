@@ -20,6 +20,7 @@ package build.codemodel.jdk.expression;
  * #L%
  */
 
+import build.base.foundation.stream.Streams;
 import build.base.marshalling.Bound;
 import build.base.marshalling.Marshal;
 import build.base.marshalling.Marshalled;
@@ -27,6 +28,7 @@ import build.base.marshalling.Marshaller;
 import build.base.marshalling.Marshalling;
 import build.base.marshalling.Out;
 import build.base.marshalling.Unmarshal;
+import build.base.mereology.Composite;
 import build.codemodel.expression.AbstractExpression;
 import build.codemodel.expression.Expression;
 import build.codemodel.foundation.CodeModel;
@@ -131,6 +133,15 @@ public final class NewObject
      */
     public Stream<TypeUsage> typeArguments() {
         return this.typeArguments.stream();
+    }
+
+    @Override
+    public Stream<? extends Composite> compositeChildren() {
+        return Streams.concat(
+            Stream.of(type),
+            args.stream(),
+            typeArguments.stream()
+        );
     }
 
     @Override

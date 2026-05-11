@@ -28,6 +28,7 @@ module build.codemodel.imperative {
     requires transitive build.codemodel.foundation;
     requires transitive build.codemodel.expression;
     requires build.base.marshalling;
+    requires build.base.mereology;
 
     exports build.codemodel.imperative;
 }

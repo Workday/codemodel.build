@@ -27,13 +27,12 @@ import build.base.marshalling.Marshaller;
 import build.base.marshalling.Marshalling;
 import build.base.marshalling.Out;
 import build.base.marshalling.Unmarshal;
+import build.base.mereology.Composite;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.Trait;
 
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -143,8 +142,8 @@ public class Block
     }
 
     @Override
-    public Collection<Statement> otherParts() {
-        return List.copyOf(statements);
+    public Stream<? extends Composite> compositeChildren() {
+        return statements();
     }
 
     @Override

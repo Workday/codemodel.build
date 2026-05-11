@@ -27,12 +27,12 @@ import build.base.marshalling.Marshaller;
 import build.base.marshalling.Marshalling;
 import build.base.marshalling.Out;
 import build.base.marshalling.Unmarshal;
+import build.base.mereology.Composite;
 import build.codemodel.expression.Expression;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.Trait;
 
 import java.lang.invoke.MethodHandles;
-import java.util.Collection;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -183,8 +183,8 @@ public class If
     }
 
     @Override
-    public Collection<?> otherParts() {
-        return Stream.concat(Stream.of(condition, thenStatement), elseStatement.stream()).toList();
+    public Stream<? extends Composite> compositeChildren() {
+        return Stream.concat(Stream.of(condition, thenStatement), elseStatement.stream());
     }
 
     @Override

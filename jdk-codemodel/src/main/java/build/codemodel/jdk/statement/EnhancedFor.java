@@ -27,6 +27,7 @@ import build.base.marshalling.Marshaller;
 import build.base.marshalling.Marshalling;
 import build.base.marshalling.Out;
 import build.base.marshalling.Unmarshal;
+import build.base.mereology.Composite;
 import build.codemodel.expression.Expression;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.Trait;
@@ -35,8 +36,6 @@ import build.codemodel.imperative.AbstractStatement;
 import build.codemodel.imperative.Statement;
 
 import java.lang.invoke.MethodHandles;
-import java.util.Collection;
-import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
 
@@ -167,8 +166,8 @@ public final class EnhancedFor
     }
 
     @Override
-    public Collection<?> otherParts() {
-        return List.of(type, iterable, body);
+    public Stream<? extends Composite> compositeChildren() {
+        return Stream.of(type, iterable, body);
     }
 
     @Override

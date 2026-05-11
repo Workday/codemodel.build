@@ -20,16 +20,19 @@ package build.codemodel.expression;
  * #L%
  */
 
+import build.base.foundation.iterator.Iterators;
 import build.base.marshalling.Marshal;
 import build.base.marshalling.Marshalled;
 import build.base.marshalling.Marshaller;
 import build.base.marshalling.Marshalling;
 import build.base.marshalling.Out;
 import build.base.marshalling.Unmarshal;
+import build.base.mereology.Composite;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.usage.TypeUsage;
 
 import java.lang.invoke.MethodHandles;
+import java.util.Iterator;
 import java.util.Objects;
 
 /**
@@ -39,7 +42,7 @@ import java.util.Objects;
  * @author reed.vonredwitz
  * @since Mar-2026
  */
-public final class ExpressionType implements Trait {
+public final class ExpressionType implements Trait, Composite {
 
     /**
      * The resolved type of the expression.
@@ -94,5 +97,12 @@ public final class ExpressionType implements Trait {
 
     static {
         Marshalling.register(ExpressionType.class, MethodHandles.lookup());
+    }
+
+    @Override
+    public <T> Iterator<T> iterator(final Class<T> type) {
+        return type.isInstance(this.typeUsage)
+            ? Iterators.of(type.cast(this.typeUsage))
+            : Iterators.empty();
     }
 }

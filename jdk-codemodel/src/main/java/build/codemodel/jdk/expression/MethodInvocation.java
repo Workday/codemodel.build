@@ -9,9 +9,9 @@ package build.codemodel.jdk.expression;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,6 +20,7 @@ package build.codemodel.jdk.expression;
  * #L%
  */
 
+import build.base.foundation.stream.Streams;
 import build.base.marshalling.Bound;
 import build.base.marshalling.Marshal;
 import build.base.marshalling.Marshalled;
@@ -27,6 +28,7 @@ import build.base.marshalling.Marshaller;
 import build.base.marshalling.Marshalling;
 import build.base.marshalling.Out;
 import build.base.marshalling.Unmarshal;
+import build.base.mereology.Composite;
 import build.codemodel.expression.AbstractExpression;
 import build.codemodel.expression.Expression;
 import build.codemodel.foundation.CodeModel;
@@ -70,10 +72,10 @@ public final class MethodInvocation
     private final Optional<TypeUsage> receiverType;
 
     private MethodInvocation(final CodeModel codeModel,
-                              final Optional<Expression> target,
-                              final String methodName,
-                              final Stream<Expression> args,
-                              final Optional<TypeUsage> receiverType) {
+                             final Optional<Expression> target,
+                             final String methodName,
+                             final Stream<Expression> args,
+                             final Optional<TypeUsage> receiverType) {
         super(codeModel);
         this.target = target == null ? Optional.empty() : target;
         this.methodName = Objects.requireNonNull(methodName, "methodName must not be null");
@@ -151,6 +153,15 @@ public final class MethodInvocation
     }
 
     @Override
+    public Stream<? extends Composite> compositeChildren() {
+        return Streams.concat(
+            target.stream(),
+            args.stream(),
+            receiverType.stream()
+        );
+    }
+
+    @Override
     public boolean equals(final Object object) {
         return object instanceof MethodInvocation other
             && Objects.equals(this.target, other.target)
@@ -163,7 +174,7 @@ public final class MethodInvocation
     /**
      * Creates a {@link MethodInvocation} expression.
      *
-     * @param codeModel   the {@link CodeModel}
+     * @param codeModel    the {@link CodeModel}
      * @param target       the optional receiver {@link Expression}
      * @param methodName   the simple name of the invoked method
      * @param args         the argument {@link Expression}s
