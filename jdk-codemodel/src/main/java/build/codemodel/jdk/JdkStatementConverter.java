@@ -206,7 +206,9 @@ public class JdkStatementConverter
     @Override
     public Statement visitTry(final TryTree t, final Void v) {
         final var resources = t.getResources().stream()
-            .map(r -> (build.codemodel.imperative.Statement) convert((StatementTree) r))
+            .map(r -> r instanceof StatementTree st
+                ? (Statement) convert(st)
+                : ExpressionStatement.of(exprConverter.convert((ExpressionTree) r)))
             .toList();
         final var catches = t.getCatches().stream()
             .map(this::convertCatch)

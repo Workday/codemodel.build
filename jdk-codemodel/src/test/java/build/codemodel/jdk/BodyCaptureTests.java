@@ -9,6 +9,7 @@ import build.codemodel.jdk.descriptor.FieldInitializerDescriptor;
 import build.codemodel.jdk.descriptor.MethodBodyDescriptor;
 import build.codemodel.jdk.expression.Lambda;
 import build.codemodel.jdk.statement.CatchClause;
+import build.codemodel.jdk.statement.ExpressionStatement;
 import build.codemodel.jdk.statement.LocalVariableDeclaration;
 import build.codemodel.jdk.statement.Try;
 import build.codemodel.objectoriented.descriptor.ConstructorDescriptor;
@@ -221,6 +222,45 @@ class BodyCaptureTests {
         assertThat(resources).hasSize(1);
         assertThat(resources.getFirst()).isInstanceOf(LocalVariableDeclaration.class);
         assertThat(((LocalVariableDeclaration) resources.getFirst()).name()).isEqualTo("is");
+    }
+
+    @Test
+    void shouldCaptureTryWithEffectivelyFinalResource() {
+        // Java 9+ allows an effectively-final variable as a try-with-resources resource
+        // without re-declaring it. The resource is an expression, not a StatementTree.
+        final var source = JavaFileObjects.forSourceString(
+            "build.codemodel.jdk.example.EffectivelyFinalResource", """
+                package build.codemodel.jdk.example;
+                import java.io.InputStream;
+                import java.io.IOException;
+                public class EffectivelyFinalResource {
+                    public void use(InputStream is) throws IOException {
+                        try (is) {
+                            is.read();
+                        }
+                    }
+                }
+                """);
+
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getNameProvider()
+            .getTypeName(Optional.empty(), "build.codemodel.jdk.example.EffectivelyFinalResource");
+        final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
+
+        final var method = descriptor.traits(MethodDescriptor.class)
+            .filter(m -> m.methodName().name().toString().equals("use"))
+            .findFirst().orElseThrow();
+        final var body = method.getTrait(MethodBodyDescriptor.class).orElseThrow().body();
+        final var tryStmt = body.statements()
+            .filter(s -> s instanceof Try)
+            .map(s -> (Try) s)
+            .findFirst().orElseThrow();
+
+        final var resources = tryStmt.resources().toList();
+        assertThat(resources).hasSize(1);
+        assertThat(resources.getFirst()).isInstanceOf(ExpressionStatement.class);
     }
 
     @Test
