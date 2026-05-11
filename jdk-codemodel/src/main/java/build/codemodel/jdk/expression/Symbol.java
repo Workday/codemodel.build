@@ -47,11 +47,11 @@ public sealed interface Symbol extends Trait, Composite
      *
      * @return the type this symbol refers to or declares
      */
-    TypeUsage typeUsage();
+    TypeUsage declaredType();
 
     @Override
     default <T> Iterator<T> iterator(final Class<T> kind) {
-        final var usage = typeUsage();
+        final var usage = declaredType();
         return kind.isInstance(usage)
             ? Iterators.of(kind.cast(usage))
             : Iterators.empty();
@@ -63,10 +63,6 @@ public sealed interface Symbol extends Trait, Composite
      * @param declaredType the declared type of the variable
      */
     record LocalVariable(TypeUsage declaredType) implements Symbol {
-        @Override
-        public TypeUsage typeUsage() {
-            return declaredType;
-        }
     }
 
     /**
@@ -75,10 +71,6 @@ public sealed interface Symbol extends Trait, Composite
      * @param declaredType the declared type of the parameter
      */
     record Parameter(TypeUsage declaredType) implements Symbol {
-        @Override
-        public TypeUsage typeUsage() {
-            return declaredType;
-        }
     }
 
     /**
@@ -87,22 +79,14 @@ public sealed interface Symbol extends Trait, Composite
      * @param declaredType the declared type of the field
      */
     record Field(TypeUsage declaredType) implements Symbol {
-        @Override
-        public TypeUsage typeUsage() {
-            return declaredType;
-        }
     }
 
     /**
      * A type name reference, e.g. {@code String} in {@code String.valueOf(...)}.
      *
-     * @param type the type being referenced
+     * @param declaredType the type being referenced
      */
-    record TypeReference(TypeUsage type) implements Symbol {
-        @Override
-        public TypeUsage typeUsage() {
-            return type;
-        }
+    record TypeReference(TypeUsage declaredType) implements Symbol {
     }
 
     /**
@@ -111,10 +95,6 @@ public sealed interface Symbol extends Trait, Composite
      * @param declaredType the type of the enclosing instance
      */
     record ThisReference(TypeUsage declaredType) implements Symbol {
-        @Override
-        public TypeUsage typeUsage() {
-            return declaredType;
-        }
     }
 
     /**
@@ -123,9 +103,5 @@ public sealed interface Symbol extends Trait, Composite
      * @param declaredType the type of the direct superclass
      */
     record SuperReference(TypeUsage declaredType) implements Symbol {
-        @Override
-        public TypeUsage typeUsage() {
-            return declaredType;
-        }
     }
 }
