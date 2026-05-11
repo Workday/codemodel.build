@@ -41,6 +41,15 @@ public interface TypeUsage
     extends Composite, Traitable {
 
     /**
+     * Returns a human-readable, module-free representation of this type usage. Unlike {@link #toString}, which
+     * preserves the module-qualified name as stored in the {@link CodeModel}, this method uses canonical names
+     * and formats generics and arrays recursively.
+     *
+     * @return the formatted type name
+     */
+    String canonicalName();
+
+    /**
      * Attempts to obtain an {@link Optional} representation of or the first part of the {@link TypeUsage} assignable
      * to the specified {@link Class}, or {@link Optional#empty()} if not possible.
      *

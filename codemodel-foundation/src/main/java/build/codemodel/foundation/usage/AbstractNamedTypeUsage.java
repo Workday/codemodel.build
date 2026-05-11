@@ -28,10 +28,10 @@ import build.base.marshalling.Out;
 import build.base.marshalling.Unmarshal;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.Trait;
-import build.codemodel.foundation.descriptor.Traitable;
 import build.codemodel.foundation.naming.TypeName;
 
 import java.util.Objects;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 /**
@@ -107,8 +107,9 @@ public abstract class AbstractNamedTypeUsage
     }
 
     @Override
-    public String toString() {
-        return this.typeName.toString() + Traitable.toString(this);
+    protected String render(final Function<TypeName, String> nameRenderer,
+                            final Function<TypeUsage, String> usageRenderer) {
+        return nameRenderer.apply(this.typeName);
     }
 
     @Override

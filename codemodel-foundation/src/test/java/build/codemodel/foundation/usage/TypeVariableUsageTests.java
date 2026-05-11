@@ -71,4 +71,24 @@ class TypeVariableUsageTests {
 
         assertThat(usage.toString()).isEqualTo("T");
     }
+
+    @Test
+    void equalsShouldNotStackOverflowOnMutuallyRecursiveBounds() {
+        // Comparable<T extends Comparable<T>> — upper bound references a GenericTypeUsage
+        // whose parameter is the same TypeVariableUsage, creating a cycle in equals().
+        final var tName = naming.getTypeName(Optional.empty(), "T");
+        final var comparableName = naming.getTypeName(Optional.empty(), "java.lang.Comparable");
+
+        final var tUsage = TypeVariableUsage.of(codeModel, tName, Optional.empty(), Optional.empty());
+        final var genericBound = GenericTypeUsage.of(codeModel, comparableName, tUsage);
+        final var tWithBound = TypeVariableUsage.of(codeModel, tName, Optional.empty(),
+            Optional.of(Lazy.of(genericBound)));
+
+        assertThat(tWithBound.equals(tWithBound)).isTrue();
+
+        final var tWithBound2 = TypeVariableUsage.of(codeModel, tName, Optional.empty(),
+            Optional.of(Lazy.of(GenericTypeUsage.of(codeModel, comparableName, tUsage))));
+
+        assertThat(tWithBound.equals(tWithBound2)).isTrue();
+    }
 }
