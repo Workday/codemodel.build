@@ -33,7 +33,6 @@ import build.codemodel.foundation.descriptor.CallableDescriptor;
 import build.codemodel.foundation.descriptor.FormalParameterDescriptor;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.descriptor.TypeDescriptor;
-import build.codemodel.foundation.usage.NamedTypeUsage;
 import build.codemodel.foundation.usage.TypeUsage;
 import build.codemodel.objectoriented.naming.MethodName;
 
@@ -222,23 +221,17 @@ public final class MethodDescriptor
         }
 
         // include the return type
-        returnType().as(NamedTypeUsage.class)
-            .ifPresent(namedTypeUsage -> {
-                builder.append(namedTypeUsage.typeName().canonicalName());
-                builder.append(' ');
-            });
+        builder.append(returnType().canonicalName());
+        builder.append(' ');
 
         // include the method name
         builder.append(methodName().name());
 
         // include the method formal parameter types
         builder.append('(');
-        formalParameters()
-            .forEach(formalParameter -> {
-                builder.append(formalParameter.type() instanceof NamedTypeUsage namedTypeUsage
-                    ? namedTypeUsage.typeName().canonicalName()
-                    : formalParameter.type());
-            });
+        builder.append(formalParameters()
+            .map(p -> p.type().canonicalName())
+            .collect(Collectors.joining(", ")));
         builder.append(')');
 
         return builder.toString();
