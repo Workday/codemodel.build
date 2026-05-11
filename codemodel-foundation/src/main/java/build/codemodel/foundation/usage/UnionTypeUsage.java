@@ -29,6 +29,7 @@ import build.base.marshalling.Marshaller;
 import build.base.marshalling.Marshalling;
 import build.base.marshalling.Out;
 import build.base.marshalling.Unmarshal;
+import build.base.mereology.Composite;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.descriptor.TypeDescriptor;
@@ -36,7 +37,6 @@ import build.codemodel.foundation.naming.TypeName;
 
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -121,8 +121,8 @@ public class UnionTypeUsage
     }
 
     @Override
-    public Collection<?> otherParts() {
-        return types().collect(Collectors.toList());
+    public Stream<? extends Composite> compositeChildren() {
+        return types();
     }
 
     @Override

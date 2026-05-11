@@ -25,6 +25,7 @@ import build.base.marshalling.Marshalled;
 import build.base.marshalling.Marshaller;
 import build.base.marshalling.Out;
 import build.base.marshalling.Unmarshal;
+import build.base.mereology.Composite;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.usage.SpecificTypeUsage;
@@ -111,6 +112,11 @@ public abstract class AbstractLogicalExpression
     @Override
     public Optional<TypeUsage> type() {
         return this.typeUsage;
+    }
+
+    @Override
+    public Stream<? extends Composite> compositeChildren() {
+        return typeUsage.stream();
     }
 
     @Override

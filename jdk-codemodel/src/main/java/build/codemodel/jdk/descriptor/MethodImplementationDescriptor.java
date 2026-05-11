@@ -20,9 +20,12 @@ package build.codemodel.jdk.descriptor;
  * #L%
  */
 
+import build.base.foundation.iterator.Iterators;
+import build.base.mereology.Composite;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
 
+import java.util.Iterator;
 import java.util.Objects;
 
 /**
@@ -32,7 +35,7 @@ import java.util.Objects;
  * @since May-2024
  */
 public class MethodImplementationDescriptor
-    implements Trait {
+    implements Trait, Composite {
 
     private final MethodDescriptor methodDescriptor;
 
@@ -52,5 +55,12 @@ public class MethodImplementationDescriptor
      */
     public MethodDescriptor methodDescriptor() {
         return this.methodDescriptor;
+    }
+
+    @Override
+    public <T> Iterator<T> iterator(final Class<T> type) {
+        return type.isInstance(this.methodDescriptor)
+            ? Iterators.of(type.cast(this.methodDescriptor))
+            : Iterators.empty();
     }
 }

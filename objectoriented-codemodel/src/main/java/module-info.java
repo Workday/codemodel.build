@@ -34,6 +34,7 @@ open module build.codemodel.objectoriented {
     requires build.base.foundation;
 
     requires jakarta.inject;
+    requires build.base.mereology;
 
     exports build.codemodel.objectoriented;
     exports build.codemodel.objectoriented.descriptor;

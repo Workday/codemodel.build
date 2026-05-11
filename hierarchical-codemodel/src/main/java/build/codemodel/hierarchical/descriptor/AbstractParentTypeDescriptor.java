@@ -25,13 +25,12 @@ import build.base.marshalling.Marshalled;
 import build.base.marshalling.Marshaller;
 import build.base.marshalling.Out;
 import build.base.marshalling.Unmarshal;
+import build.base.mereology.Composite;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.AbstractTraitable;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.usage.NamedTypeUsage;
 
-import java.util.Collection;
-import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
 
@@ -101,7 +100,7 @@ public abstract class AbstractParentTypeDescriptor
     }
 
     @Override
-    public Collection<?> otherParts() {
-        return List.of(parentTypeUsage());
+    public Stream<? extends Composite> compositeChildren() {
+        return Stream.of(parentTypeUsage());
     }
 }

@@ -24,12 +24,12 @@ import build.base.marshalling.Bound;
 import build.base.marshalling.Marshalled;
 import build.base.marshalling.Marshaller;
 import build.base.marshalling.Out;
+import build.base.mereology.Composite;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.usage.SpecificTypeUsage;
 import build.codemodel.foundation.usage.TypeUsage;
 
-import java.util.Collection;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -155,8 +155,8 @@ public class Literal<T>
     }
 
     @Override
-    public Collection<?> otherParts() {
-        return Stream.concat(type.stream(), Stream.of(value)).toList();
+    public Stream<? extends Composite> compositeChildren() {
+        return type.stream();
     }
 
     /**

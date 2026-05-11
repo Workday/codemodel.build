@@ -27,14 +27,13 @@ import build.base.marshalling.Marshaller;
 import build.base.marshalling.Marshalling;
 import build.base.marshalling.Out;
 import build.base.marshalling.Unmarshal;
+import build.base.mereology.Composite;
 import build.codemodel.expression.Expression;
 import build.codemodel.expression.VariableUsage;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.Trait;
 
 import java.lang.invoke.MethodHandles;
-import java.util.Collection;
-import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
 
@@ -144,8 +143,8 @@ public class Assignment
     }
 
     @Override
-    public Collection<?> otherParts() {
-        return List.of(variable, expression);
+    public Stream<? extends Composite> compositeChildren() {
+        return Stream.of(variable, expression);
     }
 
     @Override

@@ -64,19 +64,6 @@ public interface TypeUsage
     }
 
     /**
-     * Visits {@link TypeUsage} and the <a href="https://en.wikipedia.org/wiki/Transitive_closure">transitive closure</a>
-     * of the {@link TypeUsage}s on which this {@link TypeUsage} directly and indirectly depends.
-     *
-     * @param visitor the {@link TypeUsageVisitor}
-     */
-    default void visit(final TypeUsageVisitor visitor) {
-        if (Objects.nonNull(visitor)) {
-            visitor.visit(this);
-            composition(TypeUsage.class).forEach(visitor::visit);
-        }
-    }
-
-    /**
      * Collects the {@link TypeUsage} and the <a href="https://en.wikipedia.org/wiki/Transitive_closure">transitive closure</a>
      * of {@link TypeUsage}s on which the {@link TypeUsage} depends.
      *
@@ -84,7 +71,6 @@ public interface TypeUsage
      * @param <A>       the accumulator of {@link TypeUsage}s
      * @param <R>       the result of the {@link Collector}
      * @return the collected result
-     * @see #visit(TypeUsageVisitor)
      */
     default <A, R> R collect(final Collector<? super TypeUsage, A, R> collector) {
         Objects.requireNonNull(collector, "The Collector must not be null");

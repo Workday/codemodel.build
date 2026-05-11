@@ -20,6 +20,7 @@ package build.codemodel.objectoriented.descriptor;
  * #L%
  */
 
+import build.base.foundation.stream.Streams;
 import build.base.marshalling.Bound;
 import build.base.marshalling.Marshal;
 import build.base.marshalling.Marshalled;
@@ -27,6 +28,7 @@ import build.base.marshalling.Marshaller;
 import build.base.marshalling.Marshalling;
 import build.base.marshalling.Out;
 import build.base.marshalling.Unmarshal;
+import build.base.mereology.Composite;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.AbstractTraitable;
 import build.codemodel.foundation.descriptor.CallableDescriptor;
@@ -38,7 +40,6 @@ import build.codemodel.objectoriented.naming.MethodName;
 
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -238,12 +239,8 @@ public final class MethodDescriptor
     }
 
     @Override
-    public Collection<?> otherParts() {
-        final var parts = new ArrayList<>();
-        parts.add(returnType());
-        formalParameters().map(FormalParameterDescriptor::type).forEach(parts::add);
-        throwables().forEach(parts::add);
-        return parts;
+    public Stream<? extends Composite> compositeChildren() {
+        return Streams.concat(Stream.of(returnType()), formalParameters(), throwables());
     }
 
     @Override

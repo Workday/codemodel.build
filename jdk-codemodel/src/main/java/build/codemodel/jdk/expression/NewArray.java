@@ -27,6 +27,7 @@ import build.base.marshalling.Marshaller;
 import build.base.marshalling.Marshalling;
 import build.base.marshalling.Out;
 import build.base.marshalling.Unmarshal;
+import build.base.mereology.Composite;
 import build.codemodel.expression.AbstractExpression;
 import build.codemodel.expression.Expression;
 import build.codemodel.foundation.CodeModel;
@@ -107,6 +108,11 @@ public final class NewArray
      */
     public Stream<Expression> dimensions() {
         return this.dimensions.stream();
+    }
+
+    @Override
+    public Stream<? extends Composite> compositeChildren() {
+        return Stream.concat(Stream.of(elementType), dimensions.stream());
     }
 
     @Override

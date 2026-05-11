@@ -27,6 +27,7 @@ import build.base.marshalling.Marshaller;
 import build.base.marshalling.Marshalling;
 import build.base.marshalling.Out;
 import build.base.marshalling.Unmarshal;
+import build.base.mereology.Composite;
 import build.codemodel.expression.AbstractExpression;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.Trait;
@@ -115,6 +116,11 @@ public final class Lambda
      */
     public Statement body() {
         return this.body;
+    }
+
+    @Override
+    public Stream<? extends Composite> compositeChildren() {
+        return Stream.concat(parameters.stream(), Stream.of(body));
     }
 
     @Override

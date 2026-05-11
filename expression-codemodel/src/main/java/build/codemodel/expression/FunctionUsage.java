@@ -9,9 +9,9 @@ package build.codemodel.expression;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -27,6 +27,7 @@ import build.base.marshalling.Marshaller;
 import build.base.marshalling.Marshalling;
 import build.base.marshalling.Out;
 import build.base.marshalling.Unmarshal;
+import build.base.mereology.Composite;
 import build.codemodel.expression.naming.FunctionName;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.Trait;
@@ -34,7 +35,6 @@ import build.codemodel.foundation.usage.TypeUsage;
 
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -92,9 +92,9 @@ public class FunctionUsage
                          final Stream<Marshalled<Trait>> traits,
                          final FunctionName functionName,
                          final Stream<Marshalled<Expression>> arguments) {
-        
+
         super(codeModel, marshaller, traits);
-        
+
         this.functionName = functionName;
         this.arguments = arguments.map(marshalled -> marshaller.unmarshal(marshalled)).collect(Collectors.toCollection(ArrayList::new));
     }
@@ -112,7 +112,7 @@ public class FunctionUsage
                            final Out<Stream<Marshalled<Trait>>> traits,
                            final Out<FunctionName> functionName,
                            final Out<Stream<Marshalled<Expression>>> arguments) {
-        
+
         super.destructor(marshaller, traits);
 
         functionName.set(this.functionName);
@@ -144,8 +144,8 @@ public class FunctionUsage
     }
 
     @Override
-    public Collection<?> otherParts() {
-        return arguments;
+    public Stream<? extends Composite> compositeChildren() {
+        return arguments.stream();
     }
 
     public boolean equals(final Object object) {

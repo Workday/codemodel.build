@@ -27,6 +27,7 @@ import build.base.marshalling.Marshaller;
 import build.base.marshalling.Marshalling;
 import build.base.marshalling.Out;
 import build.base.marshalling.Unmarshal;
+import build.base.mereology.Composite;
 import build.codemodel.expression.naming.VariableName;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.Trait;
@@ -125,6 +126,11 @@ public class VariableUsage
     @Override
     public Optional<TypeUsage> type() {
         return this.type;
+    }
+
+    @Override
+    public Stream<? extends Composite> compositeChildren() {
+        return type.stream();
     }
 
     @Override

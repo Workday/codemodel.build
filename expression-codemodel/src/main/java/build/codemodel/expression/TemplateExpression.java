@@ -28,6 +28,7 @@ import build.base.marshalling.Marshaller;
 import build.base.marshalling.Marshalling;
 import build.base.marshalling.Out;
 import build.base.marshalling.Unmarshal;
+import build.base.mereology.Composite;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.usage.SpecificTypeUsage;
@@ -35,7 +36,6 @@ import build.codemodel.foundation.usage.TypeUsage;
 
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -121,8 +121,8 @@ public class TemplateExpression
     }
 
     @Override
-    public Collection<?> otherParts() {
-        return Stream.concat(Stream.of(type), expressions.stream()).toList();
+    public Stream<? extends Composite> compositeChildren() {
+        return Stream.concat(Stream.of(type), expressions.stream());
     }
 
     public static TemplateExpression of(final List<Expression> expressions) {

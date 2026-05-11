@@ -76,23 +76,34 @@ class MereologyTests {
     // -------------------------------------------------------------------------
 
     @Test
-    void numericLiteralPartsIsEmpty() {
-        assertEquals(2, num(1).parts().count());
+    void numericLiteralPartsIsOne() {
+        assertEquals(1, num(1).parts().count());
     }
 
     @Test
-    void booleanLiteralPartsIsTwo() {
-        assertEquals(2, bool(true).parts().count());
+    void booleanLiteralPartsIsOne() {
+        assertEquals(1, bool(true).parts().count());
     }
 
     @Test
-    void stringLiteralPartsIsEmpty() {
-        assertEquals(2, StringLiteral.of(codeModel, "hello").parts().count());
+    void stringLiteralPartsIsOne() {
+        assertEquals(1, StringLiteral.of(codeModel, "hello").parts().count());
     }
 
     @Test
-    void variableUsagePartsIsEmpty() {
+    void variableUsageWithoutTypePartsIsEmpty() {
         assertTrue(variable("x").parts().toList().isEmpty());
+    }
+
+    @Test
+    void variableUsageWithTypePartsContainsType() {
+        final var type = SpecificTypeUsage.of(codeModel,
+            nameProvider.getTypeName(ModuleName.of("java.lang", nameProvider), Optional.empty(), Optional.empty(), IrreducibleName.of("String")));
+        final var expr = VariableUsage.of(codeModel, VariableName.of(
+            ModuleName.of("java.lang", nameProvider), Optional.empty(), Optional.empty(), IrreducibleName.of("x")), type);
+        final var parts = expr.parts().toList();
+        assertEquals(1, parts.size());
+        assertTrue(parts.contains(type));
     }
 
     // -------------------------------------------------------------------------
