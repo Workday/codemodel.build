@@ -110,6 +110,9 @@ public abstract class AbstractCodeModel
         // include the CodeModel and its implementation class as a matchable
         this.index.add(CodeModel.class, this);
         this.index.add((Class) this.getClass(), this);
+
+        // index @Indexable fields on the model itself so fresh and unmarshalled models are consistent
+        this.index.index(this);
     }
 
     /**
@@ -153,8 +156,6 @@ public abstract class AbstractCodeModel
         namespaceDescriptors.map(marshaller::unmarshal)
             .forEach(namespaceDescriptor -> this.namespaceDescriptors
                 .put(namespaceDescriptor.namespace(), namespaceDescriptor));
-
-        this.index.index(this);
     }
 
     /**
@@ -213,6 +214,16 @@ public abstract class AbstractCodeModel
         // by default, nothing to do
     }
 
+    /**
+     * Returns an {@link Iterator} over the parts of this {@link CodeModel}.
+     * <p>
+     * When {@code type} is {@link Object}, the iterator covers all {@link TypeDescriptor}s,
+     * {@link ModuleDescriptor}s, {@link NamespaceDescriptor}s, and {@link Trait}s — but <em>not</em>
+     * the {@link CodeModel} itself. This means {@link #parts()} and {@link #composition()} do not
+     * include {@code this}. To include the model itself, use {@code traverse().reflexive(true)}.
+     * <p>
+     * When {@code type} is assignable from {@link CodeModel}, the iterator yields only {@code this}.
+     */
     @Override
     @SuppressWarnings("unchecked")
     public <T> Iterator<T> iterator(final Class<T> type) {

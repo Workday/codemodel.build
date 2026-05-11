@@ -266,6 +266,58 @@ public interface TraitableCompatibilityTests {
     }
 
     /**
+     * Ensure {@link Traitable#iterator(Class)} flattens traits across distinct non-{@link Singular} registration
+     * classes correctly.
+     */
+    @Test
+    default void shouldIterateTraitsAcrossDistinctNonSingularRegistrationClasses() {
+        final var traitable = getTraitable();
+
+        traitable.addTrait(Color.RED);
+        traitable.addTrait(Color.BLUE);
+
+        final var firstDog = new Dog();
+        traitable.addTrait(firstDog);
+
+        final var secondDog = new Dog();
+        traitable.addTrait(secondDog);
+
+        final var collected = traitable.traverse(Trait.class).stream().toList();
+
+        assertThat(collected)
+            .hasSize(4)
+            .contains(Color.RED, Color.BLUE, firstDog, secondDog);
+    }
+
+    /**
+     * Ensure {@link Traitable#computeIfAbsent} throws when there are multiple non-{@link Singular} {@link Trait}s.
+     */
+    @Test
+    default void shouldThrowOnComputeIfAbsentWithMultipleNonSingularTraits() {
+        final var traitable = getTraitable();
+
+        traitable.addTrait(Color.RED);
+        traitable.addTrait(Color.BLUE);
+
+        assertThatThrownBy(() -> traitable.computeIfAbsent(Color.class, _ -> Color.GREEN))
+            .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    /**
+     * Ensure {@link Traitable#computeIfPresent} throws when there are multiple non-{@link Singular} {@link Trait}s.
+     */
+    @Test
+    default void shouldThrowOnComputeIfPresentWithMultipleNonSingularTraits() {
+        final var traitable = getTraitable();
+
+        traitable.addTrait(Color.RED);
+        traitable.addTrait(Color.BLUE);
+
+        assertThatThrownBy(() -> traitable.computeIfPresent(Color.class, (_, _) -> Color.GREEN))
+            .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    /**
      * Ensure lots of non-singular {@link Trait}s can be added.
      */
     @Test
