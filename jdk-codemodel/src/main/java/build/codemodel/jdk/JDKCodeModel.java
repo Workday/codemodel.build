@@ -29,6 +29,8 @@ import build.base.marshalling.Marshaller;
 import build.base.marshalling.Marshalling;
 import build.base.marshalling.Out;
 import build.base.marshalling.Unmarshal;
+import build.base.mereology.Entity;
+import build.base.mereology.Strategy;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.FormalParameterDescriptor;
 import build.codemodel.foundation.descriptor.ModuleDescriptor;
@@ -55,6 +57,7 @@ import build.codemodel.jdk.descriptor.ConstructorType;
 import build.codemodel.jdk.descriptor.FieldType;
 import build.codemodel.jdk.descriptor.JDKType;
 import build.codemodel.jdk.descriptor.JDKTypeDescriptor;
+import build.codemodel.jdk.descriptor.MethodBodyDescriptor;
 import build.codemodel.jdk.descriptor.MethodType;
 import build.codemodel.jdk.descriptor.Static;
 import build.codemodel.objectoriented.ObjectOrientedCodeModel;
@@ -732,6 +735,76 @@ public class JDKCodeModel
             .filter(Optional::isPresent)
             .map(opt -> (JDKTypeDescriptor) opt.get())
             .findFirst();
+    }
+
+    /**
+     * Returns all {@link TypeReference}s to the given {@link TypeName}.
+     *
+     * @param typeName the target {@link TypeName}
+     * @return a {@link Stream} of {@link TypeReference}s
+     */
+    public Stream<TypeReference> referencesTo(final TypeName typeName) {
+        return typeDescriptors()
+            .filter(JDKTypeDescriptor.class::isInstance)
+            .map(JDKTypeDescriptor.class::cast)
+            .flatMap(td -> td.traverse(NamedTypeUsage.class)
+                .strategy(Strategy.DepthFirst)
+                .hierarchical()
+                .stream()
+                .filter(entity -> entity.object().typeName().equals(typeName))
+                .map(entity -> toTypeReference(td, entity))
+                .distinct());
+    }
+
+    /**
+     * Returns all {@link TypeReference}s to the given {@link TypeName} with the given {@link ReferenceKind}.
+     *
+     * @param typeName the target {@link TypeName}
+     * @param kind     the {@link ReferenceKind} to match
+     * @return a {@link Stream} of {@link TypeReference}s
+     */
+    public Stream<TypeReference> referencesTo(final TypeName typeName, final ReferenceKind kind) {
+        Objects.requireNonNull(kind, "kind");
+        return referencesTo(typeName).filter(ref -> ref.kind() == kind);
+    }
+
+    private static TypeReference toTypeReference(final JDKTypeDescriptor owner,
+                                                  final Entity<NamedTypeUsage> entity) {
+        final var structural = entity.hierarchy().stream()
+            .filter(c -> c instanceof ExtendsTypeDescriptor
+                      || c instanceof ImplementsTypeDescriptor
+                      || c instanceof FieldDescriptor
+                      || c instanceof MethodDescriptor
+                      || c instanceof ConstructorDescriptor
+                      || c instanceof MethodBodyDescriptor)
+            .reduce((a, b) -> b);  // last = innermost structural composite
+
+        return structural.map(c -> switch (c) {
+            case ExtendsTypeDescriptor ignored     -> TypeReference.of(owner, ReferenceKind.EXTENDS);
+            case ImplementsTypeDescriptor ignored  -> TypeReference.of(owner, ReferenceKind.IMPLEMENTS);
+            case FieldDescriptor fd                -> TypeReference.of(owner, ReferenceKind.FIELD_TYPE, fd);
+            case MethodBodyDescriptor ignored      ->
+                entity.hierarchy().stream()
+                    .filter(h -> h instanceof MethodDescriptor || h instanceof ConstructorDescriptor)
+                    .reduce((a, b) -> b)
+                    .map(h -> h instanceof ConstructorDescriptor cd
+                        ? TypeReference.of(owner, ReferenceKind.METHOD_BODY, cd)
+                        : TypeReference.of(owner, ReferenceKind.METHOD_BODY, (MethodDescriptor) h))
+                    .orElseGet(() -> TypeReference.of(owner, ReferenceKind.METHOD_BODY));
+            case MethodDescriptor md               ->
+                TypeReference.of(owner, isInReturnType(md.returnType(), entity.object())
+                    ? ReferenceKind.RETURN_TYPE
+                    : ReferenceKind.PARAMETER_TYPE, md);
+            case ConstructorDescriptor cd          ->
+                TypeReference.of(owner, ReferenceKind.PARAMETER_TYPE, cd);
+            default -> throw new IllegalStateException("Unexpected structural composite: " + c.getClass());
+        }).orElseThrow(() -> new IllegalStateException(
+            "No structural ancestor found for " + entity.object() + " in " + owner.typeName()));
+    }
+
+    private static boolean isInReturnType(final TypeUsage returnType, final NamedTypeUsage target) {
+        return returnType == target
+            || returnType.composition(TypeUsage.class).anyMatch(u -> u == target);
     }
 
     /**
