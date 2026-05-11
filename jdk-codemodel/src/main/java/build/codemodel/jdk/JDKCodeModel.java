@@ -9,9 +9,9 @@ package build.codemodel.jdk;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -769,34 +769,31 @@ public class JDKCodeModel
     }
 
     private static TypeReference toTypeReference(final JDKTypeDescriptor owner,
-                                                  final Entity<NamedTypeUsage> entity) {
+                                                 final Entity<NamedTypeUsage> entity) {
         final var structural = entity.hierarchy().stream()
             .filter(c -> c instanceof ExtendsTypeDescriptor
-                      || c instanceof ImplementsTypeDescriptor
-                      || c instanceof FieldDescriptor
-                      || c instanceof MethodDescriptor
-                      || c instanceof ConstructorDescriptor
-                      || c instanceof MethodBodyDescriptor)
+                || c instanceof ImplementsTypeDescriptor
+                || c instanceof FieldDescriptor
+                || c instanceof MethodDescriptor
+                || c instanceof ConstructorDescriptor
+                || c instanceof MethodBodyDescriptor)
             .reduce((a, b) -> b);  // last = innermost structural composite
 
         return structural.map(c -> switch (c) {
-            case ExtendsTypeDescriptor ignored     -> TypeReference.of(owner, ReferenceKind.EXTENDS);
-            case ImplementsTypeDescriptor ignored  -> TypeReference.of(owner, ReferenceKind.IMPLEMENTS);
-            case FieldDescriptor fd                -> TypeReference.of(owner, ReferenceKind.FIELD_TYPE, fd);
-            case MethodBodyDescriptor ignored      ->
-                entity.hierarchy().stream()
-                    .filter(h -> h instanceof MethodDescriptor || h instanceof ConstructorDescriptor)
-                    .reduce((a, b) -> b)
-                    .map(h -> h instanceof ConstructorDescriptor cd
-                        ? TypeReference.of(owner, ReferenceKind.METHOD_BODY, cd)
-                        : TypeReference.of(owner, ReferenceKind.METHOD_BODY, (MethodDescriptor) h))
-                    .orElseGet(() -> TypeReference.of(owner, ReferenceKind.METHOD_BODY));
-            case MethodDescriptor md               ->
-                TypeReference.of(owner, isInReturnType(md.returnType(), entity.object())
-                    ? ReferenceKind.RETURN_TYPE
-                    : ReferenceKind.PARAMETER_TYPE, md);
-            case ConstructorDescriptor cd          ->
-                TypeReference.of(owner, ReferenceKind.PARAMETER_TYPE, cd);
+            case ExtendsTypeDescriptor ignored -> TypeReference.of(owner, ReferenceKind.EXTENDS);
+            case ImplementsTypeDescriptor ignored -> TypeReference.of(owner, ReferenceKind.IMPLEMENTS);
+            case FieldDescriptor fd -> TypeReference.of(owner, ReferenceKind.FIELD_TYPE, fd);
+            case MethodBodyDescriptor ignored -> entity.hierarchy().stream()
+                .filter(h -> h instanceof MethodDescriptor || h instanceof ConstructorDescriptor)
+                .reduce((a, b) -> b)
+                .map(h -> h instanceof ConstructorDescriptor cd
+                    ? TypeReference.of(owner, ReferenceKind.METHOD_BODY, cd)
+                    : TypeReference.of(owner, ReferenceKind.METHOD_BODY, (MethodDescriptor) h))
+                .orElseGet(() -> TypeReference.of(owner, ReferenceKind.METHOD_BODY));
+            case MethodDescriptor md -> TypeReference.of(owner, isInReturnType(md.returnType(), entity.object())
+                ? ReferenceKind.RETURN_TYPE
+                : ReferenceKind.PARAMETER_TYPE, md);
+            case ConstructorDescriptor cd -> TypeReference.of(owner, ReferenceKind.PARAMETER_TYPE, cd);
             default -> throw new IllegalStateException("Unexpected structural composite: " + c.getClass());
         }).orElseThrow(() -> new IllegalStateException(
             "No structural ancestor found for " + entity.object() + " in " + owner.typeName()));

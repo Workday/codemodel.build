@@ -40,7 +40,7 @@ import java.util.Iterator;
 @Singular
 public sealed interface Symbol extends Trait, Composite
     permits Symbol.LocalVariable, Symbol.Parameter, Symbol.Field,
-            Symbol.TypeReference, Symbol.ThisReference, Symbol.SuperReference {
+    Symbol.TypeReference, Symbol.ThisReference, Symbol.SuperReference {
 
     /**
      * The {@link TypeUsage} carried by this symbol, exposed for mereological traversal.
