@@ -29,7 +29,7 @@ import build.base.marshalling.Marshaller;
 import build.base.marshalling.Marshalling;
 import build.base.marshalling.Out;
 import build.base.marshalling.Unmarshal;
-import build.base.mereology.Entity;
+import build.base.mereology.Composite;
 import build.base.mereology.Strategy;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.FormalParameterDescriptor;
@@ -55,6 +55,7 @@ import build.codemodel.foundation.usage.UnknownTypeUsage;
 import build.codemodel.foundation.usage.WildcardTypeUsage;
 import build.codemodel.jdk.descriptor.ConstructorType;
 import build.codemodel.jdk.descriptor.FieldType;
+import build.codemodel.jdk.descriptor.InitializerBlockDescriptor;
 import build.codemodel.jdk.descriptor.JDKType;
 import build.codemodel.jdk.descriptor.JDKTypeDescriptor;
 import build.codemodel.jdk.descriptor.MethodBodyDescriptor;
@@ -133,11 +134,11 @@ public class JDKCodeModel
      */
     @Unmarshal
     public JDKCodeModel(@Bound final NameProvider nameProvider,
-                         @Bound final Marshaller marshaller,
-                         final Stream<Marshalled<Trait>> traits,
-                         final Stream<Marshalled<TypeDescriptor>> typeDescriptors,
-                         final Stream<Marshalled<ModuleDescriptor>> moduleDescriptors,
-                         final Stream<Marshalled<NamespaceDescriptor>> namespaceDescriptors) {
+                        @Bound final Marshaller marshaller,
+                        final Stream<Marshalled<Trait>> traits,
+                        final Stream<Marshalled<TypeDescriptor>> typeDescriptors,
+                        final Stream<Marshalled<ModuleDescriptor>> moduleDescriptors,
+                        final Stream<Marshalled<NamespaceDescriptor>> namespaceDescriptors) {
 
         super(nameProvider, marshaller, traits, typeDescriptors, moduleDescriptors, namespaceDescriptors);
     }
@@ -215,8 +216,7 @@ public class JDKCodeModel
         if (type instanceof Class<?> classType) {
             final var typeName = nameProvider.getTypeName(classType);
             typeUsage = SpecificTypeUsage.of(this, typeName);
-        }
-        else if (type instanceof ParameterizedType parameterizedType) {
+        } else if (type instanceof ParameterizedType parameterizedType) {
             final var rawTypeUsage = getNamedTypeUsage(parameterizedType.getRawType())
                 .orElseThrow(() -> new IllegalStateException("RawType of ParameterizedType is not named:" + type));
             final var parameters = Arrays.stream(parameterizedType.getActualTypeArguments())
@@ -224,8 +224,7 @@ public class JDKCodeModel
                 .toArray(TypeUsage[]::new);
 
             typeUsage = GenericTypeUsage.of(this, rawTypeUsage.typeName(), parameters);
-        }
-        else if (type instanceof TypeVariable<?> typeVariable) {
+        } else if (type instanceof TypeVariable<?> typeVariable) {
             final var variableName = nameProvider.getIrreducibleName(typeVariable.getName());
             final var typeName = nameProvider.getTypeName(Optional.empty(), variableName);
 
@@ -243,17 +242,15 @@ public class JDKCodeModel
                     upperBound = upperBoundTypeUsages.isEmpty()
                         ? Optional.empty()
                         : (upperBoundTypeUsages.size() == 1)
-                            ? Optional.of(upperBoundTypeUsages.getFirst())
-                            : Optional.of(Lazy.of(UnionTypeUsage.of(this, upperBoundTypeUsages.stream())));
-                }
-                finally {
+                          ? Optional.of(upperBoundTypeUsages.getFirst())
+                          : Optional.of(Lazy.of(UnionTypeUsage.of(this, upperBoundTypeUsages.stream())));
+                } finally {
                     inProgress.remove(typeVariable);
                 }
             }
 
             typeUsage = TypeVariableUsage.of(this, typeName, Optional.empty(), upperBound);
-        }
-        else if (type instanceof WildcardType wildcardType) {
+        } else if (type instanceof WildcardType wildcardType) {
             final java.lang.reflect.Type[] lowers = wildcardType.getLowerBounds();
             final java.lang.reflect.Type[] uppers = wildcardType.getUpperBounds();
 
@@ -267,13 +264,11 @@ public class JDKCodeModel
                 : Optional.empty();
 
             typeUsage = WildcardTypeUsage.of(this, optLower, optUpper);
-        }
-        else if (type instanceof GenericArrayType genericArrayType) {
+        } else if (type instanceof GenericArrayType genericArrayType) {
             typeUsage = ArrayTypeUsage.of(
                 this,
                 Lazy.of(getTypeUsage(genericArrayType.getGenericComponentType())));
-        }
-        else {
+        } else {
             typeUsage = UnknownTypeUsage.create(this);
         }
 
@@ -357,8 +352,7 @@ public class JDKCodeModel
             }
 
             return Optional.ofNullable(resolved.get(classType));
-        }
-        else if (type instanceof ParameterizedType parameterizedType) {
+        } else if (type instanceof ParameterizedType parameterizedType) {
             // for ParameterizedTypes we return the TypeDescriptor of the Raw Type
             return getJDKTypeDescriptor(parameterizedType.getRawType());
         }
@@ -650,8 +644,7 @@ public class JDKCodeModel
                 .loadClass(typeName.binaryName());
 
             return getJDKTypeDescriptor(typeUsageClass);
-        }
-        catch (final ClassNotFoundException e) {
+        } catch (final ClassNotFoundException e) {
             return Optional.empty();
         }
     }
@@ -680,7 +673,7 @@ public class JDKCodeModel
         return element == null
             ? Stream.empty()
             : Streams.of(element.getDeclaredAnnotations())
-                .map(this::getAnnotation);
+              .map(this::getAnnotation);
     }
 
     /**
@@ -704,8 +697,7 @@ public class JDKCodeModel
                     final var name = nameProvider.getIrreducibleName(method.getName());
                     final var value = method.invoke(annotation);
                     return AnnotationValue.of(this, name, value);
-                }
-                catch (final IllegalAccessException | InvocationTargetException e) {
+                } catch (final IllegalAccessException | InvocationTargetException e) {
                     throw new IllegalStateException(e);
                 }
             });
@@ -747,13 +739,8 @@ public class JDKCodeModel
         return typeDescriptors()
             .filter(JDKTypeDescriptor.class::isInstance)
             .map(JDKTypeDescriptor.class::cast)
-            .flatMap(td -> td.traverse(NamedTypeUsage.class)
-                .strategy(Strategy.DepthFirst)
-                .hierarchical()
-                .stream()
-                .filter(entity -> entity.object().typeName().equals(typeName))
-                .map(entity -> toTypeReference(td, entity))
-                .distinct());
+            .flatMap(td -> referencesIn(td, typeName))
+            .distinct();
     }
 
     /**
@@ -768,40 +755,87 @@ public class JDKCodeModel
         return referencesTo(typeName).filter(ref -> ref.kind() == kind);
     }
 
-    private static TypeReference toTypeReference(final JDKTypeDescriptor owner,
-                                                 final Entity<NamedTypeUsage> entity) {
-        final var structural = entity.hierarchy().stream()
-            .filter(c -> c instanceof ExtendsTypeDescriptor
-                || c instanceof ImplementsTypeDescriptor
-                || c instanceof FieldDescriptor
-                || c instanceof MethodDescriptor
-                || c instanceof ConstructorDescriptor
-                || c instanceof MethodBodyDescriptor)
-            .reduce((a, b) -> b);  // last = innermost structural composite
-
-        return structural.map(c -> switch (c) {
-            case ExtendsTypeDescriptor ignored -> TypeReference.of(owner, ReferenceKind.EXTENDS);
-            case ImplementsTypeDescriptor ignored -> TypeReference.of(owner, ReferenceKind.IMPLEMENTS);
-            case FieldDescriptor fd -> TypeReference.of(owner, ReferenceKind.FIELD_TYPE, fd);
-            case MethodBodyDescriptor ignored -> entity.hierarchy().stream()
-                .filter(h -> h instanceof MethodDescriptor || h instanceof ConstructorDescriptor)
-                .reduce((a, b) -> b)
-                .map(h -> h instanceof ConstructorDescriptor cd
-                    ? TypeReference.of(owner, ReferenceKind.METHOD_BODY, cd)
-                    : TypeReference.of(owner, ReferenceKind.METHOD_BODY, (MethodDescriptor) h))
-                .orElseGet(() -> TypeReference.of(owner, ReferenceKind.METHOD_BODY));
-            case MethodDescriptor md -> TypeReference.of(owner, isInReturnType(md.returnType(), entity.object())
-                ? ReferenceKind.RETURN_TYPE
-                : ReferenceKind.PARAMETER_TYPE, md);
-            case ConstructorDescriptor cd -> TypeReference.of(owner, ReferenceKind.PARAMETER_TYPE, cd);
-            default -> throw new IllegalStateException("Unexpected structural composite: " + c.getClass());
-        }).orElseThrow(() -> new IllegalStateException(
-            "No structural ancestor found for " + entity.object() + " in " + owner.typeName()));
+    private static Stream<TypeReference> referencesIn(final JDKTypeDescriptor td, final TypeName typeName) {
+        return Streams.concat(
+            extendsRefs(td, typeName),
+            implementsRefs(td, typeName),
+            fieldRefs(td, typeName),
+            td.traits(MethodDescriptor.class).flatMap(md -> methodRefsFor(td, md, typeName)),
+            td.traits(ConstructorDescriptor.class).flatMap(cd -> constructorRefsFor(td, cd, typeName)),
+            initializerRefs(td, typeName)
+        );
     }
 
-    private static boolean isInReturnType(final TypeUsage returnType, final NamedTypeUsage target) {
-        return returnType == target
-            || returnType.composition(TypeUsage.class).anyMatch(u -> u == target);
+    private static Stream<TypeReference> extendsRefs(final JDKTypeDescriptor td, final TypeName typeName) {
+        return td.traits(ExtendsTypeDescriptor.class)
+            .filter(ext -> typeUsageContains(ext.parentTypeUsage(), typeName))
+            .map(_ -> TypeReference.of(td, ReferenceKind.EXTENDS));
+    }
+
+    private static Stream<TypeReference> implementsRefs(final JDKTypeDescriptor td, final TypeName typeName) {
+        return td.traits(ImplementsTypeDescriptor.class)
+            .filter(impl -> typeUsageContains(impl.parentTypeUsage(), typeName))
+            .map(_ -> TypeReference.of(td, ReferenceKind.IMPLEMENTS));
+    }
+
+    private static Stream<TypeReference> fieldRefs(final JDKTypeDescriptor td, final TypeName typeName) {
+        return td.traits(FieldDescriptor.class)
+            .filter(fd -> typeUsageContains(fd.type(), typeName))
+            .map(fd -> TypeReference.of(td, ReferenceKind.FIELD_TYPE, fd));
+    }
+
+    private static Stream<TypeReference> methodRefsFor(final JDKTypeDescriptor td,
+                                                       final MethodDescriptor md,
+                                                       final TypeName typeName) {
+        return Streams.concat(
+            Stream.of(md)
+                .filter(m -> typeUsageContains(m.returnType(), typeName))
+                .map(m -> TypeReference.of(td, ReferenceKind.RETURN_TYPE, m)),
+            Stream.of(md)
+                .filter(m -> m.formalParameters().anyMatch(p -> typeUsageContains(p.type(), typeName)))
+                .map(m -> TypeReference.of(td, ReferenceKind.PARAMETER_TYPE, m)),
+            md.getTrait(MethodBodyDescriptor.class)
+                .filter(body -> compositeContains(body, typeName))
+                .map(_ -> TypeReference.of(td, ReferenceKind.METHOD_BODY, md))
+                .stream()
+        );
+    }
+
+    private static Stream<TypeReference> constructorRefsFor(final JDKTypeDescriptor td,
+                                                            final ConstructorDescriptor cd,
+                                                            final TypeName typeName) {
+        return Streams.concat(
+            Stream.of(cd)
+                .filter(c -> c.formalParameters().anyMatch(p -> typeUsageContains(p.type(), typeName)))
+                .map(c -> TypeReference.of(td, ReferenceKind.PARAMETER_TYPE, c)),
+            cd.getTrait(MethodBodyDescriptor.class)
+                .filter(body -> compositeContains(body, typeName))
+                .map(_ -> TypeReference.of(td, ReferenceKind.METHOD_BODY, cd))
+                .stream()
+        );
+    }
+
+    private static Stream<TypeReference> initializerRefs(final JDKTypeDescriptor td, final TypeName typeName) {
+        return td.traits(InitializerBlockDescriptor.class)
+            .filter(ib -> compositeContains(ib, typeName))
+            .map(_ -> TypeReference.of(td, ReferenceKind.METHOD_BODY));
+    }
+
+    private static boolean typeUsageContains(final TypeUsage typeUsage, final TypeName typeName) {
+        if (typeUsage instanceof NamedTypeUsage ntu && ntu.typeName().equals(typeName)) {
+            return true;
+        }
+        return typeUsage.traverse(NamedTypeUsage.class)
+            .strategy(Strategy.DepthFirst)
+            .stream()
+            .anyMatch(ntu -> ntu.typeName().equals(typeName));
+    }
+
+    private static boolean compositeContains(final Composite composite, final TypeName typeName) {
+        return composite.traverse(NamedTypeUsage.class)
+            .strategy(Strategy.DepthFirst)
+            .stream()
+            .anyMatch(ntu -> ntu.typeName().equals(typeName));
     }
 
     /**
@@ -814,8 +848,8 @@ public class JDKCodeModel
         return Modifier.isPublic(modifiers)
             ? Optional.of(AccessModifier.PUBLIC)
             : (Modifier.isProtected(modifiers)
-                ? Optional.of(AccessModifier.PROTECTED)
-                : (Modifier.isPrivate(modifiers) ? Optional.of(AccessModifier.PRIVATE) : Optional.empty()));
+               ? Optional.of(AccessModifier.PROTECTED)
+               : (Modifier.isPrivate(modifiers) ? Optional.of(AccessModifier.PRIVATE) : Optional.empty()));
     }
 
     /**
@@ -830,11 +864,9 @@ public class JDKCodeModel
             || Modifier.isInterface(modifiers)) {
 
             return Classification.ABSTRACT;
-        }
-        else if (Modifier.isFinal(modifiers)) {
+        } else if (Modifier.isFinal(modifiers)) {
             return Classification.FINAL;
-        }
-        else {
+        } else {
             return Classification.CONCRETE;
         }
     }

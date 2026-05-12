@@ -252,10 +252,7 @@ class ReferencesToTests {
     }
 
     @Test
-    void typeDescriptorMayIncludeSelfReference() {
-        // Known behaviour: referencesTo() traverses the target type's own descriptor,
-        // which can produce a self-referencing TypeReference (e.g. from LocationTrait
-        // or other structural traits). Callers should filter by owner if needed.
+    void noSelfReferenceForSimpleClass() {
         final var target = JavaFileObjects.forSourceString(
             "com.example.Target", """
                 package com.example;
@@ -269,7 +266,7 @@ class ReferencesToTests {
         final var selfRefs = codeModel.referencesTo(targetName)
             .filter(r -> r.owner().typeName().equals(targetName))
             .toList();
-        assertThat(selfRefs).isNotEmpty();
+        assertThat(selfRefs).isEmpty();
     }
 
     @Test
@@ -321,6 +318,68 @@ class ReferencesToTests {
         assertThat(refs).hasSize(1);
         assertThat(refs.getFirst().kind()).isEqualTo(ReferenceKind.PARAMETER_TYPE);
         assertThat(refs.getFirst().member().orElseThrow()).isInstanceOf(ConstructorDescriptor.class);
+    }
+
+    @Test
+    void shouldFindTypeNestedInsideGenericTypeArgument() {
+        // Regression: Target appears as a type argument of a type argument (e.g. Wrapper<List<Target>>).
+        // The old traversal-based implementation crashed with "No structural ancestor found" because
+        // FieldDescriptor is not a NamedTypeUsage and was never pushed onto the mereology stack.
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Holder", """
+                package com.example;
+                import java.util.Map;
+                import java.util.List;
+                public class Holder {
+                    public Map<String, List<Target>> index;
+                }
+                """);
+        final var target = JavaFileObjects.forSourceString(
+            "com.example.Target", """
+                package com.example;
+                public class Target {}
+                """);
+
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source, target)));
+
+        final var targetName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Target");
+        final var refs = codeModel.referencesTo(targetName, ReferenceKind.FIELD_TYPE)
+            .filter(r -> r.owner().typeName().toString().contains("Holder"))
+            .toList();
+
+        assertThat(refs).hasSize(1);
+        assertThat(refs.getFirst().member().orElseThrow()).isInstanceOf(FieldDescriptor.class);
+    }
+
+    @Test
+    void shouldFindStaticInitializerReference() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Registry", """
+                package com.example;
+                public class Registry {
+                    static {
+                        Target t = new Target();
+                    }
+                }
+                """);
+        final var target = JavaFileObjects.forSourceString(
+            "com.example.Target", """
+                package com.example;
+                public class Target {}
+                """);
+
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source, target)));
+
+        final var targetName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Target");
+        final var refs = codeModel.referencesTo(targetName, ReferenceKind.METHOD_BODY)
+            .filter(r -> r.owner().typeName().toString().contains("Registry"))
+            .toList();
+
+        assertThat(refs).hasSize(1);
+        assertThat(refs.getFirst().kind()).isEqualTo(ReferenceKind.METHOD_BODY);
+        assertThat(refs.getFirst().member()).isEmpty();
     }
 
     @Test
