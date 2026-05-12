@@ -9,9 +9,9 @@ package build.codemodel.foundation.usage;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -66,7 +66,7 @@ public class TypeVariableUsage
     /**
      * Constructs a {@link TypeVariableUsage}.
      *
-     * @param codeModel the {@link CodeModel}
+     * @param codeModel  the {@link CodeModel}
      * @param typeName   the {@link TypeName}
      * @param lowerBound the {@link Optional} {@link Lazy} {@link TypeUsage} of the <i>lower-bound</i>
      * @param upperBound the {@link Optional} {@link Lazy} {@link TypeUsage} of the <i>upper-bound</i>
@@ -84,7 +84,7 @@ public class TypeVariableUsage
     /**
      * {@link Unmarshal} a {@link TypeVariableUsage}.
      *
-     * @param codeModel the {@link CodeModel}
+     * @param codeModel  the {@link CodeModel}
      * @param marshaller the {@link Marshaller} for unmarshalling the {@link Marshalled} {@link Trait}s
      * @param typeName   the {@link TypeName}
      * @param traits     the {@link Marshalled} {@link Trait}s
@@ -169,15 +169,28 @@ public class TypeVariableUsage
     @Override
     protected String render(final Function<TypeName, String> nameRenderer,
                             final Function<TypeUsage, String> usageRenderer) {
+        final Function<TypeUsage, String> boundRenderer = u -> switch (u) {
+            case TypeVariableUsage tvu -> nameRenderer.apply(tvu.typeName());
+            default -> usageRenderer.apply(u);
+        };
         return nameRenderer.apply(typeName())
-            + upperBound().map(b -> " extends " + usageRenderer.apply(b)).orElse("")
-            + lowerBound().map(b -> " super " + usageRenderer.apply(b)).orElse("");
+            + upperBound().map(b -> " extends " + renderBound(b, nameRenderer, boundRenderer)).orElse("")
+            + lowerBound().map(b -> " super " + renderBound(b, nameRenderer, boundRenderer)).orElse("");
+    }
+
+    private static String renderBound(final TypeUsage b,
+                                      final Function<TypeName, String> nameRenderer,
+                                      final Function<TypeUsage, String> boundRenderer) {
+        return switch (b) {
+            case AbstractTypeUsage atu -> atu.render(nameRenderer, boundRenderer);
+            default -> boundRenderer.apply(b);
+        };
     }
 
     /**
      * Creates a {@link TypeVariableUsage}.
      *
-     * @param codeModel the {@link CodeModel}
+     * @param codeModel  the {@link CodeModel}
      * @param typeName   the {@link TypeName}
      * @param lowerBound the {@link Optional} {@link Lazy} {@link TypeUsage} of the <i>lower-bound</i>
      * @param upperBound the {@link Optional} {@link Lazy} {@link TypeUsage} of the <i>upper-bound</i>

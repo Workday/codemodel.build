@@ -26,13 +26,15 @@ import build.codemodel.foundation.naming.ModuleName;
 import build.codemodel.foundation.naming.NonCachingNameProvider;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for {@link TypeUsage#format()}, covering all four primary branches and contrasting with {@link Object#toString()}.
- * The key difference: {@code format()} always returns canonical (module-free) names, while {@code toString()} preserves
+ * Tests for {@link TypeUsage#canonicalName()}, covering all four primary branches and contrasting with {@link Object#toString()}.
+ * The key difference: {@code canonicalName()} always returns canonical (module-free) names, while {@code toString()} preserves
  * module-qualified names as stored in the {@link build.codemodel.foundation.CodeModel}.
  *
  * @author reed.vonredwitz
@@ -108,6 +110,58 @@ class TypeUsageFormatTests {
 
         assertThat(usage.toString()).isEqualTo("T extends java.base/java.lang.Number");
         assertThat(usage.canonicalName()).isEqualTo("T extends java.lang.Number");
+    }
+
+    @Test
+    void selfReferentialGeneric() {
+        final var baseName = "build.base.archiving";
+        final var moduleName = naming.getModuleName(baseName);
+        final var namespaceName = naming.getNamespace(baseName);
+        final var className = naming.getIrreducibleName("AbstractArchiveBuilder");
+        final var name = naming.getTypeName(moduleName, namespaceName, Optional.empty(), className);
+
+        final var variableName = naming.getTypeName(
+            Optional.empty(),
+            Optional.empty(),
+            Optional.empty(),
+            naming.getIrreducibleName("B")
+        );
+        final var lazyVariable = Lazy.<TypeUsage>empty();
+        final var lazyGeneric = Lazy.<TypeUsage>empty();
+        final var variableUsage = TypeVariableUsage.of(codeModel, variableName, Optional.empty(), Optional.of(lazyGeneric));
+        final var params = List.of(lazyVariable);
+
+        final var usage = GenericTypeUsage.of(codeModel, name, params.stream());
+
+        lazyVariable.set(variableUsage);
+        lazyGeneric.set(usage);
+
+        assertThat(usage.canonicalName()).isEqualTo("build.base.archiving.AbstractArchiveBuilder<B extends build.base.archiving.AbstractArchiveBuilder<B>>");
+    }
+
+    @Test
+    void selfReferentialGeneric_equalsDoesNotStackOverflow() {
+        final var baseName = "build.base.archiving";
+        final var moduleName = naming.getModuleName(baseName);
+        final var namespaceName = naming.getNamespace(baseName);
+        final var name = naming.getTypeName(moduleName, namespaceName, Optional.empty(), naming.getIrreducibleName("AbstractArchiveBuilder"));
+        final var variableName = naming.getTypeName(Optional.empty(), Optional.empty(), Optional.empty(), naming.getIrreducibleName("B"));
+
+        final var lazyVariable1 = Lazy.<TypeUsage>empty();
+        final var lazyGeneric1 = Lazy.<TypeUsage>empty();
+        final var var1 = TypeVariableUsage.of(codeModel, variableName, Optional.empty(), Optional.of(lazyGeneric1));
+        final var generic1 = GenericTypeUsage.of(codeModel, name, Stream.of(lazyVariable1));
+        lazyVariable1.set(var1);
+        lazyGeneric1.set(generic1);
+
+        final var lazyVariable2 = Lazy.<TypeUsage>empty();
+        final var lazyGeneric2 = Lazy.<TypeUsage>empty();
+        final var var2 = TypeVariableUsage.of(codeModel, variableName, Optional.empty(), Optional.of(lazyGeneric2));
+        final var generic2 = GenericTypeUsage.of(codeModel, name, Stream.of(lazyVariable2));
+        lazyVariable2.set(var2);
+        lazyGeneric2.set(generic2);
+
+        assertThat(var1).isEqualTo(var2);
     }
 
     // --- AnnotationTypeUsage ---
