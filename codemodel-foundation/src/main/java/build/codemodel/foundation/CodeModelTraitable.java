@@ -151,8 +151,6 @@ class CodeModelTraitable
         final var trait = traitSupplier.apply((C) this.object);
         final var registrationClass = getRegistrationClass(trait.getClass());
 
-        this.codeModel.index().unindex(this.object);
-
         if (isSingular(registrationClass)) {
             this.singularTraitsByClass.compute(registrationClass, (_, existing) -> {
                 if (existing != null) {
@@ -187,7 +185,7 @@ class CodeModelTraitable
             });
         }
 
-        this.codeModel.index().index(this.object);
+        this.codeModel.index().reindexDynamic(this.object);
         return trait;
     }
 
@@ -200,8 +198,6 @@ class CodeModelTraitable
         final var removed = Lazy.<Boolean>empty();
 
         final var registrationClass = getRegistrationClass(trait.getClass());
-
-        this.codeModel.index().unindex(this.object);
 
         if (isSingular(registrationClass)) {
             this.singularTraitsByClass.compute(registrationClass, (_, existing) -> {
@@ -249,7 +245,7 @@ class CodeModelTraitable
             });
         }
 
-        this.codeModel.index().index(this.object);
+        this.codeModel.index().reindexDynamic(this.object);
         return removed.get();
     }
 
@@ -264,8 +260,6 @@ class CodeModelTraitable
         final var traitable = (C) this.object;
         final var lazyTrait = Lazy.<T>empty();
         final var registrationClass = getRegistrationClass(traitClass);
-
-        this.codeModel.index().unindex(this.object);
 
         if (isSingular(registrationClass)) {
             this.singularTraitsByClass.compute(registrationClass, (_, existing) -> {
@@ -325,7 +319,7 @@ class CodeModelTraitable
             });
         }
 
-        this.codeModel.index().index(this.object);
+        this.codeModel.index().reindexDynamic(this.object);
         return lazyTrait.optional();
     }
 
@@ -340,8 +334,6 @@ class CodeModelTraitable
         final var traitable = (C) this.object;
         final var lazyTrait = Lazy.<T>empty();
         final var registrationClass = getRegistrationClass(traitClass);
-
-        this.codeModel.index().unindex(this.object);
 
         if (isSingular(registrationClass)) {
             this.singularTraitsByClass.compute(registrationClass, (_, existing) -> {
@@ -412,7 +404,7 @@ class CodeModelTraitable
             });
         }
 
-        this.codeModel.index().index(this.object);
+        this.codeModel.index().reindexDynamic(this.object);
         return lazyTrait.optional();
     }
 

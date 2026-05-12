@@ -43,6 +43,7 @@ open module build.codemodel.jdk {
     requires build.base.parsing;
     requires build.base.version;
     requires build.base.mereology;
+    requires build.base.query;
 
     exports build.codemodel.jdk;
     exports build.codemodel.jdk.descriptor;

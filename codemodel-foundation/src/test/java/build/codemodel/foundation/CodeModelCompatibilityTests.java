@@ -2,6 +2,7 @@ package build.codemodel.foundation;
 
 import build.base.foundation.stream.Streamable;
 import build.base.marshalling.Marshalling;
+import build.base.query.Dynamic;
 import build.base.query.Indexable;
 import build.base.telemetry.Location;
 import build.codemodel.foundation.descriptor.AbstractTypeDescriptor;
@@ -679,6 +680,7 @@ public interface CodeModelCompatibilityTests
          * An {@link Indexable} method to determine if the {@link ColorableTypeDescriptor} has a {@link Color}
          * {@link Trait}.
          */
+        @Dynamic
         @Indexable
         public static final Function<ColorableTypeDescriptor, Boolean> HAS_COLOR = ColorableTypeDescriptor::hasColor;
     }

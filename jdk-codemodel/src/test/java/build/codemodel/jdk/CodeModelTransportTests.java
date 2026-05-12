@@ -5,6 +5,7 @@ import build.base.marshalling.Marshalling;
 import build.base.transport.json.JsonTransport;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.TypeDescriptor;
+import build.codemodel.foundation.naming.IrreducibleName;
 import build.codemodel.foundation.naming.NameProvider;
 import build.codemodel.foundation.naming.NonCachingNameProvider;
 import build.codemodel.foundation.naming.TypeName;
@@ -12,11 +13,13 @@ import build.codemodel.foundation.transport.IrreducibleNameTransformer;
 import build.codemodel.foundation.transport.ModuleNameTransformer;
 import build.codemodel.foundation.transport.NamespaceTransformer;
 import build.codemodel.foundation.transport.TypeNameTransformer;
+import build.codemodel.jdk.descriptor.JDKTypeDescriptor;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -41,6 +44,16 @@ class CodeModelTransportTests {
         // establish a CodeModel
         final var nameProvider = new NonCachingNameProvider();
         final var codeModel = new JDKCodeModel(nameProvider);
+
+        final var module = nameProvider.getModuleName("java.base");
+        final var namespace = nameProvider.getNamespace("java.lang");
+        final var stringName = nameProvider.getTypeName(module, namespace, Optional.empty(), IrreducibleName.of("String"));
+
+        final var stringTypeDescriptor = codeModel.match(JDKTypeDescriptor.class)
+            .where(TypeDescriptor::typeName)
+            .isEqualTo(stringName)
+            .findFirst();
+        assertThat(stringTypeDescriptor).isNotEmpty();
 
         // establish a Marshaller with the NameProvider for marshalling/unmarshalling CodeModels
         // (CodeModels have a natural dependency on NameProviders)
@@ -77,10 +90,16 @@ class CodeModelTransportTests {
 
         // unmarshal the CodeModel from the Marshalled<CodeModel>
         final var unmarshalled = marshaller.unmarshal(transported);
+        final var unmarshalledStringTypeDescriptor = unmarshalled.match(JDKTypeDescriptor.class)
+            .where(TypeDescriptor::typeName)
+            .isEqualTo(stringName)
+            .findFirst();
 
         // at least ensure that the unmarshalled isn't null!
         assertThat(unmarshalled)
             .isNotNull();
+
+        assertThat(unmarshalledStringTypeDescriptor).isNotEmpty();
 
         // ensure that the TypeDescriptors are present
         assertThat(unmarshalled.typeDescriptors()
