@@ -889,12 +889,17 @@ public class JDKCodeModel
 
                 // other classes
                 String.class,
+                Number.class,
 
                 // classes for which we don't require discovery
+                Annotation.class,
+                Comparable.class,
                 Class.class,
+                Enum.class,
                 ClassLoader.class,
                 Object.class,
                 Optional.class,
+                Record.class,
                 Stream.class,
                 Throwable.class,
                 Exception.class)

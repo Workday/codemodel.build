@@ -100,6 +100,11 @@ public abstract class AbstractParentTypeDescriptor
     }
 
     @Override
+    public String toString() {
+        return this.parentTypeUsage.toString();
+    }
+
+    @Override
     public Stream<? extends Composite> compositeChildren() {
         return Stream.of(parentTypeUsage());
     }

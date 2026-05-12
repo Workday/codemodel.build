@@ -8,6 +8,7 @@ import build.codemodel.foundation.descriptor.TypeDescriptor;
 import build.codemodel.foundation.naming.NameProvider;
 import build.codemodel.foundation.naming.NonCachingNameProvider;
 import build.codemodel.foundation.naming.TypeName;
+import build.codemodel.foundation.transport.IrreducibleNameTransformer;
 import build.codemodel.foundation.transport.ModuleNameTransformer;
 import build.codemodel.foundation.transport.NamespaceTransformer;
 import build.codemodel.foundation.transport.TypeNameTransformer;
@@ -59,6 +60,7 @@ class CodeModelTransportTests {
         // (encoding/decoding some CodeModel types as primitive types)
         transport.register(new ModuleNameTransformer(nameProvider));
         transport.register(new NamespaceTransformer(nameProvider));
+        transport.register(new IrreducibleNameTransformer(nameProvider));
         transport.register(new TypeNameTransformer(nameProvider));
 
         // establish a String-based Writer into which to write the Json

@@ -354,7 +354,7 @@ class JDKCodeModelTests {
             .containsExactly(parentTypeDescriptor, typeDescriptor);
 
         assertThat(codeModel.roots())
-            .hasSize(9);
+            .hasSize(11);
     }
 
     /**
