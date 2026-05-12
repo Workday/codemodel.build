@@ -147,15 +147,23 @@ public abstract class AbstractCodeModel
             .forEach(this::addTrait);
 
         typeDescriptors.map(marshaller::unmarshal)
-            .forEach(typeDescriptor -> this.typeDescriptors
-                .put(typeDescriptor.typeName(), typeDescriptor));
+            .forEach(typeDescriptor -> {
+                this.typeDescriptors.put(typeDescriptor.typeName(), typeDescriptor);
+                onCreatedTypeDescriptor(typeDescriptor);
+                this.index.index(typeDescriptor);
+            });
 
         moduleDescriptors.map(marshaller::unmarshal)
-            .forEach(moduleDescriptor -> this.moduleDescriptors.put(moduleDescriptor.moduleName(), moduleDescriptor));
+            .forEach(moduleDescriptor -> {
+                this.moduleDescriptors.put(moduleDescriptor.moduleName(), moduleDescriptor);
+                this.index.index(moduleDescriptor);
+            });
 
         namespaceDescriptors.map(marshaller::unmarshal)
-            .forEach(namespaceDescriptor -> this.namespaceDescriptors
-                .put(namespaceDescriptor.namespace(), namespaceDescriptor));
+            .forEach(namespaceDescriptor -> {
+                this.namespaceDescriptors.put(namespaceDescriptor.namespace(), namespaceDescriptor);
+                this.index.index(namespaceDescriptor);
+            });
     }
 
     /**

@@ -50,6 +50,10 @@
             <groupId>build.base</groupId>
             <artifactId>base-marshalling</artifactId>
         </dependency>
+        <dependency>
+            <groupId>build.base</groupId>
+            <artifactId>base-query</artifactId>
+        </dependency>
 
         <dependency>
             <groupId>build.codemodel</groupId>
@@ -138,6 +142,10 @@
                         <!-- required in module-info.java but no direct class imports -->
                         <ignoredUnusedDeclaredDependency>build.base:base-telemetry-foundation</ignoredUnusedDeclaredDependency>
                     </ignoredUnusedDeclaredDependencies>
+                    <ignoredNonTestScopedDependencies>
+                        <!-- no separate test module-info is feasible with Maven's single-module constraint -->
+                        <ignoredNonTestScopedDependency>build.base:base-query</ignoredNonTestScopedDependency>
+                    </ignoredNonTestScopedDependencies>
                 </configuration>
             </plugin>
         </plugins>

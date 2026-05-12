@@ -96,10 +96,10 @@ public interface TypeDescriptorCompatibilityTests
             .findAll())
             .hasSize(2);
 
-        // the following returns 0 as the CustomTrait is not @Indexable itself
+        // both CustomTrait instances are indexed — @Indexable on NAME is sufficient
         assertThat(codeModel.match(CustomTrait.class)
             .findAll())
-            .hasSize(0);
+            .hasSize(2);
     }
 
     /**

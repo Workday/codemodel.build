@@ -2,7 +2,9 @@ package build.codemodel.foundation;
 
 import build.base.foundation.stream.Streamable;
 import build.base.marshalling.Marshalling;
+import build.base.mereology.Composites;
 import build.base.mereology.Strategy;
+import build.base.query.Dynamic;
 import build.base.query.Indexable;
 import build.codemodel.foundation.descriptor.AbstractTraitable;
 import build.codemodel.foundation.descriptor.PolymorphicModuleDescriptor;
@@ -173,6 +175,21 @@ class ConceptualCodeModelTests
     }
 
     @Test
+    void shouldVerifyCodeModelCompositionIsIntact() {
+        final var codeModel = createEmptyCodeModel();
+        final var nameProvider = codeModel.getNameProvider();
+
+        final var typeName = nameProvider.getTypeName("Car");
+        final var typeDescriptor = codeModel.createTypeDescriptor(typeName);
+        typeDescriptor.addTrait(Color.RED);
+        typeDescriptor.addTrait(Speed.FAST);
+        typeDescriptor.createTrait(Wheel::new);
+
+        assertThat(Composites.verify(codeModel, c -> c instanceof TypeDescriptor td && td.hasTraits()))
+            .isEmpty();
+    }
+
+    @Test
     void shouldCreateTypeDescriptorWithTraitSuppliers() {
         final var codeModel = createEmptyCodeModel();
         final var typeName = codeModel.getNameProvider().getTypeName("Car");
@@ -317,6 +334,7 @@ class ConceptualCodeModelTests
                 .orElse(null);
         }
 
+        @Dynamic
         @Indexable
         public static final Function<Wheel, Color> COLOR = Wheel::color;
     }
