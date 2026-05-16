@@ -81,6 +81,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.ServiceLoader;
@@ -1110,7 +1111,7 @@ public class AnnotationProcessor
         annotationMirror.getElementValues()
             .forEach((executableElement, annotatedElement) -> {
                 final var name = nameProvider.getIrreducibleName(executableElement.getSimpleName());
-                final var value = annotatedElement.getValue();
+                final var value = resolveAnnotationValue(enclosingElement, annotatedElement.getValue());
                 final var valueLocation = annotationLocation
                     .map(location -> location.createAnnotationValueLocation(annotatedElement));
 
@@ -1126,6 +1127,27 @@ public class AnnotationProcessor
         annotationLocation.ifPresent(annotationTypeUsage::addTrait);
 
         return annotationTypeUsage;
+    }
+
+    private AnnotationValue.Value resolveAnnotationValue(final Element enclosingElement, final Object raw) {
+        return switch (raw) {
+            case AnnotationMirror nestedMirror ->
+                new AnnotationValue.Value.Nested(createAnnotationTypeUsage(enclosingElement, nestedMirror));
+            case javax.lang.model.element.AnnotationValue av ->
+                resolveAnnotationValue(enclosingElement, av.getValue());
+            case List<?> list ->
+                new AnnotationValue.Value.Array(list.stream()
+                    .map(item -> resolveAnnotationValue(enclosingElement, item))
+                    .toList());
+            case TypeMirror typeMirror ->
+                new AnnotationValue.Value.ClassRef(
+                    this.lazyCodeModel.get().getNameProvider().getTypeName(Optional.empty(), typeMirror.toString()));
+            case VariableElement varElement ->
+                new AnnotationValue.Value.EnumConstant(
+                    getTypeName(varElement.getEnclosingElement()),
+                    varElement.getSimpleName().toString());
+            default -> new AnnotationValue.Value.Literal(raw);
+        };
     }
 
     /**

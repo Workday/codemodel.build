@@ -695,7 +695,24 @@ public class JDKCodeModel
             .map(method -> {
                 try {
                     final var name = nameProvider.getIrreducibleName(method.getName());
-                    final var value = method.invoke(annotation);
+                    final var raw = method.invoke(annotation);
+                    final AnnotationValue.Value value = switch (raw) {
+                        case Annotation nested -> new AnnotationValue.Value.Nested(getAnnotation(nested));
+                        case Class<?> clazz -> new AnnotationValue.Value.ClassRef(nameProvider.getTypeName(clazz));
+                        case Enum<?> e -> new AnnotationValue.Value.EnumConstant(
+                            nameProvider.getTypeName(e.getDeclaringClass()), e.name());
+                        case Object[] arr -> new AnnotationValue.Value.Array(
+                            java.util.Arrays.stream(arr)
+                                .map(item -> (AnnotationValue.Value) switch (item) {
+                                    case Annotation nested -> new AnnotationValue.Value.Nested(getAnnotation(nested));
+                                    case Class<?> clazz -> new AnnotationValue.Value.ClassRef(nameProvider.getTypeName(clazz));
+                                    case Enum<?> e -> new AnnotationValue.Value.EnumConstant(
+                                        nameProvider.getTypeName(e.getDeclaringClass()), e.name());
+                                    default -> new AnnotationValue.Value.Literal(item);
+                                })
+                                .toList());
+                        default -> new AnnotationValue.Value.Literal(raw);
+                    };
                     return AnnotationValue.of(this, name, value);
                 } catch (final IllegalAccessException | InvocationTargetException e) {
                     throw new IllegalStateException(e);

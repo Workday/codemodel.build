@@ -709,12 +709,33 @@ public class JdkInitializer
         final var values = new ArrayList<AnnotationValue>();
         mirror.getElementValues().forEach((exec, val) -> {
             final var valueName = nameProvider.getIrreducibleName(exec.getSimpleName());
-            values.add(AnnotationValue.of(codeModel, valueName, val.getValue()));
+            values.add(AnnotationValue.of(codeModel, valueName, resolveAnnotationValue(enclosing, val.getValue())));
         });
         return AnnotationTypeUsage.of(codeModel, annotationTypeName, values.stream());
     }
 
-    private build.codemodel.foundation.naming.TypeName resolveElementTypeName(final Element element) {
+    private AnnotationValue.Value resolveAnnotationValue(final Element enclosing, final Object raw) {
+        return switch (raw) {
+            case AnnotationMirror nestedMirror ->
+                new AnnotationValue.Value.Nested(createAnnotationTypeUsage(enclosing, nestedMirror));
+            case javax.lang.model.element.AnnotationValue av ->
+                resolveAnnotationValue(enclosing, av.getValue());
+            case List<?> list ->
+                new AnnotationValue.Value.Array(list.stream()
+                    .map(item -> resolveAnnotationValue(enclosing, item))
+                    .toList());
+            case TypeMirror typeMirror ->
+                new AnnotationValue.Value.ClassRef(
+                    nameProvider.getTypeName(Optional.empty(), typeMirror.toString()));
+            case VariableElement varElement ->
+                new AnnotationValue.Value.EnumConstant(
+                    resolveElementTypeName(varElement.getEnclosingElement()),
+                    varElement.getSimpleName().toString());
+            default -> new AnnotationValue.Value.Literal(raw);
+        };
+    }
+
+    private TypeName resolveElementTypeName(final Element element) {
         if (element instanceof TypeElement typeElement) {
             final var fqn = typeElement.getQualifiedName().toString();
             if (!fqn.isEmpty()) {
