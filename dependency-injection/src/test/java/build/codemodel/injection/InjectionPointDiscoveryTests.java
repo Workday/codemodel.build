@@ -96,6 +96,7 @@ class InjectionPointDiscoveryTests
                 .canonicalName().equals(Named.class.getCanonicalName()))
             .flatMap(AnnotationTypeUsage::values)
             .map(AnnotationValue::value))
+            .map(AnnotationValue.Value::toString)
             .containsOnly("FirstName", "LastName", "Age");
     }
 
@@ -127,6 +128,7 @@ class InjectionPointDiscoveryTests
                 canonicalName().equals(Named.class.getCanonicalName()))
             .flatMap(AnnotationTypeUsage::values)
             .map(AnnotationValue::value))
+            .map(AnnotationValue.Value::toString)
             .containsOnly("FirstName", "LastName", "Age");
     }
 
@@ -160,6 +162,7 @@ class InjectionPointDiscoveryTests
                 .canonicalName().equals(Named.class.getCanonicalName()))
             .flatMap(AnnotationTypeUsage::values)
             .map(AnnotationValue::value))
+            .map(AnnotationValue.Value::toString)
             .containsOnly("FirstName", "LastName", "Age");
     }
 
@@ -191,6 +194,7 @@ class InjectionPointDiscoveryTests
                 canonicalName().equals(Named.class.getCanonicalName()))
             .flatMap(AnnotationTypeUsage::values)
             .map(AnnotationValue::value))
+            .map(AnnotationValue.Value::toString)
             .containsOnly("FirstName", "LastName", "Age");
     }
 
@@ -253,6 +257,7 @@ class InjectionPointDiscoveryTests
                 canonicalName().equals(Named.class.getCanonicalName()))
             .flatMap(AnnotationTypeUsage::values)
             .map(AnnotationValue::value))
+            .map(AnnotationValue.Value::toString)
             .containsOnly("FirstName", "LastName", "Age");
     }
 

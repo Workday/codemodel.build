@@ -3,6 +3,7 @@ package build.codemodel.jdk;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.naming.NonCachingNameProvider;
 import build.codemodel.foundation.usage.AnnotationTypeUsage;
+import build.codemodel.foundation.usage.AnnotationValue;
 import build.codemodel.foundation.usage.GenericTypeUsage;
 import build.codemodel.foundation.usage.NamedTypeUsage;
 import build.codemodel.foundation.usage.SpecificTypeUsage;
@@ -397,5 +398,65 @@ class JdkInitializerTests {
         final var typeUsages = personFactoryTd.parts(TypeUsage.class).toList();
         final var allTypeUsages = personFactoryTd.composition(TypeUsage.class).toList();
         System.out.println();
+    }
+
+    @Test
+    void shouldStoreRepeatableAnnotationValuesAsAnnotationTypeUsages() {
+        // When @Tag is @Repeatable(Tags.class) and a class uses @Tag twice, the compiler wraps
+        // them in @Tags({@Tag(...), @Tag(...)}). The nested @Tag values must be stored as
+        // AnnotationTypeUsage instances, not raw AnnotationMirror objects.
+        final var source = JavaFileObjects.forSourceString("com.example.Annotated", """
+            package com.example;
+
+            import java.lang.annotation.*;
+
+            @Retention(RetentionPolicy.RUNTIME)
+            @Repeatable(Tags.class)
+            @interface Tag { String value(); }
+
+            @Retention(RetentionPolicy.RUNTIME)
+            @interface Tags { Tag[] value(); }
+
+            @Tag("foo")
+            @Tag("bar")
+            public class Annotated {}
+            """);
+        final var codeModel = runInternal(new JdkInitializer(List.of(), List.of(), List.of(source)));
+        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Annotated");
+        final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
+
+        // The type should have @Tags as its top-level annotation
+        final var tagsUsage = descriptor.traits(AnnotationTypeUsage.class)
+            .filter(a -> a.typeName().name().toString().equals("Tags"))
+            .findFirst()
+            .orElseThrow(() -> new AssertionError("Expected @Tags annotation"));
+
+        // The value attribute inside @Tags should be a List of AnnotationTypeUsage, not raw mirrors
+        final var valueAttr = tagsUsage.values()
+            .filter(av -> av.name().toString().equals("value"))
+            .findFirst()
+            .orElseThrow();
+
+        assertThat(valueAttr.value()).isInstanceOf(AnnotationValue.Value.Array.class);
+        final var array = (AnnotationValue.Value.Array) valueAttr.value();
+        assertThat(array.elements()).hasSize(2);
+        assertThat(array.elements()).allSatisfy(item ->
+            assertThat(item).as("nested annotation value should be Value.Nested, not a raw mirror")
+                .isInstanceOf(AnnotationValue.Value.Nested.class));
+
+        // And the nested @Tag types should have the right name and values
+        final var tagNames = array.elements().stream()
+            .map(AnnotationValue.Value.Nested.class::cast)
+            .map(n -> n.annotation().typeName().name().toString())
+            .toList();
+        assertThat(tagNames).containsExactly("Tag", "Tag");
+
+        final var tagValues = array.elements().stream()
+            .map(AnnotationValue.Value.Nested.class::cast)
+            .map(AnnotationValue.Value.Nested::annotation)
+            .flatMap(AnnotationTypeUsage::values)
+            .map(av -> av.value().toString())
+            .toList();
+        assertThat(tagValues).containsExactlyInAnyOrder("foo", "bar");
     }
 }

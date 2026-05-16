@@ -29,6 +29,7 @@ import build.base.marshalling.Marshaller;
 import build.base.marshalling.Marshalling;
 import build.base.marshalling.Out;
 import build.base.marshalling.Unmarshal;
+import build.base.mereology.Composite;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.naming.TypeName;
@@ -120,6 +121,11 @@ public class AnnotationTypeUsage
      * @return the {@link Stream} {@link AnnotationValue}s
      */
     public Stream<AnnotationValue> values() {
+        return this.values.stream();
+    }
+
+    @Override
+    protected Stream<? extends Composite> compositeChildren() {
         return this.values.stream();
     }
 

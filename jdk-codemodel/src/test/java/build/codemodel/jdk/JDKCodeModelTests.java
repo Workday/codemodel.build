@@ -192,7 +192,7 @@ class JDKCodeModelTests {
             .values()
             .findFirst()
             .orElseThrow()
-            .as(String.class))
+            .toString())
             .contains("Calculates the full name");
 
         assertThat(typeDescriptor.traits(FieldDescriptor.class))
