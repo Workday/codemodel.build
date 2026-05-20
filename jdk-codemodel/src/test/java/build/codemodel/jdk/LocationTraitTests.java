@@ -20,7 +20,7 @@ package build.codemodel.jdk;
  * #L%
  */
 
-import build.codemodel.jdk.descriptor.LocationTrait;
+import build.codemodel.jdk.descriptor.SourceLocation;
 import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
 import com.google.testing.compile.JavaFileObjects;
@@ -56,8 +56,8 @@ class LocationTraitTests {
         final var field = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(FieldDescriptor.class).findFirst().orElseThrow();
 
-        assertThat(field.getTrait(LocationTrait.class)).isPresent();
-        final var location = field.getTrait(LocationTrait.class).orElseThrow();
+        assertThat(field.getTrait(SourceLocation.FilePosition.class)).isPresent();
+        final var location = field.getTrait(SourceLocation.FilePosition.class).orElseThrow();
         assertThat(location.startPosition()).isGreaterThanOrEqualTo(0);
         assertThat(location.endPosition()).isGreaterThan(location.startPosition());
     }
@@ -79,8 +79,8 @@ class LocationTraitTests {
         final var method = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(MethodDescriptor.class).findFirst().orElseThrow();
 
-        assertThat(method.getTrait(LocationTrait.class)).isPresent();
-        final var location = method.getTrait(LocationTrait.class).orElseThrow();
+        assertThat(method.getTrait(SourceLocation.FilePosition.class)).isPresent();
+        final var location = method.getTrait(SourceLocation.FilePosition.class).orElseThrow();
         assertThat(location.startPosition()).isGreaterThanOrEqualTo(0);
         assertThat(location.endPosition()).isGreaterThan(location.startPosition());
     }
@@ -105,12 +105,12 @@ class LocationTraitTests {
         final var firstPos = descriptor.traits(FieldDescriptor.class)
             .filter(f -> f.fieldName().toString().equals("first"))
             .findFirst().orElseThrow()
-            .getTrait(LocationTrait.class).orElseThrow().startPosition();
+            .getTrait(SourceLocation.FilePosition.class).orElseThrow().startPosition();
 
         final var secondPos = descriptor.traits(FieldDescriptor.class)
             .filter(f -> f.fieldName().toString().equals("second"))
             .findFirst().orElseThrow()
-            .getTrait(LocationTrait.class).orElseThrow().startPosition();
+            .getTrait(SourceLocation.FilePosition.class).orElseThrow().startPosition();
 
         assertThat(secondPos).isGreaterThan(firstPos);
     }

@@ -9,9 +9,9 @@ package build.codemodel.annotation.processing;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -30,27 +30,13 @@ import build.base.telemetry.foundation.ObservableTelemetryRecorder;
 import build.codemodel.annotation.discovery.AnnotationDiscovery;
 import build.codemodel.annotation.discovery.Discoverable;
 import build.codemodel.foundation.CodeModel;
-import build.codemodel.foundation.descriptor.FormalParameterDescriptor;
-import build.codemodel.foundation.descriptor.ThrowableDescriptor;
 import build.codemodel.foundation.descriptor.TypeDescriptor;
 import build.codemodel.foundation.naming.CachingNameProvider;
-import build.codemodel.foundation.naming.IrreducibleName;
 import build.codemodel.foundation.naming.NameProvider;
 import build.codemodel.foundation.naming.NonCachingNameProvider;
 import build.codemodel.foundation.naming.TypeName;
-import build.codemodel.foundation.usage.AnnotationTypeUsage;
-import build.codemodel.foundation.usage.AnnotationValue;
-import build.codemodel.foundation.usage.ArrayTypeUsage;
-import build.codemodel.foundation.usage.GenericTypeUsage;
-import build.codemodel.foundation.usage.IntersectionTypeUsage;
-import build.codemodel.foundation.usage.NamedTypeUsage;
 import build.codemodel.foundation.usage.SpecificTypeUsage;
 import build.codemodel.foundation.usage.TypeUsage;
-import build.codemodel.foundation.usage.TypeVariableUsage;
-import build.codemodel.foundation.usage.UnionTypeUsage;
-import build.codemodel.foundation.usage.UnknownTypeUsage;
-import build.codemodel.foundation.usage.VoidTypeUsage;
-import build.codemodel.foundation.usage.WildcardTypeUsage;
 import build.codemodel.framework.Framework;
 import build.codemodel.framework.Plugin;
 import build.codemodel.framework.builder.FrameworkBuilder;
@@ -62,26 +48,19 @@ import build.codemodel.framework.initialization.Enricher;
 import build.codemodel.framework.initialization.Initializer;
 import build.codemodel.injection.InjectionFramework;
 import build.codemodel.jdk.JDKCodeModel;
-import build.codemodel.jdk.descriptor.JDKClassTypeDescriptor;
-import build.codemodel.jdk.descriptor.JDKInterfaceTypeDescriptor;
-import build.codemodel.jdk.descriptor.MethodImplementationDescriptor;
-import build.codemodel.jdk.descriptor.Static;
-import build.codemodel.objectoriented.descriptor.AccessModifier;
-import build.codemodel.objectoriented.descriptor.Classification;
+import build.codemodel.jdk.TypeMirrorResolver;
+import build.codemodel.jdk.descriptor.JDKTypeDescriptor;
+import build.codemodel.jdk.descriptor.SourceLocation;
 import build.codemodel.objectoriented.descriptor.ExtendsTypeDescriptor;
 import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 import build.codemodel.objectoriented.descriptor.ImplementsTypeDescriptor;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
-import build.codemodel.objectoriented.descriptor.ParameterizedTypeDescriptor;
-import build.codemodel.objectoriented.naming.MethodName;
 
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.ServiceLoader;
@@ -90,7 +69,6 @@ import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Filer;
 import javax.annotation.processing.Messager;
@@ -99,27 +77,11 @@ import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.SupportedSourceVersion;
 import javax.lang.model.SourceVersion;
-import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
-import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
-import javax.lang.model.type.ArrayType;
-import javax.lang.model.type.DeclaredType;
-import javax.lang.model.type.ErrorType;
-import javax.lang.model.type.ExecutableType;
-import javax.lang.model.type.IntersectionType;
-import javax.lang.model.type.NoType;
-import javax.lang.model.type.NullType;
-import javax.lang.model.type.PrimitiveType;
-import javax.lang.model.type.TypeKind;
-import javax.lang.model.type.TypeMirror;
-import javax.lang.model.type.TypeVariable;
-import javax.lang.model.type.TypeVisitor;
-import javax.lang.model.type.UnionType;
-import javax.lang.model.type.WildcardType;
 
 /**
  * A {@link Processor} to discover, reverse-engineer and process discoverable annotations from source and byte code.
@@ -144,9 +106,9 @@ public class AnnotationProcessor
     private final ArrayList<AnnotationDiscovery> annotationDiscoveries;
 
     /**
-     * The {@link TypeName}s resolved for {@link TypeElement}s.
+     * The {@link Lazy} initialized {@link TypeMirrorResolver} for resolving {@link javax.lang.model.type.TypeMirror}s.
      */
-    private final HashMap<TypeElement, TypeName> typeNames;
+    private final Lazy<TypeMirrorResolver> lazyResolver;
 
     /**
      * The {@link Lazy} initialized {@link TelemetryRecorder} for building {@link CodeModel}s.
@@ -180,13 +142,13 @@ public class AnnotationProcessor
         super();
 
         this.annotationDiscoveries = new ArrayList<>();
-        this.typeNames = new HashMap<>();
 
         this.lazyTelemetryRecorder = Lazy.empty();
         this.lazyFramework = Lazy.empty();
         this.lazyCodeModel = Lazy.empty();
         this.capturedCompilation = Capture.empty();
         this.lazyExcludedTypesPredicate = Lazy.empty();
+        this.lazyResolver = Lazy.empty();
     }
 
     @Override
@@ -236,8 +198,7 @@ public class AnnotationProcessor
                 .map(Pattern::compile)
                 .map(Pattern::asPredicate)
                 .map(this.lazyExcludedTypesPredicate::set);
-        }
-        catch (final PatternSyntaxException e) {
+        } catch (final PatternSyntaxException e) {
             telemetryRecorder.warn(
                 "The Code Model AnnotationProcessor option %s cannot be parsed as a regular expression", e);
         }
@@ -312,7 +273,7 @@ public class AnnotationProcessor
                 .filter(TypeElement.class::isInstance)
                 .map(TypeElement.class::cast)
                 .forEach(typeElement -> {
-                    final var typeName = getTypeName(typeElement);
+                    final var typeName = resolver().resolveTypeName(typeElement);
                     include(codeModel, typeName, typeElement, pending);
                 });
 
@@ -341,20 +302,20 @@ public class AnnotationProcessor
                             + typeDescriptor.typeName()
                             + (typeDescriptor.traits(ExtendsTypeDescriptor.class).findFirst().isPresent()
                             ? " extends " + typeDescriptor.traits(ExtendsTypeDescriptor.class)
-                            .map(ExtendsTypeDescriptor::parentTypeUsage)
-                            .map(Objects::toString)
-                            .collect(Collectors.joining(", "))
+                                            .map(ExtendsTypeDescriptor::parentTypeUsage)
+                                            .map(Objects::toString)
+                                            .collect(Collectors.joining(", "))
                             : "")
                             + (typeDescriptor.traits(ImplementsTypeDescriptor.class).findFirst().isPresent()
                             ? " implements " + typeDescriptor.traits(ImplementsTypeDescriptor.class)
-                            .map(ImplementsTypeDescriptor::parentTypeUsage)
-                            .map(Objects::toString)
-                            .collect(Collectors.joining(", "))
+                                               .map(ImplementsTypeDescriptor::parentTypeUsage)
+                                               .map(Objects::toString)
+                                               .collect(Collectors.joining(", "))
                             : "")
                             + (typeDescriptor.traits().findFirst().isPresent()
                             ? " Traits["
-                            + typeDescriptor.traits().map(Object::getClass).map(Class::getSimpleName)
-                            .collect(Collectors.joining(", ")) + "]"
+                              + typeDescriptor.traits().map(Object::getClass).map(Class::getSimpleName)
+                                .collect(Collectors.joining(", ")) + "]"
                             : "")));
 
                     // --------
@@ -363,8 +324,7 @@ public class AnnotationProcessor
                     framework.compile(codeModel, telemetryRecorder)
                         .ifPresentOrElse(this.capturedCompilation::set, this.capturedCompilation::clear);
                 });
-        }
-        else {
+        } else {
             // --------
             // STAGE 4: Complete Processing (the last round without any Annotations to Process)
 
@@ -384,7 +344,7 @@ public class AnnotationProcessor
     /**
      * Includes the specified {@link TypeUsage} for discovery should it not already discovered or pending discovery.
      *
-     * @param codeModel       the {@link CodeModel}
+     * @param codeModel        the {@link CodeModel}
      * @param typeUsage        the {@link TypeUsage}
      * @param enclosingElement the {@link Element} in which the {@link TypeUsage} is defined
      * @param pending          the pending {@link TypeElement}s to process
@@ -403,7 +363,7 @@ public class AnnotationProcessor
     /**
      * Includes the specified {@link TypeName} for discovery should it not already discovered or pending discovery.
      *
-     * @param codeModel       the {@link CodeModel}
+     * @param codeModel        the {@link CodeModel}
      * @param typeName         the {@link TypeName}
      * @param enclosingElement the {@link Element} in which the {@link TypeUsage} is defined
      * @param pending          the pending {@link TypeElement}s to process
@@ -436,8 +396,7 @@ public class AnnotationProcessor
                             messager.printWarning("Failed to determine TypeElement for " + typeName.canonicalName(),
                                 enclosingElement);
                         }
-                    }
-                    else {
+                    } else {
                         pending.putLast(typeName, typeElement);
                     }
                 }
@@ -459,400 +418,23 @@ public class AnnotationProcessor
             && Introspection.primitives().anyMatch(primitive -> typeName.name().toString().equals(primitive.getName()));
     }
 
-    /**
-     * Obtains a {@link TypeName} for the specified {@link TypeElement}.
-     *
-     * @param element the {@link TypeElement}
-     * @return the {@link TypeName}
-     */
-    private TypeName getTypeName(final TypeElement element) {
-
-        final var existing = this.typeNames.get(element);
-        if (existing != null) {
-            return existing;
-        }
-
-        // attempt to determine the TypeName based on the Element
-        final var typeName = getTypeName((Element) element);
-
-        // notify the bridge of the TypeName for the TypeElement
-        this.typeNames.putIfAbsent(element, typeName);
-
-        return typeName;
-    }
-
-    /**
-     * Obtains a {@link TypeName} for the specified {@link Element}.
-     *
-     * @param element the {@link Element}
-     * @return the {@link TypeName}
-     */
-    private TypeName getTypeName(final Element element) {
-
-        final var processing = this.processingEnv;
-        final var elements = processing.getElementUtils();
-        final var codeModel = this.lazyCodeModel.get();
-        final var naming = codeModel.getNameProvider();
-
-        // determine the Module
-        final var moduleName = Optional.ofNullable(elements.getModuleOf(element))
-            .flatMap(moduleElement -> moduleElement.getQualifiedName().isEmpty()
-                ? Optional.empty()
-                : Optional.of(moduleElement))
-            .flatMap(moduleElement -> naming.getModuleName(moduleElement.getQualifiedName()));
-
-        // determine the Namespace
-        final var namespace = Optional.ofNullable(elements.getPackageOf(element))
-            .flatMap(packageElement -> packageElement.getQualifiedName().isEmpty()
-                ? Optional.empty()
-                : Optional.of(packageElement))
-            .flatMap(packageElement -> naming.getNamespace(packageElement.getQualifiedName()));
-
-        // determine the enclosing TypeName
-        // (do this by determining the TypeName of the enclosing element - if it's a TypeElement!)
-        final var enclosingElement = element.getEnclosingElement();
-        final var enclosingTypeName = enclosingElement instanceof TypeElement enclosingTypeElement
-            ? Optional.of(getTypeName(enclosingTypeElement))
-            : Optional.<TypeName>empty();
-
-        // determine the name of the Type
-        final var name = naming.getIrreducibleName(element.getSimpleName());
-
-        // create a TypeName
-        return naming.getTypeName(moduleName, namespace, enclosingTypeName, name);
-    }
-
-    /**
-     * Obtain the {@link TypeUsage} specified by the provided {@link TypeMirror} within the provided
-     * enclosing {@link Element}.
-     *
-     * @param typeMirror       the {@link TypeMirror}
-     * @param enclosingElement the enclosing {@link Element}
-     * @return the {@link TypeUsage}
-     */
-    private TypeUsage resolveTypeUsage(final TypeMirror typeMirror,
-                                       final Element enclosingElement) {
-
-        final var types = this.processingEnv.getTypeUtils();
-        final var elements = this.processingEnv.getElementUtils();
-        final var messager = this.processingEnv.getMessager();
-        final var codeModel = this.lazyCodeModel.get();
-        final var nameProvider = codeModel.getNameProvider();
-        final var recorder = this.lazyTelemetryRecorder.get();
-
-        final var pending = new LinkedHashMap<TypeMirror, Lazy<TypeUsage>>();
-        final var enclosing = new HashMap<TypeMirror, Element>();
-        final var resolved = new LinkedHashMap<TypeMirror, TypeUsage>();
-        final var annotations = new HashMap<TypeMirror, ArrayList<AnnotationTypeUsage>>();
-
-        pending.put(typeMirror, Lazy.empty());
-        enclosing.put(typeMirror, enclosingElement);
-
-        while (!pending.isEmpty()) {
-
-            final var entry = pending.lastEntry();
-            final var pendingTypeMirror = entry.getKey();
-            final var pendingLazyTypeUsage = entry.getValue();
-            final var pendingElement = enclosing.get(pendingTypeMirror);
-
-            if (pendingLazyTypeUsage.isPresent()) {
-                resolved.put(pendingTypeMirror, pendingLazyTypeUsage.get());
-                pending.remove(pendingTypeMirror);
-            }
-            else if (resolved.containsKey(pendingTypeMirror)) {
-                pending.remove(pendingTypeMirror);
-            }
-            else {
-                // resolve the AnnotationTypeUsages for the TypeMirror (when not already done so)
-                annotations.computeIfAbsent(pendingTypeMirror, __ ->
-                    pendingTypeMirror.getAnnotationMirrors().stream()
-                        .map(mirror -> createAnnotationTypeUsage(pendingElement, mirror))
-                        .collect(Collectors.toCollection(ArrayList::new)));
-
-                // resolve the TypeUsage from the TypeMirror (by visiting it)
-                pendingTypeMirror.accept(new TypeVisitor<Lazy<TypeUsage>, Lazy<TypeUsage>>() {
-                    @Override
-                    public Lazy<TypeUsage> visit(final TypeMirror t,
-                                                 final Lazy<TypeUsage> lazyTypeUsage) {
-
-                        // NOTE: Not sure what to do with this? When is it actually called?
-                        return lazyTypeUsage;
-                    }
-
-                    @Override
-                    public Lazy<TypeUsage> visitPrimitive(final PrimitiveType primitiveType,
-                                                          final Lazy<TypeUsage> lazyTypeUsage) {
-
-                        final var moduleName = nameProvider.getModuleName("java.base");
-                        final var namespace = nameProvider.getNamespace("java.lang");
-
-                        final var typeName = nameProvider.getTypeName(
-                            moduleName,
-                            namespace,
-                            Optional.empty(),
-                            nameProvider.getIrreducibleName(primitiveType.toString()));
-
-                        final var typeUsage = SpecificTypeUsage.of(codeModel, typeName);
-
-                        // include the annotation defined traits
-                        annotations.get(pendingTypeMirror).stream()
-                            .forEach(typeUsage::addTrait);
-
-                        lazyTypeUsage.set(typeUsage);
-
-                        return lazyTypeUsage;
-                    }
-
-                    @Override
-                    public Lazy<TypeUsage> visitNull(final NullType nullType,
-                                                     final Lazy<TypeUsage> lazyTypeUsage) {
-
-                        final var typeUsage = UnknownTypeUsage.create(codeModel);
-                        lazyTypeUsage.set(typeUsage);
-                        return lazyTypeUsage;
-                    }
-
-                    @Override
-                    public Lazy<TypeUsage> visitArray(final ArrayType arrayType,
-                                                      final Lazy<TypeUsage> lazyTypeUsage) {
-
-                        // resolve the ComponentType, otherwise queue it for resolution
-                        final var componentType = arrayType.getComponentType();
-                        final var lazyComponentTypeUsage = Lazy.ofNullable(resolved.get(componentType))
-                            .or(() -> pending.get(componentType));
-
-                        if (lazyComponentTypeUsage.isEmpty()) {
-                            // queue the ComponentType to be resolved
-                            pending.putIfAbsent(componentType, lazyComponentTypeUsage);
-                            enclosing.putIfAbsent(componentType, pendingElement);
-                        }
-
-                        final var typeUsage = ArrayTypeUsage.of(codeModel, lazyComponentTypeUsage);
-
-                        annotations.get(pendingTypeMirror).stream()
-                            .forEach(typeUsage::addTrait);
-
-                        lazyTypeUsage.set(typeUsage);
-
-                        return lazyTypeUsage;
-                    }
-
-                    @Override
-                    public Lazy<TypeUsage> visitDeclared(final DeclaredType declaredType,
-                                                         final Lazy<TypeUsage> lazyTypeUsage) {
-
-                        final var typeElement = (TypeElement) types.asElement(declaredType);
-
-                        final var moduleName = Optional.ofNullable(elements.getModuleOf(typeElement))
-                            .flatMap(moduleElement -> nameProvider.getModuleName(moduleElement.getQualifiedName()));
-
-                        final var fullyQualifiedTypeName = typeElement.getQualifiedName().toString();
-                        final var typeName = nameProvider.getTypeName(moduleName, fullyQualifiedTypeName);
-
-                        if (typeElement.getTypeParameters().isEmpty()) {
-                            final var typeUsage = SpecificTypeUsage.of(codeModel, typeName);
-
-                            annotations.get(pendingTypeMirror).stream()
-                                .forEach(typeUsage::addTrait);
-
-                            lazyTypeUsage.set(typeUsage);
-                        }
-                        else {
-                            final var genericTypeUsage = GenericTypeUsage.of(
-                                codeModel,
-                                typeName,
-                                declaredType
-                                    .getTypeArguments().stream()
-                                    .map(argumentMirror -> {
-                                        final var lazyArgumentMirror = Lazy.ofNullable(resolved.get(argumentMirror))
-                                            .or(() -> pending.get(argumentMirror));
-
-                                        if (lazyArgumentMirror.isEmpty()) {
-                                            pending.putIfAbsent(argumentMirror, lazyArgumentMirror);
-                                            enclosing.putIfAbsent(argumentMirror, pendingElement);
-                                        }
-                                        return lazyArgumentMirror;
-                                    }));
-
-                            // TODO: include annotations defined on the types usage
-
-                            lazyTypeUsage.set(genericTypeUsage);
-                        }
-
-                        return lazyTypeUsage;
-                    }
-
-                    @Override
-                    public Lazy<TypeUsage> visitError(final ErrorType errorType,
-                                                      final Lazy<TypeUsage> lazyTypeUsage) {
-
-                        final var element = errorType.asElement();
-
-                        // Record the ErrorType as an error/unknown type that we can't process
-                        recorder.error(ElementLocation.of(element),
-                            "Missing or undefined type " + element.getSimpleName());
-
-                        return lazyTypeUsage;
-                    }
-
-                    @Override
-                    public Lazy<TypeUsage> visitTypeVariable(final TypeVariable typeVariable,
-                                                             final Lazy<TypeUsage> lazyTypeUsage) {
-
-                        final var typeName = nameProvider.getTypeName(
-                            Optional.empty(),
-                            typeVariable.asElement().getSimpleName().toString());
-
-                        // resolve the LowerBound, otherwise queue it for resolution
-                        final var lowerBound = typeVariable.getLowerBound();
-
-                        // only resolve non-NULL lower bounds
-                        // (in NULL lower bounds mean undefined, so we can map them to empty)
-                        final var optionalLazyLowerBoundTypeUsage = lowerBound.getKind() == TypeKind.NULL
-                            ? Optional.<Lazy<TypeUsage>>empty()
-                            : Optional.of(
-                                Lazy.ofNullable(resolved.get(lowerBound))
-                                    .or(() -> pending.get(lowerBound)));
-
-                        optionalLazyLowerBoundTypeUsage.ifPresent(lazyLowerBoundTypeUsage -> {
-                            if (lazyLowerBoundTypeUsage.isEmpty()) {
-                                // queue the LowerBound to be resolved
-                                pending.putIfAbsent(lowerBound, lazyLowerBoundTypeUsage);
-                                enclosing.putIfAbsent(lowerBound, typeVariable.asElement());
-                            }
-                        });
-
-                        // resolve the UpperBound, otherwise queue it for resolution
-                        // (in java.lang.Object upper bounds mean undefined, so we can map them to empty)
-                        final var upperBound = typeVariable.getUpperBound();
-                        final var optionalLazyUpperBoundTypeUsage = upperBound.getKind() == TypeKind.DECLARED
-                            && ((DeclaredType) upperBound).asElement().getSimpleName()
-                            .toString()
-                            .equals(Object.class.getSimpleName())
-                            ? Optional.<Lazy<TypeUsage>>empty()
-                            : Optional.of(Lazy.ofNullable(resolved.get(upperBound))
-                                .or(() -> pending.get(upperBound)));
-
-                        optionalLazyUpperBoundTypeUsage.ifPresent(lazyUpperBoundTypeUsage -> {
-                            if (lazyUpperBoundTypeUsage.isEmpty()) {
-                                // queue the UpperBound to be resolved
-                                pending.putIfAbsent(upperBound, lazyUpperBoundTypeUsage);
-                                enclosing.putIfAbsent(upperBound, typeVariable.asElement());
-                            }
-                        });
-
-                        final var typeUsage = TypeVariableUsage
-                            .of(codeModel, typeName, optionalLazyLowerBoundTypeUsage, optionalLazyUpperBoundTypeUsage);
-
-                        // TODO: include annotations defined on the types usage
-
-                        lazyTypeUsage.set(typeUsage);
-
-                        return lazyTypeUsage;
-                    }
-
-                    @Override
-                    public Lazy<TypeUsage> visitWildcard(final WildcardType wildcardType,
-                                                         final Lazy<TypeUsage> lazyTypeUsage) {
-
-                        // TODO: include annotations defined on the types usage
-
-                        lazyTypeUsage.set(WildcardTypeUsage.create(codeModel));
-                        return lazyTypeUsage;
-                    }
-
-                    @Override
-                    public Lazy<TypeUsage> visitExecutable(final ExecutableType executableType,
-                                                           final Lazy<TypeUsage> lazyTypeUsage) {
-
-                        // SKIP: We aren't yet required to determine the TypeUsage of an ExecutableType
-                        return lazyTypeUsage;
-                    }
-
-                    @Override
-                    public Lazy<TypeUsage> visitNoType(final NoType noType,
-                                                       final Lazy<TypeUsage> lazyTypeUsage) {
-
-                        // TODO: include annotations defined on the types usage
-
-                        lazyTypeUsage.set(VoidTypeUsage.create(codeModel));
-                        return lazyTypeUsage;
-                    }
-
-                    @Override
-                    public Lazy<TypeUsage> visitUnknown(final TypeMirror unknownType,
-                                                        final Lazy<TypeUsage> lazyTypeUsage) {
-
-                        // TODO: include annotations defined on the types usage
-
-                        lazyTypeUsage.set(UnknownTypeUsage.create(codeModel));
-                        return lazyTypeUsage;
-                    }
-
-                    @Override
-                    public Lazy<TypeUsage> visitUnion(final UnionType unionType,
-                                                      final Lazy<TypeUsage> lazyTypeUsage) {
-
-                        // queue the alternative for resolution (if not already resolved)
-                        lazyTypeUsage.set(UnionTypeUsage.of(codeModel, unionType.getAlternatives().stream()
-                            .map(alternativeMirror -> {
-                                final var lazyAlternativeMirror = Lazy.ofNullable(resolved.get(alternativeMirror))
-                                    .or(() -> pending.get(alternativeMirror));
-
-                                if (lazyAlternativeMirror.isEmpty()) {
-                                    pending.putIfAbsent(alternativeMirror, lazyAlternativeMirror);
-                                    enclosing.putIfAbsent(alternativeMirror, pendingElement);
-                                }
-
-                                return lazyAlternativeMirror;
-                            })));
-
-                        // TODO: include annotations defined on the types usage
-
-                        return lazyTypeUsage;
-                    }
-
-                    @Override
-                    public Lazy<TypeUsage> visitIntersection(final IntersectionType intersectionType,
-                                                             final Lazy<TypeUsage> lazyTypeUsage) {
-
-                        // queue the alternative for resolution (if not already resolved)
-                        lazyTypeUsage.set(IntersectionTypeUsage.of(codeModel, intersectionType.getBounds().stream()
-                            .map(boundMirror -> {
-                                final var lazyBoundMirror = Lazy.ofNullable(resolved.get(boundMirror))
-                                    .or(() -> pending.get(boundMirror));
-
-                                if (lazyBoundMirror.isEmpty()) {
-                                    pending.putIfAbsent(boundMirror, lazyBoundMirror);
-                                    enclosing.putIfAbsent(boundMirror, pendingElement);
-                                }
-
-                                return lazyBoundMirror;
-                            })));
-
-                        // TODO: include annotations defined on the types usage
-
-                        return lazyTypeUsage;
-                    }
-                }, pendingLazyTypeUsage);
-            }
-        }
-
-        // return the resolved TypeMirror
-        final var typeUsage = resolved.get(typeMirror);
-
-        if (typeUsage == null) {
-            // defensive
-            messager.printError("Unsupported type " + typeMirror, enclosingElement);
-            throw new IllegalStateException("Failed to resolve the TypeUsage for:" + typeMirror);
-        }
-        return typeUsage;
+    private TypeMirrorResolver resolver() {
+        return this.lazyResolver.computeIfAbsent(() -> {
+            final var codeModel = this.lazyCodeModel.get();
+            final var recorder = this.lazyTelemetryRecorder.get();
+            return new TypeMirrorResolver(
+                codeModel,
+                processingEnv.getElementUtils(),
+                errorType -> recorder.error(
+                    SourceLocation.elementRef(errorType.asElement()),
+                    "Missing or undefined type " + errorType.asElement().getSimpleName()));
+        }).orElseThrow();
     }
 
     /**
      * Creates a {@link FieldDescriptor} for the {@link TypeDescriptor} based on an {@link ExecutableElement}.
      *
-     * @param codeModel     the {@link CodeModel}
+     * @param codeModel      the {@link CodeModel}
      * @param typeDescriptor the {@link TypeDescriptor} in which to define the {@link FieldDescriptor}
      * @param fieldElement   the {@link TypeElement} for the <i>field</i>
      * @param pending        the pending {@link TypeElement}s to be processed
@@ -862,30 +444,10 @@ public class AnnotationProcessor
                                                   final TypeDescriptor typeDescriptor,
                                                   final VariableElement fieldElement,
                                                   final LinkedHashMap<TypeName, TypeElement> pending) {
-
-        final var nameProvider = codeModel.getNameProvider();
-
-        final var fieldName = nameProvider.getIrreducibleName(fieldElement.getSimpleName());
-        final var type = resolveTypeUsage(fieldElement.asType(), fieldElement);
-
-        final var fieldDescriptor = FieldDescriptor.of(codeModel, fieldName, type);
-        fieldDescriptor.addTrait(ElementLocation.of(fieldElement));
-
-        // include the AnnotationUsages (as traits)
-        fieldElement.getAnnotationMirrors().stream()
-            .map(mirror -> createAnnotationTypeUsage(fieldElement, mirror))
-            .forEach(fieldDescriptor::addTrait);
+        final var fieldDescriptor = resolver().createFieldDescriptor(fieldElement);
+        fieldDescriptor.addTrait(SourceLocation.elementRef(fieldElement));
 
         typeDescriptor.addTrait(fieldDescriptor);
-
-        // include the Static trait (if necessary)
-        if (fieldElement.getModifiers().contains(Modifier.STATIC)) {
-            fieldDescriptor.addTrait(Static.STATIC);
-        }
-
-        // include the AccessModifier for the Field
-        getAccessModifier(fieldElement.getModifiers())
-            .ifPresent(fieldDescriptor::addTrait);
 
         // ensure the discovery of types used by the FieldDescriptor
         fieldDescriptor.parts(TypeUsage.class)
@@ -897,74 +459,27 @@ public class AnnotationProcessor
     /**
      * Creates a {@link MethodDescriptor} for the {@link TypeDescriptor} based on an {@link ExecutableElement}.
      *
-     * @param codeModel     the {@link CodeModel}
+     * @param codeModel      the {@link CodeModel}
      * @param typeDescriptor the {@link TypeDescriptor} in which the {@link MethodDescriptor} is being defined
      * @param methodElement  the {@link ExecutableElement} for the <i>constructor</i>
      * @param pending        the pending {@link TypeElement}s to be processed
      * @return a {@link MethodDescriptor}
      */
     private MethodDescriptor createMethodDescriptor(final CodeModel codeModel,
-                                                    final TypeDescriptor typeDescriptor,
+                                                    final JDKTypeDescriptor typeDescriptor,
                                                     final ExecutableElement methodElement,
                                                     final LinkedHashMap<TypeName, TypeElement> pending) {
+        final var returnType = resolver().resolve(methodElement.getReturnType(), methodElement);
+        final var methodName = resolver().methodName(typeDescriptor, methodElement);
 
-        final var nameProvider = codeModel.getNameProvider();
-        final var name = nameProvider.getIrreducibleName(methodElement.getSimpleName());
-        final var returnType = resolveTypeUsage(methodElement.getReturnType(), methodElement);
+        final var formalParameters = resolver().getFormalParameters(methodElement,
+            (variable, pd) -> pd.addTrait(SourceLocation.elementRef(variable)));
 
-        final var methodName = MethodName.of(
-            typeDescriptor.typeName().moduleName(),
-            typeDescriptor.typeName().namespace(),
-            Optional.of(typeDescriptor.typeName()),
-            name);
+        final var methodDescriptor = MethodDescriptor.of(typeDescriptor, methodName, returnType, formalParameters);
+        resolver().modifyMethod(methodDescriptor, methodElement);
 
-        final var formalParameters = methodElement.getParameters().stream()
-            .map(variable -> {
-                final var formalParameterName = variable.getSimpleName().isEmpty()
-                    ? Optional.<IrreducibleName>empty()
-                    : Optional.of(nameProvider.getIrreducibleName(variable.getSimpleName()));
+        methodDescriptor.addTrait(SourceLocation.elementRef(methodElement));
 
-                final var formalParameterType = resolveTypeUsage(variable.asType(), variable);
-
-                final var formalParameterDescriptor = FormalParameterDescriptor
-                    .of(codeModel, formalParameterName, formalParameterType);
-
-                formalParameterDescriptor.addTrait(ElementLocation.of(variable));
-
-                return formalParameterDescriptor;
-            });
-
-        final var methodDescriptor = MethodDescriptor
-            .of(typeDescriptor, methodName, returnType, formalParameters);
-
-        methodElement.getThrownTypes().stream()
-            .map(typeMirror -> resolveTypeUsage(typeMirror, methodElement))
-            .map(ThrowableDescriptor::of)
-            .forEach(methodDescriptor::addTrait);
-
-        methodDescriptor.addTrait(ElementLocation.of(methodElement));
-
-        // include the AnnotationUsages (as Traits)
-        methodElement.getAnnotationMirrors().stream()
-            .map(mirror -> createAnnotationTypeUsage(methodElement, mirror))
-            .forEach(methodDescriptor::addTrait);
-
-        // include the MethodImplementationDescriptor (when the constructor has an implementation)
-        if (methodElement.isDefault()) {
-            methodDescriptor.addTrait(new MethodImplementationDescriptor(methodDescriptor));
-        }
-
-        // include the Static trait (if necessary)
-        if (methodElement.getModifiers().contains(Modifier.STATIC)) {
-            methodDescriptor.addTrait(Static.STATIC);
-        }
-
-        // include the AccessModifier for the Method
-        getAccessModifier(methodElement.getModifiers())
-            .ifPresent(methodDescriptor::addTrait);
-
-        // include the Classification for the Method
-        methodDescriptor.addTrait(getClassification(methodElement.getModifiers()));
 
         // include the MethodDescriptor in the TypeDescriptor
         typeDescriptor.addTrait(methodDescriptor);
@@ -979,7 +494,7 @@ public class AnnotationProcessor
     /**
      * Creates a {@link TypeDescriptor} using the {@link CodeModel} based on a {@link TypeElement}.
      *
-     * @param codeModel  the {@link CodeModel}
+     * @param codeModel   the {@link CodeModel}
      * @param typeName    the {@link TypeName}
      * @param typeElement the {@link TypeElement}
      * @param pending     the pending {@link TypeElement}s by {@link TypeName}s to process
@@ -1000,61 +515,11 @@ public class AnnotationProcessor
                 return existing;
             }
 
-            // establish the TypeDescriptor for the TypeElement
-            final var typeDescriptor = codeModel.createTypeDescriptor(typeName, typeElement.getKind().isInterface()
-                ? JDKInterfaceTypeDescriptor::of
-                : JDKClassTypeDescriptor::of);
+            final var typeDescriptor = resolver().buildTypeDescriptor(typeName, typeElement);
 
-            typeDescriptor.addTrait(ElementLocation.of(typeElement));
+            typeDescriptor.addTrait(SourceLocation.elementRef(typeElement));
 
             messager.printNote("Discovered TypeName [" + typeName + "]", typeElement);
-
-            // discover the (generic) type parameters
-            if (!typeElement.getTypeParameters().isEmpty()) {
-
-                final var typeVariableUsages = typeElement.getTypeParameters().stream()
-                    .map(typeParameterElement -> resolveTypeUsage(typeParameterElement.asType(), typeParameterElement))
-                    .peek(typeUsage -> {
-                        if (!(typeUsage instanceof TypeVariableUsage)) {
-                            messager.printError(
-                                "The type [" + typeName + "] defines a non-TypeVariable type with [" + typeUsage + "]",
-                                typeElement);
-                        }
-                    })
-                    .filter(TypeVariableUsage.class::isInstance)
-                    .map(TypeVariableUsage.class::cast);
-
-                typeDescriptor.addTrait(ParameterizedTypeDescriptor.of(codeModel, typeVariableUsages));
-            }
-
-            // include the Static trait (if necessary)
-            if (typeElement.getModifiers().contains(Modifier.STATIC)) {
-                typeDescriptor.addTrait(Static.STATIC);
-            }
-
-            // discover the AccessModifier
-            getAccessModifier(typeElement.getModifiers())
-                .ifPresent(typeDescriptor::addTrait);
-
-            // discover the Classification
-            typeDescriptor.addTrait(getClassification(typeElement.getModifiers()));
-
-            // discover the ExtendsTypeDescriptors
-            //if (typeElement.getSuperclass().getKind() != TypeKind.NONE) {
-            Stream.of(typeElement.getSuperclass())
-                .map(superMirror -> resolveTypeUsage(superMirror, typeElement))
-                .filter(NamedTypeUsage.class::isInstance)
-                .map(NamedTypeUsage.class::cast)
-                .filter(namedTypeUsage -> !(namedTypeUsage instanceof VoidTypeUsage))
-                .forEach(superType -> typeDescriptor.addTrait(ExtendsTypeDescriptor.of(superType)));
-            //}
-
-            // discover the ImplementsTypeDescriptors
-            typeElement.getInterfaces().stream()
-                .map(implementsMirror -> resolveTypeUsage(implementsMirror, typeElement))
-                .filter(NamedTypeUsage.class::isInstance)
-                .map(NamedTypeUsage.class::cast)
-                .forEach(interfaceType -> typeDescriptor.addTrait(ImplementsTypeDescriptor.of(interfaceType)));
 
             // discover the FieldDescriptors
             typeElement.getEnclosedElements().stream()
@@ -1068,131 +533,14 @@ public class AnnotationProcessor
                 .map(ExecutableElement.class::cast)
                 .forEach(enclosing -> createMethodDescriptor(codeModel, typeDescriptor, enclosing, pending));
 
-            // include the AnnotationUsages (as Traits)
-            typeElement.getAnnotationMirrors().stream()
-                .map(mirror -> createAnnotationTypeUsage(typeElement, mirror))
-                .forEach(typeDescriptor::addTrait);
-
             // ensure the discovery of types used by the TypePrototype
             typeDescriptor.composition(TypeUsage.class)
                 .forEach(typeUsage -> include(codeModel, typeUsage, typeElement, pending));
 
             return typeDescriptor;
-        }
-        catch (final StackOverflowError e) {
+        } catch (final StackOverflowError e) {
             e.printStackTrace();
             throw e;
-        }
-    }
-
-    /**
-     * Determine the {@link AnnotationTypeUsage} based on the {@link AnnotationMirror}.
-     *
-     * @param enclosingElement the {@link Element} in which the {@link AnnotationTypeUsage} occurs
-     * @param annotationMirror the {@link AnnotationMirror} for the {@link AnnotationTypeUsage}
-     * @return the {@link AnnotationTypeUsage}
-     */
-    private AnnotationTypeUsage createAnnotationTypeUsage(final Element enclosingElement,
-                                                          final AnnotationMirror annotationMirror) {
-
-        final var codeModel = this.lazyCodeModel.get();
-        final var nameProvider = codeModel.getNameProvider();
-
-        // establish a Location for the AnnotationTypeUsage
-        final var annotationLocation = ElementLocation.ofNullable(enclosingElement)
-            .map(elementLocation -> elementLocation.createAnnotationMirrorLocation(annotationMirror));
-
-        // determine the AnnotationUsage TypeName from the AnnotationMirror AnnotationType Element
-        final var annotationTypeName = getTypeName(annotationMirror.getAnnotationType().asElement());
-
-        // resolve the annotation values from the AnnotationMirror
-        final var values = new ArrayList<AnnotationValue>();
-
-        annotationMirror.getElementValues()
-            .forEach((executableElement, annotatedElement) -> {
-                final var name = nameProvider.getIrreducibleName(executableElement.getSimpleName());
-                final var value = resolveAnnotationValue(enclosingElement, annotatedElement.getValue());
-                final var valueLocation = annotationLocation
-                    .map(location -> location.createAnnotationValueLocation(annotatedElement));
-
-                final var annotationValue = AnnotationValue.of(codeModel, name, value);
-
-                valueLocation.ifPresent(annotationValue::addTrait);
-
-                values.add(annotationValue);
-            });
-
-        final var annotationTypeUsage = AnnotationTypeUsage.of(codeModel, annotationTypeName, values.stream());
-
-        annotationLocation.ifPresent(annotationTypeUsage::addTrait);
-
-        return annotationTypeUsage;
-    }
-
-    private AnnotationValue.Value resolveAnnotationValue(final Element enclosingElement, final Object raw) {
-        return switch (raw) {
-            case AnnotationMirror nestedMirror ->
-                new AnnotationValue.Value.Nested(createAnnotationTypeUsage(enclosingElement, nestedMirror));
-            case javax.lang.model.element.AnnotationValue av ->
-                resolveAnnotationValue(enclosingElement, av.getValue());
-            case List<?> list ->
-                new AnnotationValue.Value.Array(list.stream()
-                    .map(item -> resolveAnnotationValue(enclosingElement, item))
-                    .toList());
-            case TypeMirror typeMirror ->
-                new AnnotationValue.Value.ClassRef(
-                    this.lazyCodeModel.get().getNameProvider().getTypeName(Optional.empty(), typeMirror.toString()));
-            case VariableElement varElement ->
-                new AnnotationValue.Value.EnumConstant(
-                    getTypeName(varElement.getEnclosingElement()),
-                    varElement.getSimpleName().toString());
-            default -> new AnnotationValue.Value.Literal(raw);
-        };
-    }
-
-    /**
-     * Attempts to determine the {@link AccessModifier} given {@link Modifier}s.
-     *
-     * @param modifiers the {@link Modifier}s
-     * @return the {@link Optional} {@link AccessModifier}
-     */
-    private Optional<AccessModifier> getAccessModifier(final Set<Modifier> modifiers) {
-
-        if (modifiers == null || modifiers.isEmpty()) {
-            return Optional.empty();
-        }
-
-        if (modifiers.contains(Modifier.PUBLIC)) {
-            return Optional.of(AccessModifier.PUBLIC);
-        }
-        else if (modifiers.contains(Modifier.PROTECTED)) {
-            return Optional.of(AccessModifier.PROTECTED);
-        }
-        else if (modifiers.contains(Modifier.PRIVATE)) {
-            return Optional.of(AccessModifier.PRIVATE);
-        }
-        else {
-            return Optional.empty();
-        }
-    }
-
-    /**
-     * Attempts to determine the {@link Classification} given {@link Modifier}s.
-     *
-     * @param modifiers the {@link Modifier}s
-     * @return the {@link Classification}
-     */
-    private Classification getClassification(final Set<Modifier> modifiers) {
-
-        if (modifiers == null || modifiers.isEmpty()) {
-            return Classification.CONCRETE;
-        }
-
-        if (modifiers.contains(Modifier.ABSTRACT)) {
-            return Classification.ABSTRACT;
-        }
-        else {
-            return Classification.CONCRETE;
         }
     }
 

@@ -36,8 +36,12 @@ public final class MemberTypeDescriptor
 
     private final TypeName memberTypeName;
 
-    public MemberTypeDescriptor(final TypeName memberTypeName) {
+    private MemberTypeDescriptor(final TypeName memberTypeName) {
         this.memberTypeName = Objects.requireNonNull(memberTypeName, "memberTypeName");
+    }
+
+    public static MemberTypeDescriptor of(final TypeName typeName) {
+        return new MemberTypeDescriptor(typeName);
     }
 
     public TypeName memberTypeName() {
