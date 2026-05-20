@@ -113,6 +113,9 @@ import javax.lang.model.util.Elements;
  *   <li>{@code errorHandler} — optional; called when an {@link ErrorType} is encountered before
  *       the type is silently mapped to {@link UnknownTypeUsage}</li>
  * </ul>
+ *
+ * @author reed.vonredwitz
+ * @since May-2026
  */
 public final class TypeMirrorResolver {
 
@@ -330,7 +333,7 @@ public final class TypeMirrorResolver {
     }
 
     private void addFieldModifiers(final FieldDescriptor fieldDescriptor,
-                                  final VariableElement fieldElement) {
+                                   final VariableElement fieldElement) {
         final var fieldModifiers = fieldElement.getModifiers();
         if (fieldModifiers.contains(Modifier.STATIC)) {
             fieldDescriptor.addTrait(Static.STATIC);
@@ -503,7 +506,7 @@ public final class TypeMirrorResolver {
     }
 
     private void addThrowables(final ExecutableElement methodElement,
-                              final MethodDescriptor methodDescriptor) {
+                               final MethodDescriptor methodDescriptor) {
         methodElement.getThrownTypes().stream()
             .map(t -> this.resolve(t, methodElement))
             .map(ThrowableDescriptor::of)
@@ -511,7 +514,7 @@ public final class TypeMirrorResolver {
     }
 
     private void addTypeParameters(final Traitable traitable,
-                                  final Parameterizable parameterizableElement) {
+                                   final Parameterizable parameterizableElement) {
         if (parameterizableElement.getTypeParameters().isEmpty()) {
             return;
         }
