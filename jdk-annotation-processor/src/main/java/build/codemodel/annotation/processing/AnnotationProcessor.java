@@ -9,9 +9,9 @@ package build.codemodel.annotation.processing;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -30,17 +30,13 @@ import build.base.telemetry.foundation.ObservableTelemetryRecorder;
 import build.codemodel.annotation.discovery.AnnotationDiscovery;
 import build.codemodel.annotation.discovery.Discoverable;
 import build.codemodel.foundation.CodeModel;
-import build.codemodel.foundation.descriptor.ThrowableDescriptor;
 import build.codemodel.foundation.descriptor.TypeDescriptor;
 import build.codemodel.foundation.naming.CachingNameProvider;
 import build.codemodel.foundation.naming.NameProvider;
 import build.codemodel.foundation.naming.NonCachingNameProvider;
 import build.codemodel.foundation.naming.TypeName;
-import build.codemodel.foundation.usage.NamedTypeUsage;
 import build.codemodel.foundation.usage.SpecificTypeUsage;
 import build.codemodel.foundation.usage.TypeUsage;
-import build.codemodel.foundation.usage.TypeVariableUsage;
-import build.codemodel.foundation.usage.VoidTypeUsage;
 import build.codemodel.framework.Framework;
 import build.codemodel.framework.Plugin;
 import build.codemodel.framework.builder.FrameworkBuilder;
@@ -53,19 +49,12 @@ import build.codemodel.framework.initialization.Initializer;
 import build.codemodel.injection.InjectionFramework;
 import build.codemodel.jdk.JDKCodeModel;
 import build.codemodel.jdk.TypeMirrorResolver;
-import build.codemodel.jdk.descriptor.JDKClassTypeDescriptor;
-import build.codemodel.jdk.descriptor.JDKInterfaceTypeDescriptor;
-import build.codemodel.jdk.descriptor.MethodImplementationDescriptor;
+import build.codemodel.jdk.descriptor.JDKTypeDescriptor;
 import build.codemodel.jdk.descriptor.SourceLocation;
-import build.codemodel.jdk.descriptor.Static;
-import build.codemodel.objectoriented.descriptor.AccessModifier;
-import build.codemodel.objectoriented.descriptor.Classification;
 import build.codemodel.objectoriented.descriptor.ExtendsTypeDescriptor;
 import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 import build.codemodel.objectoriented.descriptor.ImplementsTypeDescriptor;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
-import build.codemodel.objectoriented.descriptor.ParameterizedTypeDescriptor;
-import build.codemodel.objectoriented.naming.MethodName;
 
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
@@ -80,7 +69,6 @@ import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Filer;
 import javax.annotation.processing.Messager;
@@ -92,10 +80,8 @@ import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
-import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
-import javax.lang.model.type.TypeMirror;
 
 /**
  * A {@link Processor} to discover, reverse-engineer and process discoverable annotations from source and byte code.
@@ -212,8 +198,7 @@ public class AnnotationProcessor
                 .map(Pattern::compile)
                 .map(Pattern::asPredicate)
                 .map(this.lazyExcludedTypesPredicate::set);
-        }
-        catch (final PatternSyntaxException e) {
+        } catch (final PatternSyntaxException e) {
             telemetryRecorder.warn(
                 "The Code Model AnnotationProcessor option %s cannot be parsed as a regular expression", e);
         }
@@ -317,20 +302,20 @@ public class AnnotationProcessor
                             + typeDescriptor.typeName()
                             + (typeDescriptor.traits(ExtendsTypeDescriptor.class).findFirst().isPresent()
                             ? " extends " + typeDescriptor.traits(ExtendsTypeDescriptor.class)
-                            .map(ExtendsTypeDescriptor::parentTypeUsage)
-                            .map(Objects::toString)
-                            .collect(Collectors.joining(", "))
+                                            .map(ExtendsTypeDescriptor::parentTypeUsage)
+                                            .map(Objects::toString)
+                                            .collect(Collectors.joining(", "))
                             : "")
                             + (typeDescriptor.traits(ImplementsTypeDescriptor.class).findFirst().isPresent()
                             ? " implements " + typeDescriptor.traits(ImplementsTypeDescriptor.class)
-                            .map(ImplementsTypeDescriptor::parentTypeUsage)
-                            .map(Objects::toString)
-                            .collect(Collectors.joining(", "))
+                                               .map(ImplementsTypeDescriptor::parentTypeUsage)
+                                               .map(Objects::toString)
+                                               .collect(Collectors.joining(", "))
                             : "")
                             + (typeDescriptor.traits().findFirst().isPresent()
                             ? " Traits["
-                            + typeDescriptor.traits().map(Object::getClass).map(Class::getSimpleName)
-                            .collect(Collectors.joining(", ")) + "]"
+                              + typeDescriptor.traits().map(Object::getClass).map(Class::getSimpleName)
+                                .collect(Collectors.joining(", ")) + "]"
                             : "")));
 
                     // --------
@@ -339,8 +324,7 @@ public class AnnotationProcessor
                     framework.compile(codeModel, telemetryRecorder)
                         .ifPresentOrElse(this.capturedCompilation::set, this.capturedCompilation::clear);
                 });
-        }
-        else {
+        } else {
             // --------
             // STAGE 4: Complete Processing (the last round without any Annotations to Process)
 
@@ -360,7 +344,7 @@ public class AnnotationProcessor
     /**
      * Includes the specified {@link TypeUsage} for discovery should it not already discovered or pending discovery.
      *
-     * @param codeModel       the {@link CodeModel}
+     * @param codeModel        the {@link CodeModel}
      * @param typeUsage        the {@link TypeUsage}
      * @param enclosingElement the {@link Element} in which the {@link TypeUsage} is defined
      * @param pending          the pending {@link TypeElement}s to process
@@ -379,7 +363,7 @@ public class AnnotationProcessor
     /**
      * Includes the specified {@link TypeName} for discovery should it not already discovered or pending discovery.
      *
-     * @param codeModel       the {@link CodeModel}
+     * @param codeModel        the {@link CodeModel}
      * @param typeName         the {@link TypeName}
      * @param enclosingElement the {@link Element} in which the {@link TypeUsage} is defined
      * @param pending          the pending {@link TypeElement}s to process
@@ -412,8 +396,7 @@ public class AnnotationProcessor
                             messager.printWarning("Failed to determine TypeElement for " + typeName.canonicalName(),
                                 enclosingElement);
                         }
-                    }
-                    else {
+                    } else {
                         pending.putLast(typeName, typeElement);
                     }
                 }
@@ -448,14 +431,10 @@ public class AnnotationProcessor
         }).orElseThrow();
     }
 
-    private TypeUsage resolveTypeUsage(final TypeMirror typeMirror, final Element enclosingElement) {
-        return resolver().resolve(typeMirror, enclosingElement);
-    }
-
     /**
      * Creates a {@link FieldDescriptor} for the {@link TypeDescriptor} based on an {@link ExecutableElement}.
      *
-     * @param codeModel     the {@link CodeModel}
+     * @param codeModel      the {@link CodeModel}
      * @param typeDescriptor the {@link TypeDescriptor} in which to define the {@link FieldDescriptor}
      * @param fieldElement   the {@link TypeElement} for the <i>field</i>
      * @param pending        the pending {@link TypeElement}s to be processed
@@ -465,30 +444,10 @@ public class AnnotationProcessor
                                                   final TypeDescriptor typeDescriptor,
                                                   final VariableElement fieldElement,
                                                   final LinkedHashMap<TypeName, TypeElement> pending) {
-
-        final var nameProvider = codeModel.getNameProvider();
-
-        final var fieldName = nameProvider.getIrreducibleName(fieldElement.getSimpleName());
-        final var type = resolveTypeUsage(fieldElement.asType(), fieldElement);
-
-        final var fieldDescriptor = FieldDescriptor.of(codeModel, fieldName, type);
+        final var fieldDescriptor = resolver().createFieldDescriptor(fieldElement);
         fieldDescriptor.addTrait(SourceLocation.elementRef(fieldElement));
 
-        // include the AnnotationUsages (as traits)
-        fieldElement.getAnnotationMirrors().stream()
-            .map(mirror -> resolver().createAnnotationTypeUsage(fieldElement, mirror))
-            .forEach(fieldDescriptor::addTrait);
-
         typeDescriptor.addTrait(fieldDescriptor);
-
-        // include the Static trait (if necessary)
-        if (fieldElement.getModifiers().contains(Modifier.STATIC)) {
-            fieldDescriptor.addTrait(Static.STATIC);
-        }
-
-        // include the AccessModifier for the Field
-        getAccessModifier(fieldElement.getModifiers())
-            .ifPresent(fieldDescriptor::addTrait);
 
         // ensure the discovery of types used by the FieldDescriptor
         fieldDescriptor.parts(TypeUsage.class)
@@ -500,61 +459,27 @@ public class AnnotationProcessor
     /**
      * Creates a {@link MethodDescriptor} for the {@link TypeDescriptor} based on an {@link ExecutableElement}.
      *
-     * @param codeModel     the {@link CodeModel}
+     * @param codeModel      the {@link CodeModel}
      * @param typeDescriptor the {@link TypeDescriptor} in which the {@link MethodDescriptor} is being defined
      * @param methodElement  the {@link ExecutableElement} for the <i>constructor</i>
      * @param pending        the pending {@link TypeElement}s to be processed
      * @return a {@link MethodDescriptor}
      */
     private MethodDescriptor createMethodDescriptor(final CodeModel codeModel,
-                                                    final TypeDescriptor typeDescriptor,
+                                                    final JDKTypeDescriptor typeDescriptor,
                                                     final ExecutableElement methodElement,
                                                     final LinkedHashMap<TypeName, TypeElement> pending) {
-
-        final var nameProvider = codeModel.getNameProvider();
-        final var name = nameProvider.getIrreducibleName(methodElement.getSimpleName());
-        final var returnType = resolveTypeUsage(methodElement.getReturnType(), methodElement);
-
-        final var methodName = MethodName.of(
-            typeDescriptor.typeName().moduleName(),
-            typeDescriptor.typeName().namespace(),
-            Optional.of(typeDescriptor.typeName()),
-            name);
+        final var returnType = resolver().resolve(methodElement.getReturnType(), methodElement);
+        final var methodName = resolver().methodName(typeDescriptor, methodElement);
 
         final var formalParameters = resolver().getFormalParameters(methodElement,
             (variable, pd) -> pd.addTrait(SourceLocation.elementRef(variable)));
 
-        final var methodDescriptor = MethodDescriptor
-            .of(typeDescriptor, methodName, returnType, formalParameters);
-
-        methodElement.getThrownTypes().stream()
-            .map(typeMirror -> resolveTypeUsage(typeMirror, methodElement))
-            .map(ThrowableDescriptor::of)
-            .forEach(methodDescriptor::addTrait);
+        final var methodDescriptor = MethodDescriptor.of(typeDescriptor, methodName, returnType, formalParameters);
+        resolver().modifyMethod(methodDescriptor, methodElement);
 
         methodDescriptor.addTrait(SourceLocation.elementRef(methodElement));
 
-        // include the AnnotationUsages (as Traits)
-        methodElement.getAnnotationMirrors().stream()
-            .map(mirror -> resolver().createAnnotationTypeUsage(methodElement, mirror))
-            .forEach(methodDescriptor::addTrait);
-
-        // include the MethodImplementationDescriptor (when the constructor has an implementation)
-        if (methodElement.isDefault()) {
-            methodDescriptor.addTrait(new MethodImplementationDescriptor(methodDescriptor));
-        }
-
-        // include the Static trait (if necessary)
-        if (methodElement.getModifiers().contains(Modifier.STATIC)) {
-            methodDescriptor.addTrait(Static.STATIC);
-        }
-
-        // include the AccessModifier for the Method
-        getAccessModifier(methodElement.getModifiers())
-            .ifPresent(methodDescriptor::addTrait);
-
-        // include the Classification for the Method
-        methodDescriptor.addTrait(getClassification(methodElement.getModifiers()));
 
         // include the MethodDescriptor in the TypeDescriptor
         typeDescriptor.addTrait(methodDescriptor);
@@ -569,7 +494,7 @@ public class AnnotationProcessor
     /**
      * Creates a {@link TypeDescriptor} using the {@link CodeModel} based on a {@link TypeElement}.
      *
-     * @param codeModel  the {@link CodeModel}
+     * @param codeModel   the {@link CodeModel}
      * @param typeName    the {@link TypeName}
      * @param typeElement the {@link TypeElement}
      * @param pending     the pending {@link TypeElement}s by {@link TypeName}s to process
@@ -590,61 +515,11 @@ public class AnnotationProcessor
                 return existing;
             }
 
-            // establish the TypeDescriptor for the TypeElement
-            final var typeDescriptor = codeModel.createTypeDescriptor(typeName, typeElement.getKind().isInterface()
-                ? JDKInterfaceTypeDescriptor::of
-                : JDKClassTypeDescriptor::of);
+            final var typeDescriptor = resolver().buildTypeDescriptor(typeName, typeElement);
 
             typeDescriptor.addTrait(SourceLocation.elementRef(typeElement));
 
             messager.printNote("Discovered TypeName [" + typeName + "]", typeElement);
-
-            // discover the (generic) type parameters
-            if (!typeElement.getTypeParameters().isEmpty()) {
-
-                final var typeVariableUsages = typeElement.getTypeParameters().stream()
-                    .map(typeParameterElement -> resolveTypeUsage(typeParameterElement.asType(), typeParameterElement))
-                    .peek(typeUsage -> {
-                        if (!(typeUsage instanceof TypeVariableUsage)) {
-                            messager.printError(
-                                "The type [" + typeName + "] defines a non-TypeVariable type with [" + typeUsage + "]",
-                                typeElement);
-                        }
-                    })
-                    .filter(TypeVariableUsage.class::isInstance)
-                    .map(TypeVariableUsage.class::cast);
-
-                typeDescriptor.addTrait(ParameterizedTypeDescriptor.of(codeModel, typeVariableUsages));
-            }
-
-            // include the Static trait (if necessary)
-            if (typeElement.getModifiers().contains(Modifier.STATIC)) {
-                typeDescriptor.addTrait(Static.STATIC);
-            }
-
-            // discover the AccessModifier
-            getAccessModifier(typeElement.getModifiers())
-                .ifPresent(typeDescriptor::addTrait);
-
-            // discover the Classification
-            typeDescriptor.addTrait(getClassification(typeElement.getModifiers()));
-
-            // discover the ExtendsTypeDescriptors
-            //if (typeElement.getSuperclass().getKind() != TypeKind.NONE) {
-            Stream.of(typeElement.getSuperclass())
-                .map(superMirror -> resolveTypeUsage(superMirror, typeElement))
-                .filter(NamedTypeUsage.class::isInstance)
-                .map(NamedTypeUsage.class::cast)
-                .filter(namedTypeUsage -> !(namedTypeUsage instanceof VoidTypeUsage))
-                .forEach(superType -> typeDescriptor.addTrait(ExtendsTypeDescriptor.of(superType)));
-            //}
-
-            // discover the ImplementsTypeDescriptors
-            typeElement.getInterfaces().stream()
-                .map(implementsMirror -> resolveTypeUsage(implementsMirror, typeElement))
-                .filter(NamedTypeUsage.class::isInstance)
-                .map(NamedTypeUsage.class::cast)
-                .forEach(interfaceType -> typeDescriptor.addTrait(ImplementsTypeDescriptor.of(interfaceType)));
 
             // discover the FieldDescriptors
             typeElement.getEnclosedElements().stream()
@@ -658,29 +533,15 @@ public class AnnotationProcessor
                 .map(ExecutableElement.class::cast)
                 .forEach(enclosing -> createMethodDescriptor(codeModel, typeDescriptor, enclosing, pending));
 
-            // include the AnnotationUsages (as Traits)
-            typeElement.getAnnotationMirrors().stream()
-                .map(mirror -> resolver().createAnnotationTypeUsage(typeElement, mirror))
-                .forEach(typeDescriptor::addTrait);
-
             // ensure the discovery of types used by the TypePrototype
             typeDescriptor.composition(TypeUsage.class)
                 .forEach(typeUsage -> include(codeModel, typeUsage, typeElement, pending));
 
             return typeDescriptor;
-        }
-        catch (final StackOverflowError e) {
+        } catch (final StackOverflowError e) {
             e.printStackTrace();
             throw e;
         }
-    }
-
-    private Optional<AccessModifier> getAccessModifier(final Set<Modifier> modifiers) {
-        return TypeMirrorResolver.getAccessModifier(modifiers == null ? Set.of() : modifiers);
-    }
-
-    private Classification getClassification(final Set<Modifier> modifiers) {
-        return TypeMirrorResolver.getClassification(modifiers == null ? Set.of() : modifiers);
     }
 
     /**

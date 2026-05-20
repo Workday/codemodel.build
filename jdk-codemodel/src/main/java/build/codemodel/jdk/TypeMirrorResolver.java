@@ -23,6 +23,8 @@ package build.codemodel.jdk;
 import build.base.foundation.Lazy;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.FormalParameterDescriptor;
+import build.codemodel.foundation.descriptor.ThrowableDescriptor;
+import build.codemodel.foundation.descriptor.Traitable;
 import build.codemodel.foundation.naming.IrreducibleName;
 import build.codemodel.foundation.naming.ModuleName;
 import build.codemodel.foundation.naming.NameProvider;
@@ -33,6 +35,7 @@ import build.codemodel.foundation.usage.AnnotationValue;
 import build.codemodel.foundation.usage.ArrayTypeUsage;
 import build.codemodel.foundation.usage.GenericTypeUsage;
 import build.codemodel.foundation.usage.IntersectionTypeUsage;
+import build.codemodel.foundation.usage.NamedTypeUsage;
 import build.codemodel.foundation.usage.SpecificTypeUsage;
 import build.codemodel.foundation.usage.TypeUsage;
 import build.codemodel.foundation.usage.TypeVariableUsage;
@@ -40,11 +43,29 @@ import build.codemodel.foundation.usage.UnionTypeUsage;
 import build.codemodel.foundation.usage.UnknownTypeUsage;
 import build.codemodel.foundation.usage.VoidTypeUsage;
 import build.codemodel.foundation.usage.WildcardTypeUsage;
+import build.codemodel.jdk.descriptor.AnnotationMemberDefaultValue;
+import build.codemodel.jdk.descriptor.AnnotationType;
+import build.codemodel.jdk.descriptor.EnclosingTypeDescriptor;
+import build.codemodel.jdk.descriptor.EnumType;
 import build.codemodel.jdk.descriptor.Final;
+import build.codemodel.jdk.descriptor.JDKClassTypeDescriptor;
+import build.codemodel.jdk.descriptor.JDKInterfaceTypeDescriptor;
+import build.codemodel.jdk.descriptor.JDKTypeDescriptor;
+import build.codemodel.jdk.descriptor.MemberTypeDescriptor;
+import build.codemodel.jdk.descriptor.MethodImplementationDescriptor;
+import build.codemodel.jdk.descriptor.RecordComponentDescriptor;
+import build.codemodel.jdk.descriptor.RecordType;
 import build.codemodel.jdk.descriptor.SourceLocation;
+import build.codemodel.jdk.descriptor.Static;
 import build.codemodel.jdk.descriptor.Varargs;
 import build.codemodel.objectoriented.descriptor.AccessModifier;
 import build.codemodel.objectoriented.descriptor.Classification;
+import build.codemodel.objectoriented.descriptor.ExtendsTypeDescriptor;
+import build.codemodel.objectoriented.descriptor.FieldDescriptor;
+import build.codemodel.objectoriented.descriptor.ImplementsTypeDescriptor;
+import build.codemodel.objectoriented.descriptor.MethodDescriptor;
+import build.codemodel.objectoriented.descriptor.ParameterizedTypeDescriptor;
+import build.codemodel.objectoriented.naming.MethodName;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -59,9 +80,13 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
+import javax.lang.model.element.Parameterizable;
+import javax.lang.model.element.RecordComponentElement;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.ArrayType;
 import javax.lang.model.type.DeclaredType;
@@ -186,6 +211,15 @@ public final class TypeMirrorResolver {
         return Classification.CONCRETE;
     }
 
+    public static void applyModifiers(final Traitable descriptor,
+                                      final Collection<? extends Modifier> modifiers) {
+        if (modifiers.contains(Modifier.STATIC)) {
+            descriptor.addTrait(Static.STATIC);
+        }
+        getAccessModifier(modifiers).ifPresent(descriptor::addTrait);
+        descriptor.addTrait(getClassification(modifiers));
+    }
+
     // --- Formal parameters ---
 
     /**
@@ -284,6 +318,35 @@ public final class TypeMirrorResolver {
         return nameProvider.getTypeName(element.getSimpleName().toString());
     }
 
+    // --- Fields ---
+
+    public FieldDescriptor createFieldDescriptor(final VariableElement fieldElement) {
+        final var fieldName = nameProvider.getIrreducibleName(fieldElement.getSimpleName());
+        final var fieldType = this.resolve(fieldElement.asType(), fieldElement);
+        final var fieldDescriptor = FieldDescriptor.of(codeModel, fieldName, fieldType);
+        this.addFieldModifiers(fieldDescriptor, fieldElement);
+        this.addTypeAnnotations(fieldDescriptor, fieldElement);
+        return fieldDescriptor;
+    }
+
+    private void addFieldModifiers(final FieldDescriptor fieldDescriptor,
+                                  final VariableElement fieldElement) {
+        final var fieldModifiers = fieldElement.getModifiers();
+        if (fieldModifiers.contains(Modifier.STATIC)) {
+            fieldDescriptor.addTrait(Static.STATIC);
+        }
+        TypeMirrorResolver.getAccessModifier(fieldModifiers).ifPresent(fieldDescriptor::addTrait);
+    }
+
+    // --- Annotations ---
+
+    public void addTypeAnnotations(final Traitable traitable,
+                                   final Element element) {
+        element.getAnnotationMirrors().stream()
+            .map(mirror -> createAnnotationTypeUsage(element, mirror))
+            .forEach(traitable::addTrait);
+    }
+
     public AnnotationValue.Value resolveAnnotationValue(final Element enclosing, final Object raw) {
         return switch (raw) {
             case AnnotationMirror nestedMirror ->
@@ -332,6 +395,150 @@ public final class TypeMirrorResolver {
             return Optional.empty();
         }
         return Optional.of(enqueueIfAbsent(bound, pending, enclosing, resolved, currentEnclosing));
+    }
+
+    // --- Classes ---
+
+    public JDKTypeDescriptor buildTypeDescriptor(final TypeName typeName,
+                                                 final TypeElement typeElement) {
+        final boolean isInterface = typeElement.getKind().isInterface();
+        final var typeDescriptor = codeModel.createTypeDescriptor(typeName, isInterface ? JDKInterfaceTypeDescriptor::of : JDKClassTypeDescriptor::of);
+
+        final var kindTrait = switch (typeElement.getKind()) {
+            case ElementKind.ANNOTATION_TYPE -> AnnotationType.ANNOTATION_TYPE;
+            case ElementKind.ENUM -> EnumType.ENUM;
+            case ElementKind.RECORD -> RecordType.RECORD;
+            default -> null;
+        };
+        Optional.ofNullable(kindTrait).ifPresent(typeDescriptor::addTrait);
+
+        if (typeElement.getEnclosingElement() instanceof TypeElement enclosingElement) {
+            typeDescriptor.addTrait(new EnclosingTypeDescriptor(this.resolveTypeName(enclosingElement)));
+        }
+
+        addTypeAnnotations(typeDescriptor, typeElement);
+        if (typeElement.getKind() == ElementKind.RECORD) {
+            addRecordComponents(typeDescriptor, typeElement);
+        }
+
+        this.addTypeParameters(typeDescriptor, typeElement);
+        TypeMirrorResolver.applyModifiers(typeDescriptor, typeElement.getModifiers());
+
+        this.addSuperclass(typeDescriptor, typeElement);
+        this.addInterfaces(typeDescriptor, typeElement);
+        this.addedInnerTypes(typeDescriptor, typeElement);
+
+        return typeDescriptor;
+    }
+
+    private void addRecordComponents(final JDKTypeDescriptor typeDescriptor,
+                                     final TypeElement typeElement) {
+        for (final RecordComponentElement component : typeElement.getRecordComponents()) {
+            final var name = nameProvider.getIrreducibleName(component.getSimpleName());
+            final var type = this.resolve(component.asType(), component);
+            typeDescriptor.addTrait(RecordComponentDescriptor.of(name, type));
+        }
+    }
+
+    private void addSuperclass(final JDKTypeDescriptor typeDescriptor, final TypeElement typeElement) {
+        final var superMirror = typeElement.getSuperclass();
+        if (superMirror.getKind() == TypeKind.NONE || superMirror.getKind() == TypeKind.ERROR) {
+            return;
+        }
+        // java.lang.Object is the implicit superclass of every class; omit it per plan invariant
+        if (superMirror instanceof DeclaredType dt
+            && ((TypeElement) dt.asElement()).getQualifiedName().toString().equals("java.lang.Object")) {
+            return;
+        }
+        final var superUsage = this.resolve(superMirror, typeElement);
+        if (superUsage instanceof NamedTypeUsage named) {
+            typeDescriptor.addTrait(ExtendsTypeDescriptor.of(named));
+        }
+    }
+
+    private void addInterfaces(final JDKTypeDescriptor typeDescriptor,
+                               final TypeElement typeElement) {
+        for (final var interfaceMirror : typeElement.getInterfaces()) {
+            final var usage = this.resolve(interfaceMirror, typeElement);
+            if (usage instanceof NamedTypeUsage named) {
+                typeDescriptor.addTrait(ImplementsTypeDescriptor.of(named));
+            }
+        }
+    }
+
+    private void addedInnerTypes(final JDKTypeDescriptor typeDescriptor, final TypeElement typeElement) {
+        typeElement.getEnclosedElements().stream()
+            .filter(e -> e.getKind().isClass() || e.getKind().isInterface())
+            .map(TypeElement.class::cast)
+            .map(this::resolveTypeName)
+            .map(MemberTypeDescriptor::of)
+            .forEach(typeDescriptor::addTrait);
+    }
+
+    // --- Methods ---
+
+    public void modifyMethod(final MethodDescriptor methodDescriptor,
+                             final ExecutableElement methodElement) {
+        final var jdkDefault = methodElement.getDefaultValue();
+        if (jdkDefault != null) {
+            methodDescriptor.addTrait(new AnnotationMemberDefaultValue(jdkDefault.getValue()));
+        }
+        this.addTypeParameters(methodDescriptor, methodElement);
+        this.addThrowables(methodElement, methodDescriptor);
+        if (methodElement.isDefault()) {
+            methodDescriptor.addTrait(new MethodImplementationDescriptor(methodDescriptor));
+        }
+        TypeMirrorResolver.applyModifiers(methodDescriptor, methodElement.getModifiers());
+        this.addTypeAnnotations(methodDescriptor, methodElement);
+    }
+
+    public MethodName methodName(final JDKTypeDescriptor typeDescriptor,
+                                 final ExecutableElement methodElement) {
+        final var methodSimpleName = nameProvider.getIrreducibleName(methodElement.getSimpleName());
+        return MethodName.of(
+            typeDescriptor.typeName().moduleName(),
+            typeDescriptor.typeName().namespace(),
+            Optional.of(typeDescriptor.typeName()),
+            methodSimpleName);
+    }
+
+    private void addThrowables(final ExecutableElement methodElement,
+                              final MethodDescriptor methodDescriptor) {
+        methodElement.getThrownTypes().stream()
+            .map(t -> this.resolve(t, methodElement))
+            .map(ThrowableDescriptor::of)
+            .forEach(methodDescriptor::addTrait);
+    }
+
+    private void addTypeParameters(final Traitable traitable,
+                                  final Parameterizable parameterizableElement) {
+        if (parameterizableElement.getTypeParameters().isEmpty()) {
+            return;
+        }
+        final var typeVariableUsages = parameterizableElement.getTypeParameters().stream()
+            .map(tp -> this.resolveTypeParameter(tp, parameterizableElement))
+            .toList();
+        traitable.addTrait(ParameterizedTypeDescriptor.of(codeModel, typeVariableUsages.stream()));
+    }
+
+    private TypeVariableUsage resolveTypeParameter(final TypeParameterElement tp,
+                                                   final Element enclosingElement) {
+        final var name = nameProvider.getTypeName(tp.getSimpleName().toString());
+        final var typeVar = (TypeVariable) tp.asType();
+
+        // Upper bound: skip the implicit java.lang.Object (every type parameter extends it)
+        final var upperBound = typeVar.getUpperBound();
+        final Optional<Lazy<TypeUsage>> optUpper;
+        if (upperBound.getKind() == TypeKind.DECLARED
+            && ((TypeElement) ((DeclaredType) upperBound).asElement())
+            .getQualifiedName().toString().equals("java.lang.Object")) {
+            optUpper = Optional.empty();
+        } else {
+            optUpper = Optional.of(Lazy.of(this.resolve(upperBound, enclosingElement)));
+        }
+
+        // Type parameters never have lower bounds (only wildcards do)
+        return TypeVariableUsage.of(codeModel, name, Optional.empty(), optUpper);
     }
 
     // --- Visitor ---
