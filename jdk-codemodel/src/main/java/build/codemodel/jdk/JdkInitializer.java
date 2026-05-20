@@ -24,23 +24,10 @@ import build.base.foundation.Lazy;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.FormalParameterDescriptor;
 import build.codemodel.foundation.descriptor.ThrowableDescriptor;
-import build.codemodel.foundation.naming.ModuleName;
 import build.codemodel.foundation.naming.NameProvider;
-import build.codemodel.foundation.naming.Namespace;
-import build.codemodel.foundation.naming.TypeName;
-import build.codemodel.foundation.usage.AnnotationTypeUsage;
-import build.codemodel.foundation.usage.AnnotationValue;
-import build.codemodel.foundation.usage.ArrayTypeUsage;
-import build.codemodel.foundation.usage.GenericTypeUsage;
-import build.codemodel.foundation.usage.IntersectionTypeUsage;
 import build.codemodel.foundation.usage.NamedTypeUsage;
-import build.codemodel.foundation.usage.SpecificTypeUsage;
 import build.codemodel.foundation.usage.TypeUsage;
 import build.codemodel.foundation.usage.TypeVariableUsage;
-import build.codemodel.foundation.usage.UnionTypeUsage;
-import build.codemodel.foundation.usage.UnknownTypeUsage;
-import build.codemodel.foundation.usage.VoidTypeUsage;
-import build.codemodel.foundation.usage.WildcardTypeUsage;
 import build.codemodel.framework.initialization.Initializer;
 import build.codemodel.jdk.descriptor.AnnotationMemberDefaultValue;
 import build.codemodel.jdk.descriptor.AnnotationType;
@@ -48,23 +35,19 @@ import build.codemodel.jdk.descriptor.EnclosingTypeDescriptor;
 import build.codemodel.jdk.descriptor.EnumConstantDescriptor;
 import build.codemodel.jdk.descriptor.EnumType;
 import build.codemodel.jdk.descriptor.FieldInitializerDescriptor;
-import build.codemodel.jdk.descriptor.Final;
 import build.codemodel.jdk.descriptor.ImportDeclaration;
 import build.codemodel.jdk.descriptor.InitializerBlockDescriptor;
 import build.codemodel.jdk.descriptor.JDKClassTypeDescriptor;
 import build.codemodel.jdk.descriptor.JDKInterfaceTypeDescriptor;
 import build.codemodel.jdk.descriptor.JDKModuleDescriptor;
 import build.codemodel.jdk.descriptor.JDKTypeDescriptor;
-import build.codemodel.jdk.descriptor.LocationTrait;
 import build.codemodel.jdk.descriptor.MemberTypeDescriptor;
 import build.codemodel.jdk.descriptor.MethodBodyDescriptor;
 import build.codemodel.jdk.descriptor.MethodImplementationDescriptor;
 import build.codemodel.jdk.descriptor.RecordComponentDescriptor;
 import build.codemodel.jdk.descriptor.RecordType;
+import build.codemodel.jdk.descriptor.SourceLocation;
 import build.codemodel.jdk.descriptor.Static;
-import build.codemodel.jdk.descriptor.Varargs;
-import build.codemodel.objectoriented.descriptor.AccessModifier;
-import build.codemodel.objectoriented.descriptor.Classification;
 import build.codemodel.objectoriented.descriptor.ConstructorDescriptor;
 import build.codemodel.objectoriented.descriptor.ExtendsTypeDescriptor;
 import build.codemodel.objectoriented.descriptor.FieldDescriptor;
@@ -89,40 +72,21 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
-import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
-import javax.lang.model.element.ModuleElement;
-import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.RecordComponentElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.element.VariableElement;
-import javax.lang.model.type.ArrayType;
 import javax.lang.model.type.DeclaredType;
-import javax.lang.model.type.ErrorType;
-import javax.lang.model.type.ExecutableType;
-import javax.lang.model.type.IntersectionType;
-import javax.lang.model.type.NoType;
-import javax.lang.model.type.NullType;
-import javax.lang.model.type.PrimitiveType;
 import javax.lang.model.type.TypeKind;
-import javax.lang.model.type.TypeMirror;
 import javax.lang.model.type.TypeVariable;
-import javax.lang.model.type.TypeVisitor;
-import javax.lang.model.type.UnionType;
-import javax.lang.model.type.WildcardType;
 import javax.tools.Diagnostic;
 import javax.tools.JavaCompiler;
 import javax.tools.JavaFileObject;
@@ -150,6 +114,7 @@ public class JdkInitializer
     // Set at the start of initialize() for use by helper methods
     private CodeModel codeModel;
     private NameProvider nameProvider;
+    private TypeMirrorResolver resolver;
     private Trees trees;
     private JdkExpressionConverter exprConverter;
     private JdkStatementConverter stmtConverter;
@@ -225,7 +190,6 @@ public class JdkInitializer
         initialized = true;
         this.codeModel = codeModel;
         this.nameProvider = codeModel.getNameProvider();
-
         final JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         try (StandardJavaFileManager fileManager = compiler.getStandardFileManager(null, null, null)) {
 
@@ -239,6 +203,7 @@ public class JdkInitializer
             final var javacTask = (JavacTask) task;
             final var compilationUnits = javacTask.parse();
             javacTask.analyze();
+            this.resolver = new TypeMirrorResolver(codeModel, javacTask.getElements(), null);
             this.trees = Trees.instance(javacTask);
             this.exprConverter = new JdkExpressionConverter(codeModel);
             this.stmtConverter = new JdkStatementConverter(codeModel, this.exprConverter);
@@ -249,12 +214,12 @@ public class JdkInitializer
                     @Override
                     public Void visitClass(final ClassTree classTree, final Void unused) {
                         exprConverter.setTypeContext(trees, cut,
-                            mirror -> resolveTypeUsage(mirror, null));
+                            mirror -> resolver.resolve(mirror, null));
                         final TreePath classPath = trees.getPath(cut, classTree);
                         final var typeElement = (TypeElement) trees.getElement(classPath);
                         if (typeElement != null
                             && !typeElement.getQualifiedName().toString().isEmpty()) {
-                            exprConverter.setEnclosingType(resolveTypeUsage(typeElement.asType(), null));
+                            exprConverter.setEnclosingType(resolver.resolve(typeElement.asType(), null));
                             processTypeElement(typeElement, classTree, cut);
                         }
                         return super.visitClass(classTree, unused);
@@ -324,7 +289,7 @@ public class JdkInitializer
     private void processTypeElement(final TypeElement typeElement,
                                     final ClassTree classTree,
                                     final CompilationUnitTree cut) {
-        final var typeName = resolveTypeName(typeElement);
+        final var typeName = resolver.resolveTypeName(typeElement);
 
         // Skip if already registered (can happen with inner types visited by the scanner)
         if (codeModel.getTypeDescriptor(typeName).isPresent()) {
@@ -344,7 +309,7 @@ public class JdkInitializer
         }
 
         if (typeElement.getEnclosingElement() instanceof TypeElement enclosingElement) {
-            typeDescriptor.addTrait(new EnclosingTypeDescriptor(resolveTypeName(enclosingElement)));
+            typeDescriptor.addTrait(new EnclosingTypeDescriptor(resolver.resolveTypeName(enclosingElement)));
         }
 
         if (classTree != null && cut != null) {
@@ -352,7 +317,7 @@ public class JdkInitializer
             final var start = srcPositions.getStartPosition(cut, classTree);
             final var end = srcPositions.getEndPosition(cut, classTree);
             if (start != Diagnostic.NOPOS) {
-                typeDescriptor.addTrait(LocationTrait.of(cut.getSourceFile().toUri(), start, end));
+                typeDescriptor.addTrait(SourceLocation.filePosition(cut.getSourceFile().toUri(), start, end));
             }
         }
 
@@ -394,7 +359,7 @@ public class JdkInitializer
             .getQualifiedName().toString().equals("java.lang.Object")) {
             optUpper = Optional.empty();
         } else {
-            optUpper = Optional.of(Lazy.of(resolveTypeUsage(upperBound, enclosingElement)));
+            optUpper = Optional.of(Lazy.of(resolver.resolve(upperBound, enclosingElement)));
         }
 
         // Type parameters never have lower bounds (only wildcards do)
@@ -406,8 +371,8 @@ public class JdkInitializer
         if (modifiers.contains(Modifier.STATIC)) {
             typeDescriptor.addTrait(Static.STATIC);
         }
-        getAccessModifier(modifiers).ifPresent(typeDescriptor::addTrait);
-        typeDescriptor.addTrait(getClassification(modifiers));
+        TypeMirrorResolver.getAccessModifier(modifiers).ifPresent(typeDescriptor::addTrait);
+        typeDescriptor.addTrait(TypeMirrorResolver.getClassification(modifiers));
     }
 
     private void addSuperclass(final JDKTypeDescriptor typeDescriptor, final TypeElement typeElement) {
@@ -420,7 +385,7 @@ public class JdkInitializer
             && ((TypeElement) dt.asElement()).getQualifiedName().toString().equals("java.lang.Object")) {
             return;
         }
-        final var superUsage = resolveTypeUsage(superMirror, typeElement);
+        final var superUsage = resolver.resolve(superMirror, typeElement);
         if (superUsage instanceof NamedTypeUsage named) {
             typeDescriptor.addTrait(ExtendsTypeDescriptor.of(named));
         }
@@ -428,7 +393,7 @@ public class JdkInitializer
 
     private void addInterfaces(final JDKTypeDescriptor typeDescriptor, final TypeElement typeElement) {
         for (final var interfaceMirror : typeElement.getInterfaces()) {
-            final var usage = resolveTypeUsage(interfaceMirror, typeElement);
+            final var usage = resolver.resolve(interfaceMirror, typeElement);
             if (usage instanceof NamedTypeUsage named) {
                 typeDescriptor.addTrait(ImplementsTypeDescriptor.of(named));
             }
@@ -439,7 +404,7 @@ public class JdkInitializer
         typeElement.getEnclosedElements().stream()
             .filter(e -> e.getKind().isClass() || e.getKind().isInterface())
             .map(TypeElement.class::cast)
-            .forEach(nested -> typeDescriptor.addTrait(new MemberTypeDescriptor(resolveTypeName(nested))));
+            .forEach(nested -> typeDescriptor.addTrait(new MemberTypeDescriptor(resolver.resolveTypeName(nested))));
     }
 
     private void addImports(final JDKTypeDescriptor typeDescriptor, final CompilationUnitTree cut) {
@@ -509,22 +474,22 @@ public class JdkInitializer
                               final CompilationUnitTree cut,
                               final SourcePositions srcPositions) {
         final var fieldName = nameProvider.getIrreducibleName(fieldElement.getSimpleName());
-        final var fieldType = resolveTypeUsage(fieldElement.asType(), fieldElement);
+        final var fieldType = resolver.resolve(fieldElement.asType(), fieldElement);
         final var fieldDescriptor = FieldDescriptor.of(codeModel, fieldName, fieldType);
 
         final var fieldModifiers = fieldElement.getModifiers();
         if (fieldModifiers.contains(Modifier.STATIC)) {
             fieldDescriptor.addTrait(Static.STATIC);
         }
-        getAccessModifier(fieldModifiers).ifPresent(fieldDescriptor::addTrait);
+        TypeMirrorResolver.getAccessModifier(fieldModifiers).ifPresent(fieldDescriptor::addTrait);
         fieldElement.getAnnotationMirrors().stream()
-            .map(mirror -> createAnnotationTypeUsage(fieldElement, mirror))
+            .map(mirror -> resolver.createAnnotationTypeUsage(fieldElement, mirror))
             .forEach(fieldDescriptor::addTrait);
 
         final var start = srcPositions.getStartPosition(cut, varTree);
         final var end = srcPositions.getEndPosition(cut, varTree);
         if (start != Diagnostic.NOPOS) {
-            fieldDescriptor.addTrait(LocationTrait.of(cut.getSourceFile().toUri(), start, end));
+            fieldDescriptor.addTrait(SourceLocation.filePosition(cut.getSourceFile().toUri(), start, end));
         }
 
         typeDescriptor.addTrait(fieldDescriptor);
@@ -539,7 +504,7 @@ public class JdkInitializer
                                      final TypeElement typeElement) {
         for (final RecordComponentElement component : typeElement.getRecordComponents()) {
             final var name = nameProvider.getIrreducibleName(component.getSimpleName());
-            final var type = resolveTypeUsage(component.asType(), component);
+            final var type = resolver.resolve(component.asType(), component);
             typeDescriptor.addTrait(RecordComponentDescriptor.of(name, type));
         }
     }
@@ -552,15 +517,15 @@ public class JdkInitializer
         final var formalParameters = getFormalParameters(methodElement);
 
         final var constructorDescriptor = ConstructorDescriptor.of(typeDescriptor, formalParameters);
-        getAccessModifier(methodElement.getModifiers()).ifPresent(constructorDescriptor::addTrait);
+        TypeMirrorResolver.getAccessModifier(methodElement.getModifiers()).ifPresent(constructorDescriptor::addTrait);
         methodElement.getAnnotationMirrors().stream()
-            .map(mirror -> createAnnotationTypeUsage(methodElement, mirror))
+            .map(mirror -> resolver.createAnnotationTypeUsage(methodElement, mirror))
             .forEach(constructorDescriptor::addTrait);
 
         final var start = srcPositions.getStartPosition(cut, ctorTree);
         final var end = srcPositions.getEndPosition(cut, ctorTree);
         if (start != Diagnostic.NOPOS) {
-            constructorDescriptor.addTrait(LocationTrait.of(cut.getSourceFile().toUri(), start, end));
+            constructorDescriptor.addTrait(SourceLocation.filePosition(cut.getSourceFile().toUri(), start, end));
         }
 
         typeDescriptor.addTrait(constructorDescriptor);
@@ -578,25 +543,7 @@ public class JdkInitializer
     }
 
     private Stream<FormalParameterDescriptor> getFormalParameters(final ExecutableElement methodElement) {
-        final var params = methodElement.getParameters();
-        final int lastIdx = params.size() - 1;
-        return IntStream.range(0, params.size()).mapToObj(i -> {
-            final var param = params.get(i);
-            final var pd = FormalParameterDescriptor.of(
-                codeModel,
-                Optional.of(nameProvider.getIrreducibleName(param.getSimpleName())),
-                resolveTypeUsage(param.asType(), param));
-            if (param.getModifiers().contains(Modifier.FINAL)) {
-                pd.addTrait(Final.FINAL);
-            }
-            if (methodElement.isVarArgs() && i == lastIdx) {
-                pd.addTrait(Varargs.VARARGS);
-            }
-            param.getAnnotationMirrors().stream()
-                .map(mirror -> createAnnotationTypeUsage(param, mirror))
-                .forEach(pd::addTrait);
-            return pd;
-        });
+        return resolver.getFormalParameters(methodElement, (_, _) -> {});
     }
 
     private void processMethod(final JDKTypeDescriptor typeDescriptor,
@@ -605,7 +552,7 @@ public class JdkInitializer
                                final CompilationUnitTree cut,
                                final SourcePositions srcPositions) {
         final var methodSimpleName = nameProvider.getIrreducibleName(methodElement.getSimpleName());
-        final var returnType = resolveTypeUsage(methodElement.getReturnType(), methodElement);
+        final var returnType = resolver.resolve(methodElement.getReturnType(), methodElement);
         final var methodName = MethodName.of(
             typeDescriptor.typeName().moduleName(),
             typeDescriptor.typeName().namespace(),
@@ -627,7 +574,7 @@ public class JdkInitializer
             methodDescriptor.addTrait(ParameterizedTypeDescriptor.of(codeModel, typeVars.stream()));
         }
         methodElement.getThrownTypes().stream()
-            .map(t -> resolveTypeUsage(t, methodElement))
+            .map(t -> resolver.resolve(t, methodElement))
             .map(ThrowableDescriptor::of)
             .forEach(methodDescriptor::addTrait);
         if (methodElement.isDefault()) {
@@ -638,16 +585,16 @@ public class JdkInitializer
         if (methodModifiers.contains(Modifier.STATIC)) {
             methodDescriptor.addTrait(Static.STATIC);
         }
-        getAccessModifier(methodModifiers).ifPresent(methodDescriptor::addTrait);
-        methodDescriptor.addTrait(getClassification(methodModifiers));
+        TypeMirrorResolver.getAccessModifier(methodModifiers).ifPresent(methodDescriptor::addTrait);
+        methodDescriptor.addTrait(TypeMirrorResolver.getClassification(methodModifiers));
         methodElement.getAnnotationMirrors().stream()
-            .map(mirror -> createAnnotationTypeUsage(methodElement, mirror))
+            .map(mirror -> resolver.createAnnotationTypeUsage(methodElement, mirror))
             .forEach(methodDescriptor::addTrait);
 
         final var start = srcPositions.getStartPosition(cut, methodTree);
         final var end = srcPositions.getEndPosition(cut, methodTree);
         if (start != Diagnostic.NOPOS) {
-            methodDescriptor.addTrait(LocationTrait.of(cut.getSourceFile().toUri(), start, end));
+            methodDescriptor.addTrait(SourceLocation.filePosition(cut.getSourceFile().toUri(), start, end));
         }
 
         typeDescriptor.addTrait(methodDescriptor);
@@ -659,373 +606,8 @@ public class JdkInitializer
 
     private void addTypeAnnotations(final JDKTypeDescriptor typeDescriptor, final TypeElement typeElement) {
         typeElement.getAnnotationMirrors().stream()
-            .map(mirror -> createAnnotationTypeUsage(typeElement, mirror))
+            .map(mirror -> resolver.createAnnotationTypeUsage(typeElement, mirror))
             .forEach(typeDescriptor::addTrait);
     }
 
-    // --- Naming ---
-
-    private TypeName resolveTypeName(final TypeElement typeElement) {
-        final var moduleName = resolveModuleName(typeElement);
-        final var namespace = resolveNamespace(typeElement);
-        final var enclosingTypeName = resolveEnclosingTypeName(typeElement);
-        final var irreducibleName = nameProvider.getIrreducibleName(typeElement.getSimpleName().toString());
-        return nameProvider.getTypeName(moduleName, namespace, enclosingTypeName, irreducibleName);
-    }
-
-    private Optional<ModuleName> resolveModuleName(final TypeElement typeElement) {
-        return Stream.iterate(typeElement.getEnclosingElement(), Objects::nonNull, Element::getEnclosingElement)
-            .filter(ModuleElement.class::isInstance)
-            .map(ModuleElement.class::cast)
-            .findFirst()
-            .flatMap(me -> switch (me) {
-                case ModuleElement m when !m.isUnnamed() -> nameProvider.getModuleName(m.getQualifiedName().toString());
-                default -> Optional.empty();
-            });
-    }
-
-    private Optional<Namespace> resolveNamespace(final TypeElement typeElement) {
-        return Stream.iterate(typeElement.getEnclosingElement(), Objects::nonNull, Element::getEnclosingElement)
-            .filter(PackageElement.class::isInstance)
-            .map(PackageElement.class::cast)
-            .findFirst()
-            .map(p -> p.getQualifiedName().toString())
-            .filter(name -> !name.isEmpty())
-            .flatMap(nameProvider::getNamespace);
-    }
-
-    private Optional<TypeName> resolveEnclosingTypeName(final TypeElement typeElement) {
-        return switch (typeElement.getEnclosingElement()) {
-            case TypeElement enclosing -> Optional.of(resolveTypeName(enclosing));
-            default -> Optional.empty();
-        };
-    }
-
-    // --- Annotation creation ---
-
-    private AnnotationTypeUsage createAnnotationTypeUsage(final Element enclosing,
-                                                          final AnnotationMirror mirror) {
-        final var annotationTypeName = resolveElementTypeName(mirror.getAnnotationType().asElement());
-        final var values = new ArrayList<AnnotationValue>();
-        mirror.getElementValues().forEach((exec, val) -> {
-            final var valueName = nameProvider.getIrreducibleName(exec.getSimpleName());
-            values.add(AnnotationValue.of(codeModel, valueName, resolveAnnotationValue(enclosing, val.getValue())));
-        });
-        return AnnotationTypeUsage.of(codeModel, annotationTypeName, values.stream());
-    }
-
-    private AnnotationValue.Value resolveAnnotationValue(final Element enclosing, final Object raw) {
-        return switch (raw) {
-            case AnnotationMirror nestedMirror ->
-                new AnnotationValue.Value.Nested(createAnnotationTypeUsage(enclosing, nestedMirror));
-            case javax.lang.model.element.AnnotationValue av ->
-                resolveAnnotationValue(enclosing, av.getValue());
-            case List<?> list ->
-                new AnnotationValue.Value.Array(list.stream()
-                    .map(item -> resolveAnnotationValue(enclosing, item))
-                    .toList());
-            case TypeMirror typeMirror ->
-                new AnnotationValue.Value.ClassRef(
-                    nameProvider.getTypeName(Optional.empty(), typeMirror.toString()));
-            case VariableElement varElement ->
-                new AnnotationValue.Value.EnumConstant(
-                    resolveElementTypeName(varElement.getEnclosingElement()),
-                    varElement.getSimpleName().toString());
-            default -> new AnnotationValue.Value.Literal(raw);
-        };
-    }
-
-    private TypeName resolveElementTypeName(final Element element) {
-        if (element instanceof TypeElement typeElement) {
-            final var fqn = typeElement.getQualifiedName().toString();
-            if (!fqn.isEmpty()) {
-                return nameProvider.getTypeName(Optional.empty(), fqn);
-            }
-        }
-        return nameProvider.getTypeName(element.getSimpleName().toString());
-    }
-
-    // --- Modifier helpers ---
-
-    private static Optional<AccessModifier> getAccessModifier(final Collection<? extends Modifier> modifiers) {
-        for (final var m : modifiers) {
-            switch (m) {
-                case PUBLIC:
-                    return Optional.of(AccessModifier.PUBLIC);
-                case PROTECTED:
-                    return Optional.of(AccessModifier.PROTECTED);
-                case PRIVATE:
-                    return Optional.of(AccessModifier.PRIVATE);
-                default:
-                    break;
-            }
-        }
-        return Optional.empty();
-    }
-
-    private static Classification getClassification(final Collection<? extends Modifier> modifiers) {
-        if (modifiers.contains(Modifier.ABSTRACT)) {
-            return Classification.ABSTRACT;
-        } else if (modifiers.contains(Modifier.FINAL)) {
-            return Classification.FINAL;
-        }
-        return Classification.CONCRETE;
-    }
-
-    // --- Type resolution ---
-
-    /**
-     * Returns the shared {@link Lazy} placeholder for {@code mirror}, inserting one into
-     * {@code pending} if neither {@code pending} nor {@code resolved} contains it yet.
-     *
-     * <p>This is the single primitive behind the lazy-queue pattern. Every visitor method that
-     * encounters a sub-type calls this to obtain a {@link Lazy} whose value will be set when the
-     * queue loop eventually visits that sub-type. Because all callers share the same {@link Lazy}
-     * instance by reference, the resolved value is automatically visible to every composite built
-     * around it — no re-wiring needed.
-     */
-    private static Lazy<TypeUsage> enqueueIfAbsent(
-        final TypeMirror mirror,
-        final LinkedHashMap<TypeMirror, Lazy<TypeUsage>> pending,
-        final HashMap<TypeMirror, Element> enclosing,
-        final LinkedHashMap<TypeMirror, TypeUsage> resolved,
-        final Element currentEnclosing) {
-
-        var lazy = Lazy.ofNullable(resolved.get(mirror)).or(() -> pending.get(mirror));
-        if (lazy.isEmpty()) {
-            pending.putIfAbsent(mirror, lazy);
-            lazy = pending.get(mirror);
-            enclosing.putIfAbsent(mirror, currentEnclosing);
-        }
-        return lazy;
-    }
-
-    /**
-     * Resolves an optional bound {@link TypeMirror} into the lazy-queue.
-     * Returns {@link Optional#empty()} when {@code bound} is null (no bound declared in source)
-     * or has kind {@link TypeKind#NULL} (the null-type lower-bound javac uses for unbounded type
-     * variables).
-     */
-    private static Optional<Lazy<TypeUsage>> resolveOptionalBound(
-        final TypeMirror bound,
-        final LinkedHashMap<TypeMirror, Lazy<TypeUsage>> pending,
-        final HashMap<TypeMirror, Element> enclosing,
-        final LinkedHashMap<TypeMirror, TypeUsage> resolved,
-        final Element currentEnclosing) {
-
-        if (bound == null || bound.getKind() == TypeKind.NULL) {
-            return Optional.empty();
-        }
-        return Optional.of(enqueueIfAbsent(bound, pending, enclosing, resolved, currentEnclosing));
-    }
-
-    /**
-     * Resolves a {@link TypeMirror} to a {@link TypeUsage} using a lazy-queue visitor to handle
-     * recursive and mutually-referential generic types without stack overflow.
-     *
-     * <p><b>Algorithm — depth-first lazy queue:</b>
-     * <ol>
-     *   <li>The root {@link TypeMirror} is placed in {@code pending} with an empty {@link Lazy}
-     *       placeholder.</li>
-     *   <li>Each iteration takes the <em>last</em> entry ({@link java.util.LinkedHashMap#lastEntry})
-     *       — i.e. the most-recently-added — implementing a LIFO / depth-first traversal.</li>
-     *   <li>If the entry's {@link Lazy} is already populated it is moved to {@code resolved} and
-     *       removed from {@code pending}.</li>
-     *   <li>Otherwise the {@link TypeMirror} is visited. Visitor methods fill the entry's
-     *       {@link Lazy} directly ({@link Lazy#set}) for leaf types (primitives, void, …) or
-     *       insert new empty-{@link Lazy} placeholders into {@code pending} for any
-     *       sub-types they depend on, then construct a composite usage that holds references to
-     *       those placeholders.</li>
-     *   <li>On the next iteration the newly-inserted sub-type placeholder is at the tail and is
-     *       processed first, ensuring dependencies are resolved before the composites that
-     *       reference them.</li>
-     * </ol>
-     *
-     * <p>Annotations for each {@link TypeMirror} are computed and cached in {@code annotations}
-     * <em>before</em> the visitor fires, so every {@code visitXxx} method can safely call
-     * {@code annotations.get(currentMirror)} without a null-check.
-     */
-    TypeUsage resolveTypeUsage(final TypeMirror typeMirror, final Element enclosingElement) {
-        final var pending = new LinkedHashMap<TypeMirror, Lazy<TypeUsage>>();
-        final var enclosing = new HashMap<TypeMirror, Element>();
-        final var resolved = new LinkedHashMap<TypeMirror, TypeUsage>();
-        final var annotations = new HashMap<TypeMirror, ArrayList<AnnotationTypeUsage>>();
-
-        pending.put(typeMirror, Lazy.empty());
-        enclosing.put(typeMirror, enclosingElement);
-
-        while (!pending.isEmpty()) {
-            // LIFO: most-recently-added entry first → depth-first traversal.
-            // Dependencies are pushed to the tail by visitor methods and therefore
-            // resolved before the composite types that depend on them.
-            final var entry = pending.lastEntry();
-            final var pendingMirror = entry.getKey();
-            final var pendingLazy = entry.getValue();
-            final var pendingEnclosing = enclosing.get(pendingMirror);
-
-            if (pendingLazy.isPresent()) {
-                resolved.put(pendingMirror, pendingLazy.get());
-                pending.remove(pendingMirror);
-            } else if (resolved.containsKey(pendingMirror)) {
-                pending.remove(pendingMirror);
-            } else {
-                // Pre-populate annotations before the visitor fires so that every visitXxx
-                // method can safely call annotations.get(currentMirror) without a null-check.
-                annotations.computeIfAbsent(pendingMirror, __ ->
-                    pendingMirror.getAnnotationMirrors().stream()
-                        .map(m -> createAnnotationTypeUsage(pendingEnclosing, m))
-                        .collect(Collectors.toCollection(ArrayList::new)));
-
-                pendingMirror.accept(buildTypeVisitor(pending, enclosing, resolved, annotations,
-                    pendingMirror, pendingEnclosing), pendingLazy);
-            }
-        }
-
-        final var result = resolved.get(typeMirror);
-        if (result == null) {
-            throw new IllegalStateException("Failed to resolve TypeUsage for: " + typeMirror);
-        }
-        return result;
-    }
-
-    private TypeVisitor<Lazy<TypeUsage>, Lazy<TypeUsage>> buildTypeVisitor(
-        final LinkedHashMap<TypeMirror, Lazy<TypeUsage>> pending,
-        final HashMap<TypeMirror, Element> enclosing,
-        final LinkedHashMap<TypeMirror, TypeUsage> resolved,
-        final HashMap<TypeMirror, ArrayList<AnnotationTypeUsage>> annotations,
-        final TypeMirror currentMirror,
-        final Element currentEnclosing) {
-
-        return new TypeVisitor<>() {
-            @Override
-            public Lazy<TypeUsage> visit(final TypeMirror t, final Lazy<TypeUsage> lazy) {
-                return lazy;
-            }
-
-            @Override
-            public Lazy<TypeUsage> visitPrimitive(final PrimitiveType t, final Lazy<TypeUsage> lazy) {
-                final var moduleName = nameProvider.getModuleName("java.base");
-                final var namespace = nameProvider.getNamespace("java.lang");
-                final var typeName = nameProvider.getTypeName(
-                    moduleName, namespace, Optional.empty(),
-                    nameProvider.getIrreducibleName(t.toString()));
-                final var usage = SpecificTypeUsage.of(codeModel, typeName);
-                annotations.get(currentMirror).forEach(usage::addTrait);
-                lazy.set(usage);
-                return lazy;
-            }
-
-            @Override
-            public Lazy<TypeUsage> visitNull(final NullType t, final Lazy<TypeUsage> lazy) {
-                lazy.set(UnknownTypeUsage.create(codeModel));
-                return lazy;
-            }
-
-            @Override
-            public Lazy<TypeUsage> visitArray(final ArrayType t, final Lazy<TypeUsage> lazy) {
-                final var lazyComponent = enqueueIfAbsent(
-                    t.getComponentType(), pending, enclosing, resolved, currentEnclosing);
-                final var usage = ArrayTypeUsage.of(codeModel, lazyComponent);
-                annotations.get(currentMirror).forEach(usage::addTrait);
-                lazy.set(usage);
-                return lazy;
-            }
-
-            @Override
-            public Lazy<TypeUsage> visitDeclared(final DeclaredType t, final Lazy<TypeUsage> lazy) {
-                final var typeElement = (TypeElement) t.asElement();
-                final var typeName = resolveTypeName(typeElement);
-
-                if (typeElement.getTypeParameters().isEmpty()) {
-                    final var usage = SpecificTypeUsage.of(codeModel, typeName);
-                    annotations.get(currentMirror).forEach(usage::addTrait);
-                    lazy.set(usage);
-                } else {
-                    final var lazyArgs = t.getTypeArguments().stream()
-                        .map(arg -> enqueueIfAbsent(arg, pending, enclosing, resolved, currentEnclosing))
-                        .toList();
-                    final var usage = GenericTypeUsage.of(codeModel, typeName, lazyArgs.stream());
-                    annotations.get(currentMirror).forEach(usage::addTrait);
-                    lazy.set(usage);
-                }
-                return lazy;
-            }
-
-            @Override
-            public Lazy<TypeUsage> visitError(final ErrorType t, final Lazy<TypeUsage> lazy) {
-                lazy.set(UnknownTypeUsage.create(codeModel));
-                return lazy;
-            }
-
-            @Override
-            public Lazy<TypeUsage> visitTypeVariable(final TypeVariable t, final Lazy<TypeUsage> lazy) {
-                final var typeName = nameProvider.getTypeName(
-                    Optional.empty(), t.asElement().getSimpleName().toString());
-
-                // Lower bound: TypeKind.NULL means "no super bound" — resolveOptionalBound handles this.
-                final Optional<Lazy<TypeUsage>> optLower = resolveOptionalBound(
-                    t.getLowerBound(), pending, enclosing, resolved, t.asElement());
-
-                // Upper bound: skip the implicit java.lang.Object (every type variable extends it).
-                final var upperBound = t.getUpperBound();
-                final var isObjectUpper = upperBound.getKind() == TypeKind.DECLARED
-                    && ((TypeElement) ((DeclaredType) upperBound).asElement()).getQualifiedName().toString()
-                    .equals("java.lang.Object");
-                final Optional<Lazy<TypeUsage>> optUpper = isObjectUpper
-                    ? Optional.empty()
-                    : Optional.of(enqueueIfAbsent(upperBound, pending, enclosing, resolved, t.asElement()));
-
-                lazy.set(TypeVariableUsage.of(codeModel, typeName, optLower, optUpper));
-                return lazy;
-            }
-
-            @Override
-            public Lazy<TypeUsage> visitWildcard(final WildcardType t, final Lazy<TypeUsage> lazy) {
-                // extends bound → upper bound; super bound → lower bound
-                final Optional<Lazy<TypeUsage>> optUpper = resolveOptionalBound(
-                    t.getExtendsBound(), pending, enclosing, resolved, currentEnclosing);
-                final Optional<Lazy<TypeUsage>> optLower = resolveOptionalBound(
-                    t.getSuperBound(), pending, enclosing, resolved, currentEnclosing);
-                final var usage = WildcardTypeUsage.of(codeModel, optLower, optUpper);
-                annotations.get(currentMirror).forEach(usage::addTrait);
-                lazy.set(usage);
-                return lazy;
-            }
-
-            @Override
-            public Lazy<TypeUsage> visitExecutable(final ExecutableType t, final Lazy<TypeUsage> lazy) {
-                return lazy;
-            }
-
-            @Override
-            public Lazy<TypeUsage> visitNoType(final NoType t, final Lazy<TypeUsage> lazy) {
-                lazy.set(VoidTypeUsage.create(codeModel));
-                return lazy;
-            }
-
-            @Override
-            public Lazy<TypeUsage> visitUnknown(final TypeMirror t, final Lazy<TypeUsage> lazy) {
-                lazy.set(UnknownTypeUsage.create(codeModel));
-                return lazy;
-            }
-
-            @Override
-            public Lazy<TypeUsage> visitUnion(final UnionType t, final Lazy<TypeUsage> lazy) {
-                final var lazyAlts = t.getAlternatives().stream()
-                    .map(alt -> enqueueIfAbsent(alt, pending, enclosing, resolved, currentEnclosing))
-                    .toList();
-                lazy.set(UnionTypeUsage.of(codeModel, lazyAlts.stream()));
-                return lazy;
-            }
-
-            @Override
-            public Lazy<TypeUsage> visitIntersection(final IntersectionType t, final Lazy<TypeUsage> lazy) {
-                final var lazyBounds = t.getBounds().stream()
-                    .map(bound -> enqueueIfAbsent(bound, pending, enclosing, resolved, currentEnclosing))
-                    .toList();
-                lazy.set(IntersectionTypeUsage.of(codeModel, lazyBounds.stream()));
-                return lazy;
-            }
-        };
-    }
 }

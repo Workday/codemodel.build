@@ -20,7 +20,7 @@ package build.codemodel.jdk;
  * #L%
  */
 
-import build.codemodel.jdk.descriptor.LocationTrait;
+import build.codemodel.jdk.descriptor.SourceLocation;
 import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
 import com.google.testing.compile.JavaFileObjects;
@@ -60,7 +60,7 @@ class MemberOrderTests {
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
 
         final var fieldNames = descriptor.traits(FieldDescriptor.class)
-            .sorted(Comparator.comparingLong(f -> f.getTrait(LocationTrait.class).orElseThrow().startPosition()))
+            .sorted(Comparator.comparingLong(f -> f.trait(SourceLocation.FilePosition.class).startPosition()))
             .map(f -> f.fieldName().toString())
             .toList();
 
@@ -86,7 +86,7 @@ class MemberOrderTests {
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
 
         final var methodNames = descriptor.traits(MethodDescriptor.class)
-            .sorted(Comparator.comparingLong(m -> m.getTrait(LocationTrait.class).orElseThrow().startPosition()))
+            .sorted(Comparator.comparingLong(m -> m.trait(SourceLocation.FilePosition.class).startPosition()))
             .map(m -> m.methodName().name().toString())
             .toList();
 
