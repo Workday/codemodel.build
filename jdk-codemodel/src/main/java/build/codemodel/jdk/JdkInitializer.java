@@ -50,10 +50,12 @@ import com.sun.source.util.Trees;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.lang.model.element.ElementKind;
@@ -81,6 +83,14 @@ public class JdkInitializer
     private final List<JavaFileObject> javaFileObjects;
     private final List<Path> classpath;
     private final List<Path> modulePath;
+
+    /**
+     * When non-null, only compilation units whose source URI satisfies this predicate have their
+     * descriptors registered. All compilation units are still compiled together, so types from
+     * filtered-out units remain resolvable by javac. Used by rescan to include sibling sources
+     * for type resolution without re-registering their already-present descriptors.
+     */
+    private Predicate<URI> registrationFilter = null;
 
     private boolean initialized = false;
 
@@ -149,6 +159,19 @@ public class JdkInitializer
     }
 
     /**
+     * Restricts descriptor registration to compilation units whose source URI satisfies the given
+     * predicate. Units that do not match are still compiled (providing type resolution context)
+     * but produce no descriptors.
+     *
+     * @param filter predicate over source URIs; {@code null} means register all units
+     * @return this initializer, for chaining
+     */
+    public JdkInitializer withRegistrationFilter(final Predicate<URI> filter) {
+        this.registrationFilter = filter;
+        return this;
+    }
+
+    /**
      * Parses all configured sources and registers their {@link build.codemodel.jdk.descriptor.JDKTypeDescriptor}s
      * into the given {@link CodeModel}.
      * May only be called once; throws {@link IllegalStateException} on repeated invocations.
@@ -183,9 +206,14 @@ public class JdkInitializer
             this.exprConverter.setStmtConverter(this.stmtConverter);
 
             for (final var cut : compilationUnits) {
+                final var sourceUri = cut.getSourceFile().toUri();
+                final boolean register = registrationFilter == null || registrationFilter.test(sourceUri);
                 cut.accept(new TreeScanner<Void, Void>() {
                     @Override
                     public Void visitClass(final ClassTree classTree, final Void unused) {
+                        if (!register) {
+                            return null;
+                        }
                         exprConverter.setTypeContext(trees, cut,
                             mirror -> resolver.resolve(mirror, null));
                         final TreePath classPath = trees.getPath(cut, classTree);
@@ -200,10 +228,14 @@ public class JdkInitializer
 
                     @Override
                     public Void visitModule(final ModuleTree moduleTree, final Void unused) {
+                        if (!register) {
+                            return null;
+                        }
                         nameProvider.getModuleName(moduleTree.getName().toString()).ifPresent(moduleName -> {
                             final var descriptor = codeModel.createModuleDescriptor(
                                 moduleName, JDKModuleDescriptor::of);
                             descriptor.populateFrom(moduleTree);
+                            addSourceLocation(trees.getSourcePositions(), cut, moduleTree, descriptor);
                         });
                         return null;
                     }

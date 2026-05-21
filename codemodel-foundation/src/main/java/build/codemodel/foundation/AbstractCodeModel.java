@@ -301,6 +301,30 @@ public abstract class AbstractCodeModel
         return Optional.ofNullable(this.typeDescriptors.get(typeName));
     }
 
+    /**
+     * Removes a {@link TypeDescriptor} from this model and unindexes it.
+     * Has no effect if the descriptor is not registered.
+     *
+     * @param descriptor the {@link TypeDescriptor} to remove
+     */
+    protected void removeTypeDescriptor(final TypeDescriptor descriptor) {
+        if (this.typeDescriptors.remove(descriptor.typeName(), descriptor)) {
+            this.index.unindex(descriptor);
+        }
+    }
+
+    /**
+     * Removes a {@link ModuleDescriptor} from this model and unindexes it.
+     * Has no effect if the descriptor is not registered.
+     *
+     * @param descriptor the {@link ModuleDescriptor} to remove
+     */
+    protected void removeModuleDescriptor(final ModuleDescriptor descriptor) {
+        if (this.moduleDescriptors.remove(descriptor.moduleName(), descriptor)) {
+            this.index.unindex(descriptor);
+        }
+    }
+
     @Override
     public Stream<TypeDescriptor> typeDescriptors() {
         return this.typeDescriptors.values().stream();
