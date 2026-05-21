@@ -407,16 +407,16 @@ class JdkInitializerTests {
         // AnnotationTypeUsage instances, not raw AnnotationMirror objects.
         final var source = JavaFileObjects.forSourceString("com.example.Annotated", """
             package com.example;
-
+            
             import java.lang.annotation.*;
-
+            
             @Retention(RetentionPolicy.RUNTIME)
             @Repeatable(Tags.class)
             @interface Tag { String value(); }
-
+            
             @Retention(RetentionPolicy.RUNTIME)
             @interface Tags { Tag[] value(); }
-
+            
             @Tag("foo")
             @Tag("bar")
             public class Annotated {}
