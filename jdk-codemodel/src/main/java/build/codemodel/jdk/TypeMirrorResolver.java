@@ -21,6 +21,7 @@ package build.codemodel.jdk;
  */
 
 import build.base.foundation.Lazy;
+import build.base.foundation.Memoizer;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.FormalParameterDescriptor;
 import build.codemodel.foundation.descriptor.ThrowableDescriptor;
@@ -123,12 +124,11 @@ public final class TypeMirrorResolver {
     private final NameProvider nameProvider;
     private final Elements elements;
     private final Consumer<ErrorType> errorHandler;
-    private final HashMap<TypeElement, TypeName> typeNameCache = new HashMap<>();
+    private final Memoizer<TypeElement, TypeName> typeNameCache = new Memoizer<>(this::computeTypeName);
 
-    public TypeMirrorResolver(
-        final CodeModel codeModel,
-        final Elements elements,
-        final Consumer<ErrorType> errorHandler) {
+    public TypeMirrorResolver(final CodeModel codeModel,
+                              final Elements elements,
+                              final Consumer<ErrorType> errorHandler) {
 
         this.codeModel = codeModel;
         this.nameProvider = codeModel.getNameProvider();
@@ -285,13 +285,15 @@ public final class TypeMirrorResolver {
     // --- Type name resolution ---
 
     public TypeName resolveTypeName(final TypeElement typeElement) {
-        return typeNameCache.computeIfAbsent(typeElement, e -> {
-            final var moduleName = resolveModuleName(e);
-            final var namespace = resolveNamespace(e);
-            final var enclosingTypeName = resolveEnclosingTypeName(e);
-            final var irreducibleName = nameProvider.getIrreducibleName(e.getSimpleName().toString());
-            return nameProvider.getTypeName(moduleName, namespace, enclosingTypeName, irreducibleName);
-        });
+        return typeNameCache.compute(typeElement);
+    }
+
+    private TypeName computeTypeName(final TypeElement typeElement) {
+        final var moduleName = resolveModuleName(typeElement);
+        final var namespace = resolveNamespace(typeElement);
+        final var enclosingTypeName = resolveEnclosingTypeName(typeElement);
+        final var irreducibleName = nameProvider.getIrreducibleName(typeElement.getSimpleName().toString());
+        return nameProvider.getTypeName(moduleName, namespace, enclosingTypeName, irreducibleName);
     }
 
     private Optional<ModuleName> resolveModuleName(final TypeElement typeElement) {
