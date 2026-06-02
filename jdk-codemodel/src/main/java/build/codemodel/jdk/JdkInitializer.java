@@ -42,11 +42,10 @@ import com.sun.source.tree.MethodTree;
 import com.sun.source.tree.ModuleTree;
 import com.sun.source.tree.Tree;
 import com.sun.source.tree.VariableTree;
+import com.sun.source.util.DocTrees;
 import com.sun.source.util.JavacTask;
-import com.sun.source.util.SourcePositions;
 import com.sun.source.util.TreePath;
-import com.sun.source.util.TreeScanner;
-import com.sun.source.util.Trees;
+import com.sun.source.util.TreePathScanner;
 
 import java.io.File;
 import java.io.IOException;
@@ -56,7 +55,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
@@ -98,7 +96,7 @@ public class JdkInitializer
     private CodeModel codeModel;
     private NameProvider nameProvider;
     private TypeMirrorResolver resolver;
-    private Trees trees;
+    private DocTrees trees;
     private JdkExpressionConverter exprConverter;
     private JdkStatementConverter stmtConverter;
 
@@ -200,7 +198,7 @@ public class JdkInitializer
             final var compilationUnits = javacTask.parse();
             javacTask.analyze();
             this.resolver = new TypeMirrorResolver(codeModel, javacTask.getElements(), null);
-            this.trees = Trees.instance(javacTask);
+            this.trees = DocTrees.instance(javacTask);
             this.exprConverter = new JdkExpressionConverter(codeModel);
             this.stmtConverter = new JdkStatementConverter(codeModel, this.exprConverter);
             this.exprConverter.setStmtConverter(this.stmtConverter);
@@ -208,20 +206,20 @@ public class JdkInitializer
             for (final var cut : compilationUnits) {
                 final var sourceUri = cut.getSourceFile().toUri();
                 final boolean register = registrationFilter == null || registrationFilter.test(sourceUri);
-                cut.accept(new TreeScanner<Void, Void>() {
+                new TreePathScanner<Void, Void>() {
                     @Override
                     public Void visitClass(final ClassTree classTree, final Void unused) {
                         if (!register) {
                             return null;
                         }
-                        exprConverter.setTypeContext(trees, cut,
+                        final TreePath classPath = getCurrentPath();
+                        exprConverter.setTypeContext(trees, classPath.getCompilationUnit(),
                             mirror -> resolver.resolve(mirror, null));
-                        final TreePath classPath = trees.getPath(cut, classTree);
                         final var typeElement = (TypeElement) trees.getElement(classPath);
                         if (typeElement != null
                             && !typeElement.getQualifiedName().toString().isEmpty()) {
                             exprConverter.setEnclosingType(resolver.resolve(typeElement.asType(), null));
-                            processTypeElement(typeElement, classTree, cut);
+                            processTypeElement(typeElement, classPath);
                         }
                         return super.visitClass(classTree, unused);
                     }
@@ -231,15 +229,16 @@ public class JdkInitializer
                         if (!register) {
                             return null;
                         }
+                        final var moduleCut = getCurrentPath().getCompilationUnit();
                         nameProvider.getModuleName(moduleTree.getName().toString()).ifPresent(moduleName -> {
                             final var descriptor = codeModel.createModuleDescriptor(
                                 moduleName, JDKModuleDescriptor::of);
                             descriptor.populateFrom(moduleTree);
-                            addSourceLocation(trees.getSourcePositions(), cut, moduleTree, descriptor);
+                            addSourceLocation(moduleCut, moduleTree, descriptor);
                         });
                         return null;
                     }
-                }, null);
+                }.scan(cut, null);
             }
 
         } catch (final IOException e) {
@@ -254,15 +253,11 @@ public class JdkInitializer
         final var options = new ArrayList<String>();
         if (!classpath.isEmpty()) {
             options.add("--class-path");
-            options.add(classpath.stream()
-                .map(Path::toString)
-                .collect(Collectors.joining(File.pathSeparator)));
+            options.add(String.join(File.pathSeparator, classpath.stream().map(Path::toString).toList()));
         }
         if (!modulePath.isEmpty()) {
             options.add("--module-path");
-            options.add(modulePath.stream()
-                .map(Path::toString)
-                .collect(Collectors.joining(File.pathSeparator)));
+            options.add(String.join(File.pathSeparator, modulePath.stream().map(Path::toString).toList()));
         }
         return options.isEmpty() ? null : options;
     }
@@ -292,8 +287,7 @@ public class JdkInitializer
     // --- Type processing ---
 
     private void processTypeElement(final TypeElement typeElement,
-                                    final ClassTree classTree,
-                                    final CompilationUnitTree cut) {
+                                    final TreePath classPath) {
         final var typeName = resolver.resolveTypeName(typeElement);
 
         // Skip if already registered (can happen with inner types visited by the scanner)
@@ -303,21 +297,15 @@ public class JdkInitializer
 
         final var typeDescriptor = resolver.buildTypeDescriptor(typeName, typeElement);
 
-        if (classTree != null && cut != null) {
-            final var srcPositions = trees.getSourcePositions();
-            addSourceLocation(srcPositions, cut, classTree, typeDescriptor);
-        }
-
+        final var cut = classPath.getCompilationUnit();
+        addSourceLocation(cut, classPath.getLeaf(), typeDescriptor);
         if (!(typeElement.getEnclosingElement() instanceof TypeElement)) {
             addImports(typeDescriptor, cut);
         }
-        processMembers(typeDescriptor, typeElement, classTree, cut);
+        processMembers(typeDescriptor, classPath);
     }
 
     private void addImports(final JDKTypeDescriptor typeDescriptor, final CompilationUnitTree cut) {
-        if (cut == null) {
-            return;
-        }
         final var imports = cut.getImports();
         for (int i = 0; i < imports.size(); i++) {
             final var importTree = imports.get(i);
@@ -338,35 +326,29 @@ public class JdkInitializer
     }
 
     private void processMembers(final JDKTypeDescriptor typeDescriptor,
-                                final TypeElement typeElement,
-                                final ClassTree classTree,
-                                final CompilationUnitTree cut) {
-        if (classTree == null || cut == null) {
-            return;
-        }
+                                final TreePath classPath) {
+        final var cut = classPath.getCompilationUnit();
+        final var classTree = (ClassTree) classPath.getLeaf();
         final var srcPositions = trees.getSourcePositions();
         final var sortedMembers = classTree.getMembers().stream()
             .sorted(java.util.Comparator.comparingLong(m -> srcPositions.getStartPosition(cut, m)))
             .toList();
         int enumConstantOrder = 0;
         for (final var member : sortedMembers) {
-            final var path = TreePath.getPath(cut, member);
-            if (path == null) {
-                continue;
-            }
+            final var path = new TreePath(classPath, member);
             final var elem = trees.getElement(path);
             if (member instanceof VariableTree vt && elem instanceof VariableElement ve) {
                 if (ve.getKind() == ElementKind.FIELD) {
-                    processField(typeDescriptor, ve, vt, cut, srcPositions);
+                    processField(typeDescriptor, ve, vt, cut);
                 } else if (ve.getKind() == ElementKind.ENUM_CONSTANT) {
                     final var name = nameProvider.getIrreducibleName(ve.getSimpleName());
                     typeDescriptor.addTrait(EnumConstantDescriptor.of(name, enumConstantOrder++));
                 }
             } else if (member instanceof MethodTree mt && elem instanceof ExecutableElement ee) {
                 if (ee.getKind() == ElementKind.CONSTRUCTOR) {
-                    processConstructor(typeDescriptor, ee, mt, cut, srcPositions);
+                    processConstructor(typeDescriptor, ee, mt, cut);
                 } else if (ee.getKind() == ElementKind.METHOD) {
-                    processMethod(typeDescriptor, ee, mt, cut, srcPositions);
+                    processMethod(typeDescriptor, ee, mt, cut);
                 }
             } else if (member instanceof BlockTree bt) {
                 typeDescriptor.addTrait(
@@ -378,10 +360,9 @@ public class JdkInitializer
     private void processField(final JDKTypeDescriptor typeDescriptor,
                               final VariableElement fieldElement,
                               final VariableTree varTree,
-                              final CompilationUnitTree cut,
-                              final SourcePositions srcPositions) {
+                              final CompilationUnitTree cut) {
         final var fieldDescriptor = resolver.createFieldDescriptor(fieldElement);
-        addSourceLocation(srcPositions, cut, varTree, fieldDescriptor);
+        addSourceLocation(cut, varTree, fieldDescriptor);
 
         typeDescriptor.addTrait(fieldDescriptor);
 
@@ -394,19 +375,19 @@ public class JdkInitializer
     private void processConstructor(final JDKTypeDescriptor typeDescriptor,
                                     final ExecutableElement methodElement,
                                     final MethodTree ctorTree,
-                                    final CompilationUnitTree cut,
-                                    final SourcePositions srcPositions) {
+                                    final CompilationUnitTree cut) {
         final var formalParameters = getFormalParameters(methodElement);
 
         final var constructorDescriptor = ConstructorDescriptor.of(typeDescriptor, formalParameters);
         TypeMirrorResolver.getAccessModifier(methodElement.getModifiers()).ifPresent(constructorDescriptor::addTrait);
         resolver.addTypeAnnotations(constructorDescriptor, methodElement);
 
-        addSourceLocation(srcPositions, cut, ctorTree, constructorDescriptor);
+        addSourceLocation(cut, ctorTree, constructorDescriptor);
 
         typeDescriptor.addTrait(constructorDescriptor);
 
         if (ctorTree.getBody() != null) {
+            final var srcPositions = trees.getSourcePositions();
             final var bodyStart = srcPositions.getStartPosition(cut, ctorTree.getBody());
             final var realStmts = ctorTree.getBody().getStatements().stream()
                 .filter(stmt -> {
@@ -426,8 +407,7 @@ public class JdkInitializer
     private void processMethod(final JDKTypeDescriptor typeDescriptor,
                                final ExecutableElement methodElement,
                                final MethodTree methodTree,
-                               final CompilationUnitTree cut,
-                               final SourcePositions srcPositions) {
+                               final CompilationUnitTree cut) {
         final var returnType = resolver.resolve(methodElement.getReturnType(), methodElement);
         final var methodName = resolver.methodName(typeDescriptor, methodElement);
 
@@ -436,7 +416,7 @@ public class JdkInitializer
         final var methodDescriptor = MethodDescriptor.of(typeDescriptor, methodName, returnType, formalParameters);
         resolver.modifyMethod(methodDescriptor, methodElement);
 
-        addSourceLocation(srcPositions, cut, methodTree, methodDescriptor);
+        addSourceLocation(cut, methodTree, methodDescriptor);
 
         typeDescriptor.addTrait(methodDescriptor);
 
@@ -445,10 +425,10 @@ public class JdkInitializer
         }
     }
 
-    private void addSourceLocation(final SourcePositions srcPositions,
-                                   final CompilationUnitTree cut,
+    private void addSourceLocation(final CompilationUnitTree cut,
                                    final Tree tree,
                                    final Traitable traitable) {
+        final var srcPositions = trees.getSourcePositions();
         final var start = srcPositions.getStartPosition(cut, tree);
         final var end = srcPositions.getEndPosition(cut, tree);
         if (start != Diagnostic.NOPOS) {
