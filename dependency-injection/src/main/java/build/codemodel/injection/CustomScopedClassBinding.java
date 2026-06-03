@@ -21,7 +21,12 @@ package build.codemodel.injection;
  */
 
 import java.lang.annotation.Annotation;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Stream;
 
 /**
  * A {@link ClassBinding} whose instance lifecycle is managed by a custom {@link Scope} (i.e. any
@@ -58,6 +63,12 @@ class CustomScopedClassBinding<T>
      * caching or sharing strategy on each {@link #value()} call.
      */
     private final ValueBinding<T> delegate;
+
+    /**
+     * All distinct instances produced by this binding, tracked by identity for {@code @PreDestroy}.
+     */
+    private final Set<T> instances = Collections.synchronizedSet(
+        Collections.newSetFromMap(new IdentityHashMap<>()));
 
     /**
      * Constructs a {@link CustomScopedClassBinding}.
@@ -103,6 +114,18 @@ class CustomScopedClassBinding<T>
 
     @Override
     public T value() {
-        return this.delegate.value();
+        final var v = this.delegate.value();
+        this.instances.add(v);
+        return v;
+    }
+
+    boolean hasInstantiatedValues() {
+        return !this.instances.isEmpty();
+    }
+
+    Stream<T> instantiatedValues() {
+        synchronized (this.instances) {
+            return new ArrayList<>(this.instances).stream();
+        }
     }
 }
