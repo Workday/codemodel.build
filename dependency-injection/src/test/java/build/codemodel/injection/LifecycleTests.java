@@ -85,7 +85,7 @@ class LifecycleTests
     static class ContextScopedService {
     }
 
-    // ---- custom scope fixture ----
+    // ---- custom scope fixtures ----
 
     @Retention(RetentionPolicy.RUNTIME)
     @Target(ElementType.TYPE)
@@ -95,6 +95,14 @@ class LifecycleTests
 
     @AlwaysSame
     static class CustomScopedService {
+    }
+
+    @AlwaysSame
+    static class CustomScopedWithPreDestroy {
+        @PreDestroy
+        void destroy() {
+            events.add("custom-scoped");
+        }
     }
 
     // ---- @PreDestroy: reverse topological order ----
@@ -227,5 +235,58 @@ class LifecycleTests
 
         assertThat(context.create(CustomScopedService.class)).isSameAs(fixedInstance);
         assertThat(context.create(CustomScopedService.class)).isSameAs(fixedInstance);
+    }
+
+    /**
+     * Ensures {@link BindingBuilder#toOverriding(Class)} honours a custom scope annotation on the
+     * concrete class instead of silently falling back to prototype.
+     */
+    @Test
+    void shouldRespectCustomScopeInToOverriding() {
+        final var framework = createInjectionFramework();
+        final var fixedInstance = new CustomScopedService();
+        framework.bindScope(AlwaysSame.class, binding -> ValueBinding.of(binding.dependency(), fixedInstance));
+
+        final var context = framework.newContext();
+        context.bind(CustomScopedService.class).to(CustomScopedService.class);
+        context.bind(CustomScopedService.class).toOverriding(CustomScopedService.class);
+
+        assertThat(context.create(CustomScopedService.class)).isSameAs(fixedInstance);
+    }
+
+    /**
+     * Ensures {@link Context#bind(Object)} followed by {@link BindingBuilder#to(Class)} honours
+     * a custom scope annotation on the concrete class instead of silently falling back to prototype.
+     */
+    @Test
+    void shouldRespectCustomScopeInBindValueToClass() {
+        final var framework = createInjectionFramework();
+        final var fixedInstance = new CustomScopedService();
+        framework.bindScope(AlwaysSame.class, binding -> ValueBinding.of(binding.dependency(), fixedInstance));
+
+        final var context = framework.newContext();
+        final var dummy = new CustomScopedService();
+        context.bind(dummy).to(CustomScopedService.class);
+
+        assertThat(context.create(CustomScopedService.class)).isSameAs(fixedInstance);
+    }
+
+    /**
+     * Ensures {@link Context#close()} invokes {@link PreDestroy} on instantiated custom-scoped instances.
+     */
+    @Test
+    void shouldInvokePreDestroyOnCustomScopedInstances() {
+        events.clear();
+        final var framework = createInjectionFramework();
+        final var fixedInstance = new CustomScopedWithPreDestroy();
+        framework.bindScope(AlwaysSame.class, binding -> ValueBinding.of(binding.dependency(), fixedInstance));
+
+        final var context = framework.newContext();
+        context.bind(CustomScopedWithPreDestroy.class).to(CustomScopedWithPreDestroy.class);
+        context.create(CustomScopedWithPreDestroy.class);
+
+        context.close();
+
+        assertThat(events).containsExactly("custom-scoped");
     }
 }

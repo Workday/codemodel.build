@@ -199,6 +199,14 @@ class InjectionContext
                 final var typeDescriptor = codeModel.getJDKTypeDescriptor(concreteClass)
                     .orElseThrow(() -> new IllegalArgumentException(
                         "Could not resolve a TypeDescriptor for " + concreteClass));
+                final var scopeEntry = this.injectionFramework.findScopeEntry(typeDescriptor);
+                if (scopeEntry.isPresent()) {
+                    final ValueBinding<T> factory = new SupplierBinding<>(
+                        dependency, () -> (T) InjectionContext.this.createUnscoped(concreteClass));
+                    final Binding<?> scoped = scopeEntry.get().getValue().scope(factory);
+                    return replaceBinding(dependency,
+                        new CustomScopedClassBinding<>(dependency, concreteClass, scopeEntry.get().getKey(), scoped));
+                }
                 return replaceBinding(dependency, this.injectionFramework.isSingleton(typeDescriptor)
                     ? new LazySingletonClassBinding<>(dependency, concreteClass)
                     : new NonSingletonClassBinding<T>(dependency, concreteClass));
@@ -303,6 +311,14 @@ class InjectionContext
                 final var typeDescriptor = codeModel.getJDKTypeDescriptor(concreteClass)
                     .orElseThrow(() -> new IllegalArgumentException(
                         "Could not resolve a TypeDescriptor for " + concreteClass));
+                final var scopeEntry = this.injectionFramework.findScopeEntry(typeDescriptor);
+                if (scopeEntry.isPresent()) {
+                    final ValueBinding<T> factory = new SupplierBinding<>(
+                        dependency, () -> (T) InjectionContext.this.createUnscoped(concreteClass));
+                    final Binding<?> scoped = scopeEntry.get().getValue().scope(factory);
+                    return addBinding(dependency,
+                        new CustomScopedClassBinding<>(dependency, concreteClass, scopeEntry.get().getKey(), scoped));
+                }
                 return addBinding(dependency, this.injectionFramework.isSingleton(typeDescriptor)
                     ? new LazySingletonClassBinding<>(dependency, concreteClass)
                     : new NonSingletonClassBinding<>(dependency, concreteClass));
@@ -624,30 +640,40 @@ class InjectionContext
     @Override
     @SuppressWarnings("unchecked")
     public void close() {
-        // Collect all instantiated singleton bindings
+        // Collect all instantiated singleton and custom-scoped bindings
         final var instantiatedSingletons = this.bindingsByDependency.values().stream()
             .filter(LazySingletonClassBinding.class::isInstance)
             .map(b -> (LazySingletonClassBinding<Object>) b)
             .filter(b -> b.value().optional().isPresent())
             .toList();
 
-        if (instantiatedSingletons.isEmpty()) {
+        final var instantiatedCustomScoped = this.bindingsByDependency.values().stream()
+            .filter(CustomScopedClassBinding.class::isInstance)
+            .map(b -> (CustomScopedClassBinding<Object>) b)
+            .filter(CustomScopedClassBinding::hasInstantiatedValues)
+            .toList();
+
+        if (instantiatedSingletons.isEmpty() && instantiatedCustomScoped.isEmpty()) {
             return;
         }
 
-        // Build a dependency graph over instantiated singletons only
-        final var singletonDeps = instantiatedSingletons.stream()
-            .map(Binding::dependency)
+        // Build a dependency graph over all instantiated bindings
+        final var instantiatedDeps = Stream.concat(
+                instantiatedSingletons.stream().map(Binding::dependency),
+                instantiatedCustomScoped.stream().map(Binding::dependency))
             .collect(Collectors.toSet());
 
         final var graphBuilder = Graph.<Dependency>directed();
-        instantiatedSingletons.forEach(b -> {
+        Stream.concat(
+            instantiatedSingletons.stream().map(b -> (ClassBinding<Object>) b),
+            instantiatedCustomScoped.stream().map(b -> (ClassBinding<Object>) b)
+        ).forEach(b -> {
             final var bindingDep = b.dependency();
             graphBuilder.addVertex(bindingDep);
             this.injectionFramework.getInjectableDescriptor(b.concreteClass())
                 .injectionPoints()
                 .flatMap(InjectionPoint::dependencies)
-                .filter(singletonDeps::contains)
+                .filter(instantiatedDeps::contains)
                 .forEach(dep -> graphBuilder.addEdge(bindingDep, dep));
         });
 
@@ -658,33 +684,34 @@ class InjectionContext
         Collections.reverse(destroyOrder);
 
         // Index bindings by dependency for lookup during destruction
-        final var depToBinding = instantiatedSingletons.stream()
+        final var depToBinding = Stream.concat(
+                instantiatedSingletons.stream().map(b -> (ClassBinding<Object>) b),
+                instantiatedCustomScoped.stream().map(b -> (ClassBinding<Object>) b))
             .collect(Collectors.toMap(Binding::dependency, b -> b));
 
-        // Invoke @PreDestroy methods on each singleton in destruction order
+        // Invoke @PreDestroy methods in destruction order
         destroyOrder.forEach(dep -> {
             final var binding = depToBinding.get(dep);
-            if (binding == null) {
-                return;
-            }
-            final var instance = binding.value().optional().orElse(null);
-            if (instance == null) {
-                return;
-            }
-            this.injectionFramework.getInjectableDescriptor(binding.concreteClass())
-                .preDestroyMethods()
-                .map(md -> md.getTrait(MethodType.class).orElse(null))
-                .filter(Objects::nonNull)
-                .map(MethodType::method)
-                .forEach(method -> {
-                    try {
-                        method.setAccessible(true);
-                        method.invoke(instance);
-                    } catch (final IllegalAccessException | InvocationTargetException e) {
-                        throw new InjectionException(
-                            "Invoking @PreDestroy method " + method + " on " + instance.getClass(), e);
-                    }
-                });
+            final Stream<Object> instances = switch (binding) {
+                case LazySingletonClassBinding<Object> lsb -> lsb.value().optional().stream();
+                case CustomScopedClassBinding<Object> csb -> csb.instantiatedValues();
+                default -> throw new IllegalStateException("Unexpected binding type: " + binding.getClass());
+            };
+            instances.forEach(instance ->
+                this.injectionFramework.getInjectableDescriptor(binding.concreteClass())
+                    .preDestroyMethods()
+                    .filter(md -> md.hasTrait(MethodType.class))
+                    .map(md -> md.trait(MethodType.class))
+                    .map(MethodType::method)
+                    .forEach(method -> {
+                        try {
+                            method.setAccessible(true);
+                            method.invoke(instance);
+                        } catch (final IllegalAccessException | InvocationTargetException e) {
+                            throw new InjectionException(
+                                "Invoking @PreDestroy method " + method + " on " + instance.getClass(), e);
+                        }
+                    }));
         });
     }
 
