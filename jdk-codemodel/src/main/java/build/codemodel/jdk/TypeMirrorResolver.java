@@ -61,6 +61,7 @@ import build.codemodel.jdk.descriptor.Static;
 import build.codemodel.jdk.descriptor.Varargs;
 import build.codemodel.objectoriented.descriptor.AccessModifier;
 import build.codemodel.objectoriented.descriptor.Classification;
+import build.codemodel.objectoriented.descriptor.ConstructorDescriptor;
 import build.codemodel.objectoriented.descriptor.ExtendsTypeDescriptor;
 import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 import build.codemodel.objectoriented.descriptor.ImplementsTypeDescriptor;
@@ -497,6 +498,15 @@ public final class TypeMirrorResolver {
         this.addTypeAnnotations(methodDescriptor, methodElement);
     }
 
+    public void modifyConstructor(final ConstructorDescriptor constructorDescriptor,
+                                  final ExecutableElement constructorElement) {
+        this.addTypeParameters(constructorDescriptor, constructorElement);
+        this.addThrowables(constructorElement, constructorDescriptor);
+        TypeMirrorResolver.getAccessModifier(constructorElement.getModifiers())
+            .ifPresent(constructorDescriptor::addTrait);
+        this.addTypeAnnotations(constructorDescriptor, constructorElement);
+    }
+
     public MethodName methodName(final JDKTypeDescriptor typeDescriptor,
                                  final ExecutableElement methodElement) {
         final var methodSimpleName = nameProvider.getIrreducibleName(methodElement.getSimpleName());
@@ -507,12 +517,12 @@ public final class TypeMirrorResolver {
             methodSimpleName);
     }
 
-    private void addThrowables(final ExecutableElement methodElement,
-                               final MethodDescriptor methodDescriptor) {
-        methodElement.getThrownTypes().stream()
-            .map(t -> this.resolve(t, methodElement))
+    private void addThrowables(final ExecutableElement executableElement,
+                               final Traitable traitable) {
+        executableElement.getThrownTypes().stream()
+            .map(t -> this.resolve(t, executableElement))
             .map(ThrowableDescriptor::of)
-            .forEach(methodDescriptor::addTrait);
+            .forEach(traitable::addTrait);
     }
 
     private void addTypeParameters(final Traitable traitable,

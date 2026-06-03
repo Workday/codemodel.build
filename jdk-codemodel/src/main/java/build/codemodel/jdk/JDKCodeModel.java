@@ -55,6 +55,7 @@ import build.codemodel.foundation.usage.UnknownTypeUsage;
 import build.codemodel.foundation.usage.WildcardTypeUsage;
 import build.codemodel.jdk.descriptor.ConstructorType;
 import build.codemodel.jdk.descriptor.FieldType;
+import build.codemodel.jdk.descriptor.Final;
 import build.codemodel.jdk.descriptor.InitializerBlockDescriptor;
 import build.codemodel.jdk.descriptor.JDKType;
 import build.codemodel.jdk.descriptor.JDKTypeDescriptor;
@@ -62,6 +63,7 @@ import build.codemodel.jdk.descriptor.MethodBodyDescriptor;
 import build.codemodel.jdk.descriptor.MethodType;
 import build.codemodel.jdk.descriptor.SourceLocation;
 import build.codemodel.jdk.descriptor.Static;
+import build.codemodel.jdk.descriptor.Varargs;
 import build.codemodel.objectoriented.ObjectOrientedCodeModel;
 import build.codemodel.objectoriented.descriptor.AccessModifier;
 import build.codemodel.objectoriented.descriptor.Classification;
@@ -545,7 +547,7 @@ public class JDKCodeModel
                             .orElseThrow(() -> new IllegalStateException(
                                 "The exception type " + exceptionType + " is not named!"));
                         final var throwableDescriptor = ThrowableDescriptor.of(exceptionTypeUsage);
-                        typeDescriptor.addTrait(throwableDescriptor);
+                        constructorDescriptor.addTrait(throwableDescriptor);
                     });
 
                 // include the ConstructorType
@@ -594,7 +596,7 @@ public class JDKCodeModel
                             .orElseThrow(() -> new IllegalStateException(
                                 "The exception type " + exceptionType + " is not named!"));
                         final var throwableDescriptor = ThrowableDescriptor.of(exceptionTypeUsage);
-                        typeDescriptor.addTrait(throwableDescriptor);
+                        methodDescriptor.addTrait(throwableDescriptor);
                     });
 
                 // include the MethodType
@@ -985,7 +987,14 @@ public class JDKCodeModel
 
                 final var parameterType = getTypeUsage(parameter);
 
-                return FormalParameterDescriptor.of(this, parameterName, parameterType);
+                final var pd = FormalParameterDescriptor.of(this, parameterName, parameterType);
+                if (parameter.isVarArgs()) {
+                    pd.addTrait(Varargs.VARARGS);
+                }
+                if (Modifier.isFinal(parameter.getModifiers())) {
+                    pd.addTrait(Final.FINAL);
+                }
+                return pd;
             });
     }
 

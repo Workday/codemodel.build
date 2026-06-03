@@ -379,8 +379,7 @@ public class JdkInitializer
         final var formalParameters = getFormalParameters(methodElement);
 
         final var constructorDescriptor = ConstructorDescriptor.of(typeDescriptor, formalParameters);
-        TypeMirrorResolver.getAccessModifier(methodElement.getModifiers()).ifPresent(constructorDescriptor::addTrait);
-        resolver.addTypeAnnotations(constructorDescriptor, methodElement);
+        resolver.modifyConstructor(constructorDescriptor, methodElement);
 
         addSourceLocation(cut, ctorTree, constructorDescriptor);
 

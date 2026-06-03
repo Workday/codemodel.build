@@ -1,20 +1,26 @@
 package build.codemodel.jdk;
 
+import build.codemodel.foundation.descriptor.ThrowableDescriptor;
 import build.codemodel.foundation.descriptor.TypeDescriptor;
 import build.codemodel.foundation.naming.NonCachingNameProvider;
 import build.codemodel.foundation.usage.AnnotationTypeUsage;
 import build.codemodel.foundation.usage.GenericTypeUsage;
 import build.codemodel.foundation.usage.NamedTypeUsage;
-import build.codemodel.foundation.usage.WildcardTypeUsage;
 import build.codemodel.foundation.usage.TypeVariableUsage;
-import build.codemodel.jdk.example.BoundedContainer;
-import build.codemodel.jdk.example.WildcardContainer;
+import build.codemodel.foundation.usage.WildcardTypeUsage;
 import build.codemodel.hierarchical.descriptor.HierarchicalTypeDescriptor;
+import build.codemodel.jdk.descriptor.Final;
 import build.codemodel.jdk.descriptor.JDKTypeDescriptor;
+import build.codemodel.jdk.descriptor.Varargs;
 import build.codemodel.jdk.example.AbstractPerson;
+import build.codemodel.jdk.example.FinalParamExample;
+import build.codemodel.jdk.example.BoundedContainer;
 import build.codemodel.jdk.example.Container;
 import build.codemodel.jdk.example.Description;
 import build.codemodel.jdk.example.NonAbstractPerson;
+import build.codemodel.jdk.example.ThrowingExample;
+import build.codemodel.jdk.example.VarargsExample;
+import build.codemodel.jdk.example.WildcardContainer;
 import build.codemodel.objectoriented.descriptor.AccessModifier;
 import build.codemodel.objectoriented.descriptor.Classification;
 import build.codemodel.objectoriented.descriptor.ConstructorDescriptor;
@@ -426,6 +432,87 @@ class JDKCodeModelTests {
             .toList();
         assertThat(typeVars).hasSize(1);
         assertThat(typeVars.getFirst().typeName().name().toString()).isEqualTo("T");
+    }
+
+    @Test
+    void shouldAttachThrowableDescriptorToMethodDescriptorViaReflection() {
+        final var codeModel = createCodeModel();
+        final var descriptor = codeModel.getJDKTypeDescriptor(ThrowingExample.class).orElseThrow();
+
+        final var readMethod = descriptor.traits(MethodDescriptor.class)
+            .filter(m -> m.methodName().name().toString().equals("read"))
+            .findFirst().orElseThrow();
+
+        assertThat(readMethod.traits(ThrowableDescriptor.class)).hasSize(1);
+        assertThat(((NamedTypeUsage) readMethod.traits(ThrowableDescriptor.class)
+            .findFirst().orElseThrow().throwable()).typeName().canonicalName())
+            .isEqualTo("java.io.IOException");
+
+        // The ThrowableDescriptor must NOT appear on the type itself
+        assertThat(descriptor.traits(ThrowableDescriptor.class)).isEmpty();
+    }
+
+    @Test
+    void shouldAttachThrowableDescriptorToConstructorDescriptorViaReflection() {
+        final var codeModel = createCodeModel();
+        final var descriptor = codeModel.getJDKTypeDescriptor(ThrowingExample.class).orElseThrow();
+
+        final var ctor = descriptor.getTrait(ConstructorDescriptor.class).orElseThrow();
+
+        assertThat(ctor.traits(ThrowableDescriptor.class)).hasSize(1);
+        assertThat(((NamedTypeUsage) ctor.traits(ThrowableDescriptor.class)
+            .findFirst().orElseThrow().throwable()).typeName().canonicalName())
+            .isEqualTo("java.io.IOException");
+
+        // The ThrowableDescriptor must NOT appear on the type itself
+        assertThat(descriptor.traits(ThrowableDescriptor.class)).isEmpty();
+    }
+
+    @Test
+    void shouldMarkVarargsParameterWithVarargsTraitViaReflection() {
+        final var codeModel = createCodeModel();
+        final var descriptor = codeModel.getJDKTypeDescriptor(VarargsExample.class).orElseThrow();
+
+        // Method: format(String prefix, Object... args) — last param is varargs
+        final var formatMethod = descriptor.traits(MethodDescriptor.class)
+            .filter(m -> m.methodName().name().toString().equals("format"))
+            .findFirst().orElseThrow();
+        final var formatParams = formatMethod.formalParameters().toList();
+        assertThat(formatParams.get(0).hasTrait(Varargs.class)).as("prefix is not varargs").isFalse();
+        assertThat(formatParams.get(1).hasTrait(Varargs.class)).as("args is varargs").isTrue();
+
+        // Method: fixed(String a, String b) — no varargs
+        final var fixedMethod = descriptor.traits(MethodDescriptor.class)
+            .filter(m -> m.methodName().name().toString().equals("fixed"))
+            .findFirst().orElseThrow();
+        assertThat(fixedMethod.formalParameters().noneMatch(p -> p.hasTrait(Varargs.class)))
+            .as("fixed() has no varargs params").isTrue();
+
+        // Constructor: VarargsExample(String first, String... rest) — last param is varargs
+        final var ctor = descriptor.getTrait(ConstructorDescriptor.class).orElseThrow();
+        final var ctorParams = ctor.formalParameters().toList();
+        assertThat(ctorParams.get(0).hasTrait(Varargs.class)).as("first is not varargs").isFalse();
+        assertThat(ctorParams.get(1).hasTrait(Varargs.class)).as("rest is varargs").isTrue();
+    }
+
+    @Test
+    void shouldMarkFinalParameterWithFinalTraitViaReflection() {
+        final var codeModel = createCodeModel();
+        final var descriptor = codeModel.getJDKTypeDescriptor(FinalParamExample.class).orElseThrow();
+
+        // Constructor: FinalParamExample(final String key, String value)
+        final var ctor = descriptor.getTrait(ConstructorDescriptor.class).orElseThrow();
+        final var ctorParams = ctor.formalParameters().toList();
+        assertThat(ctorParams.get(0).hasTrait(Final.class)).as("key is final").isTrue();
+        assertThat(ctorParams.get(1).hasTrait(Final.class)).as("value is not final").isFalse();
+
+        // Method: store(final String key, String value)
+        final var storeMethod = descriptor.traits(MethodDescriptor.class)
+            .filter(m -> m.methodName().name().toString().equals("store"))
+            .findFirst().orElseThrow();
+        final var storeParams = storeMethod.formalParameters().toList();
+        assertThat(storeParams.get(0).hasTrait(Final.class)).as("key is final").isTrue();
+        assertThat(storeParams.get(1).hasTrait(Final.class)).as("value is not final").isFalse();
     }
 
     @Test
