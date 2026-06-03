@@ -7,24 +7,20 @@ import build.codemodel.objectoriented.descriptor.Classification;
 import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
 import build.codemodel.objectoriented.naming.MethodName;
-import com.google.testing.compile.Compilation;
-import com.google.testing.compile.Compiler;
-import com.google.testing.compile.JavaFileObjects;
 import org.junit.jupiter.api.Test;
 
-import java.nio.file.FileSystems;
-import java.util.Arrays;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Unit tests to ensure discovery of <i>constructor</i> types using the {@link AnnotationProcessor}.
+ * Unit tests to ensure discovery of <i>method</i> types using the {@link AnnotationProcessor}.
  *
  * @author brian.oliver
  * @since May-2024
  */
-public class MethodDiscoveryTests {
+public class MethodDiscoveryTests
+    extends AnnotationProcessorTests {
 
     /**
      * Ensure the {@link MethodDescriptor}s are created for <i>methods</i>.
@@ -46,34 +42,8 @@ public class MethodDiscoveryTests {
                         int methodWithParameters(String name, double size);
                     }                                    
                 """;
-
-        final var fileSystem = FileSystems.getDefault();
-
-        final var classPath = Arrays.stream(System.getProperty("java.class.path").split(":"))
-            .map(file -> fileSystem.getPath(file).toFile())
-            .toList();
-
         final var annotationProcessor = new AnnotationProcessor();
-
-        assertThat(annotationProcessor.getCodeModel().isEmpty())
-            .isTrue();
-
-        var compiler = Compiler.javac()
-            .withClasspath(classPath)
-            .withProcessors(annotationProcessor);
-
-        final var modulePath = System.getProperty("jdk.module.path");
-        if (modulePath != null) {
-            compiler = compiler
-                .withOptions("--module-path=" + modulePath,
-                    "--add-modules=build.codemodel.foundation,build.codemodel.jdk.annotation.discovery");
-        }
-
-        final var compilation = compiler
-            .compile(JavaFileObjects.forSourceString("Discover", source));
-
-        assertThat(compilation.status())
-            .isEqualTo(Compilation.Status.SUCCESS);
+        compile(annotationProcessor, "Discover", source);
 
         final var codeModel = annotationProcessor.getCodeModel()
             .orElseThrow();
