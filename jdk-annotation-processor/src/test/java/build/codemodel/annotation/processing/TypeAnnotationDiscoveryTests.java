@@ -6,15 +6,10 @@ import build.codemodel.foundation.usage.TypeVariableUsage;
 import build.codemodel.foundation.usage.UnknownTypeUsage;
 import build.codemodel.foundation.usage.WildcardTypeUsage;
 import build.codemodel.objectoriented.descriptor.FieldDescriptor;
-import com.google.testing.compile.Compiler;
-import com.google.testing.compile.JavaFileObjects;
 import org.junit.jupiter.api.Test;
 
-import java.nio.file.FileSystems;
-import java.util.Arrays;
 import java.util.Optional;
 
-import static com.google.testing.compile.Compilation.Status.SUCCESS;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -22,23 +17,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Each test corresponds to a bug where the old code dropped type-use annotations in a specific visitor
  * branch, or caused an {@link IllegalStateException} when an unresolvable type was encountered.
  */
-class TypeAnnotationDiscoveryTests {
-
-    private static Compiler compiler(final AnnotationProcessor processor) {
-        final var classPath = Arrays.stream(System.getProperty("java.class.path").split(":"))
-            .map(p -> FileSystems.getDefault().getPath(p).toFile())
-            .toList();
-        var compiler = Compiler.javac()
-            .withClasspath(classPath)
-            .withProcessors(processor);
-        final var modulePath = System.getProperty("jdk.module.path");
-        if (modulePath != null) {
-            compiler = compiler.withOptions(
-                "--module-path=" + modulePath,
-                "--add-modules=build.codemodel.foundation,build.codemodel.jdk.annotation.discovery");
-        }
-        return compiler;
-    }
+class TypeAnnotationDiscoveryTests
+    extends AnnotationProcessorTests {
 
     // -------------------------------------------------------------------------
     // #71 / #76 — TypeVariable usage dropped annotations
@@ -59,10 +39,8 @@ class TypeAnnotationDiscoveryTests {
             }
             """;
         final var processor = new AnnotationProcessor();
-        final var compilation = compiler(processor)
-            .compile(JavaFileObjects.forSourceString("Foo", source));
+        compile(processor, "Foo", source);
 
-        assertThat(compilation.status()).isEqualTo(SUCCESS);
         final var codeModel = processor.getCodeModel().orElseThrow();
         final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "Foo");
         final var field = codeModel.getTypeDescriptor(typeName).orElseThrow()
@@ -97,10 +75,8 @@ class TypeAnnotationDiscoveryTests {
             }
             """;
         final var processor = new AnnotationProcessor();
-        final var compilation = compiler(processor)
-            .compile(JavaFileObjects.forSourceString("Foo", source));
+        compile(processor, "Foo", source);
 
-        assertThat(compilation.status()).isEqualTo(SUCCESS);
         final var codeModel = processor.getCodeModel().orElseThrow();
         final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "Foo");
         final var field = codeModel.getTypeDescriptor(typeName).orElseThrow()
@@ -136,10 +112,8 @@ class TypeAnnotationDiscoveryTests {
             }
             """;
         final var processor = new AnnotationProcessor();
-        final var compilation = compiler(processor)
-            .compile(JavaFileObjects.forSourceString("Foo", source));
+        compile(processor, "Foo", source);
 
-        assertThat(compilation.status()).isEqualTo(SUCCESS);
         final var codeModel = processor.getCodeModel().orElseThrow();
         final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "Foo");
         final var field = codeModel.getTypeDescriptor(typeName).orElseThrow()
@@ -173,7 +147,7 @@ class TypeAnnotationDiscoveryTests {
             """;
         final var processor = new AnnotationProcessor();
         // Compilation fails (cannot find symbol), but the AP must not throw ISE
-        compiler(processor).compile(JavaFileObjects.forSourceString("Foo", source));
+        run(processor, "Foo", source);
 
         assertThat(processor.getCodeModel()).isPresent();
         final var codeModel = processor.getCodeModel().orElseThrow();

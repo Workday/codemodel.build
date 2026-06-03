@@ -2,13 +2,8 @@ package build.codemodel.annotation.processing;
 
 import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
-import com.google.testing.compile.Compilation;
-import com.google.testing.compile.Compiler;
-import com.google.testing.compile.JavaFileObjects;
 import org.junit.jupiter.api.Test;
 
-import java.nio.file.FileSystems;
-import java.util.Arrays;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -19,7 +14,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author brian.oliver
  * @since Mar-2024
  */
-public class RecursivelyDefinedTypeDiscoveryTests {
+public class RecursivelyDefinedTypeDiscoveryTests
+    extends AnnotationProcessorTests {
 
     /**
      * Ensure the {@code Discoverable} annotation triggers discovery of a recursively defined type.
@@ -36,39 +32,8 @@ public class RecursivelyDefinedTypeDiscoveryTests {
                         Discover<T> discover();      
                     }                                    
                 """;
-
-        final var fileSystem = FileSystems.getDefault();
-
-        final var classPath = Arrays.stream(System.getProperty("java.class.path").split(":"))
-            .map(file -> fileSystem.getPath(file).toFile())
-            .toList();
-
         final var annotationProcessor = new AnnotationProcessor();
-
-        assertThat(annotationProcessor.getCodeModel().isEmpty())
-            .isTrue();
-
-        var compiler = Compiler.javac()
-            .withClasspath(classPath)
-            .withProcessors(annotationProcessor);
-
-        final var modulePath = System.getProperty("jdk.module.path");
-        if (modulePath != null) {
-            compiler = compiler
-                .withOptions("--module-path=" + modulePath,
-                    "--add-modules=build.codemodel.foundation,build.codemodel.jdk.annotation.discovery");
-        }
-
-        final var compilation = compiler
-            .compile(JavaFileObjects.forSourceString("Discover", source));
-
-        System.out.println("Module Path:" + modulePath);
-        System.out.println("Class Path:" + classPath);
-
-        compilation.errors().forEach(System.err::println);
-
-        assertThat(compilation.status())
-            .isEqualTo(Compilation.Status.SUCCESS);
+        compile(annotationProcessor, "Discover", source);
 
         final var codeModel = annotationProcessor.getCodeModel()
             .orElseThrow();
