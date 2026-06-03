@@ -46,6 +46,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiFunction;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -356,10 +357,15 @@ class InjectionContext
     @SuppressWarnings("unchecked")
     public <T> MultiBinder<T> bindSet(final Class<T> type) {
         Objects.requireNonNull(type, "The element type must not be null");
-        final boolean isNew = !this.multiBindings.containsKey(type);
-        final var entry = (MultiBindingEntry<T>) this.multiBindings
-            .computeIfAbsent(type, _ -> new MultiBindingEntry<T>());
-        if (isNew) {
+        final var created = new AtomicBoolean(false);
+        final var entry = (MultiBindingEntry<T>) this.multiBindings.compute(type, (_, existing) -> {
+            if (existing != null) {
+                return existing;
+            }
+            created.set(true);
+            return new MultiBindingEntry<T>();
+        });
+        if (created.get()) {
             final var typeDescriptor = this.injectionFramework.codeModel()
                 .getJDKTypeDescriptor(type).orElse(null);
             this.bindingGraphContributor.contributeBinding(
@@ -752,10 +758,11 @@ class InjectionContext
                 .orElseThrow(() -> new UnsatisfiedDependencyException(dependency));
 
             if (this.injectionFramework.isSingleton(typeDescriptor)) {
-                // establish a binding for the singleton
-                bind(concreteClass).to(concreteClass);
-
-                // now attempt to get the value again
+                try {
+                    bind(concreteClass).to(concreteClass);
+                } catch (final BindingAlreadyExistsException ignored) {
+                    // another thread won the race to register this singleton concurrently
+                }
                 return getValue(requiredBy, dependency);
             } else if (requiredBy.isEmpty()) {
                 // when we don't have a requiredBy, that means we're trying to instantiate the class directly
