@@ -33,7 +33,6 @@ open module build.codemodel.objectoriented {
     requires build.base.marshalling;
     requires build.base.foundation;
 
-    requires jakarta.inject;
     requires build.base.mereology;
 
     exports build.codemodel.objectoriented;

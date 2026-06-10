@@ -32,7 +32,6 @@ open module build.codemodel.foundation {
     requires build.base.telemetry;
 
     requires java.desktop;
-    requires jakarta.inject;
 
     exports build.codemodel.foundation;
     exports build.codemodel.foundation.descriptor;

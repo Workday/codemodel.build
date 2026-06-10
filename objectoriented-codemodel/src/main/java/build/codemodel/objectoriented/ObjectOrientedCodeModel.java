@@ -36,7 +36,6 @@ import build.codemodel.foundation.descriptor.TypeDescriptor;
 import build.codemodel.foundation.naming.NameProvider;
 import build.codemodel.hierarchical.AbstractHierarchicalCodeModel;
 import build.codemodel.hierarchical.HierarchicalCodeModel;
-import jakarta.inject.Inject;
 
 import java.lang.invoke.MethodHandles;
 import java.util.stream.Stream;
@@ -55,7 +54,6 @@ public class ObjectOrientedCodeModel
      *
      * @param nameProvider the {@link NameProvider}
      */
-    @Inject
     public ObjectOrientedCodeModel(final NameProvider nameProvider) {
         super(nameProvider);
     }
