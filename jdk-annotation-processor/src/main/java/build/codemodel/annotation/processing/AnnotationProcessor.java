@@ -51,6 +51,7 @@ import build.codemodel.jdk.JDKCodeModel;
 import build.codemodel.jdk.TypeMirrorResolver;
 import build.codemodel.jdk.descriptor.JDKTypeDescriptor;
 import build.codemodel.jdk.descriptor.SourceLocation;
+import build.codemodel.objectoriented.descriptor.ConstructorDescriptor;
 import build.codemodel.objectoriented.descriptor.ExtendsTypeDescriptor;
 import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 import build.codemodel.objectoriented.descriptor.ImplementsTypeDescriptor;
@@ -457,6 +458,35 @@ public class AnnotationProcessor
     }
 
     /**
+     * Creates a {@link ConstructorDescriptor} for the {@link TypeDescriptor} based on an {@link ExecutableElement}.
+     *
+     * @param codeModel          the {@link CodeModel}
+     * @param typeDescriptor     the {@link TypeDescriptor} in which to define the {@link ConstructorDescriptor}
+     * @param constructorElement the {@link ExecutableElement} for the <i>constructor</i>
+     * @param pending            the pending {@link TypeElement}s to be processed
+     * @return a {@link ConstructorDescriptor}
+     */
+    private ConstructorDescriptor createConstructorDescriptor(final CodeModel codeModel,
+                                                               final JDKTypeDescriptor typeDescriptor,
+                                                               final ExecutableElement constructorElement,
+                                                               final LinkedHashMap<TypeName, TypeElement> pending) {
+        final var formalParameters = resolver().getFormalParameters(constructorElement,
+            (variable, pd) -> pd.addTrait(SourceLocation.elementRef(variable)));
+
+        final var constructorDescriptor = ConstructorDescriptor.of(typeDescriptor, formalParameters);
+        resolver().modifyConstructor(constructorDescriptor, constructorElement);
+
+        constructorDescriptor.addTrait(SourceLocation.elementRef(constructorElement));
+
+        typeDescriptor.addTrait(constructorDescriptor);
+
+        constructorDescriptor.parts(TypeUsage.class)
+            .forEach(typeUsage -> include(codeModel, typeUsage, constructorElement, pending));
+
+        return constructorDescriptor;
+    }
+
+    /**
      * Creates a {@link MethodDescriptor} for the {@link TypeDescriptor} based on an {@link ExecutableElement}.
      *
      * @param codeModel      the {@link CodeModel}
@@ -526,6 +556,12 @@ public class AnnotationProcessor
                 .filter(enclosing -> enclosing.getKind() == ElementKind.FIELD)
                 .map(VariableElement.class::cast)
                 .forEach(enclosing -> createFieldDescriptor(codeModel, typeDescriptor, enclosing, pending));
+
+            // discover the ConstructorDescriptors
+            typeElement.getEnclosedElements().stream()
+                .filter(enclosing -> enclosing.getKind() == ElementKind.CONSTRUCTOR)
+                .map(ExecutableElement.class::cast)
+                .forEach(enclosing -> createConstructorDescriptor(codeModel, typeDescriptor, enclosing, pending));
 
             // discover the MethodDescriptors
             typeElement.getEnclosedElements().stream()
