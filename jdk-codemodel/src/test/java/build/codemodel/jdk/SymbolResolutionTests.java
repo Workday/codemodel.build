@@ -6,7 +6,7 @@ import build.codemodel.jdk.descriptor.MethodBodyDescriptor;
 import build.codemodel.jdk.expression.Identifier;
 import build.codemodel.jdk.expression.Symbol;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
-import com.google.testing.compile.JavaFileObjects;
+import build.base.compile.testing.JavaFileObjects;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

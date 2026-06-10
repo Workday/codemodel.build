@@ -7,7 +7,7 @@ import build.codemodel.jdk.descriptor.OpenModule;
 import build.codemodel.jdk.descriptor.OpensDescriptor;
 import build.codemodel.jdk.descriptor.ProvidesDescriptor;
 import build.codemodel.jdk.descriptor.UsesDescriptor;
-import com.google.testing.compile.JavaFileObjects;
+import build.base.compile.testing.JavaFileObjects;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

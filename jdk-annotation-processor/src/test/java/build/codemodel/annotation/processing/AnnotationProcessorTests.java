@@ -1,15 +1,14 @@
 package build.codemodel.annotation.processing;
 
-import com.google.testing.compile.Compilation;
-import com.google.testing.compile.Compiler;
-import com.google.testing.compile.JavaFileObjects;
+import  build.base.compile.testing.Compilation;
+import  build.base.compile.testing.Compiler;
+import  build.base.compile.testing.JavaFileObjects;
 
 import java.io.File;
 import java.nio.file.FileSystems;
 import java.util.Arrays;
 import java.util.Locale;
 
-import static com.google.testing.compile.Compilation.Status.SUCCESS;
 import static org.assertj.core.api.Assertions.assertThat;
 
 abstract class AnnotationProcessorTests {
@@ -23,7 +22,7 @@ abstract class AnnotationProcessorTests {
         compilation.diagnostics()
             .forEach(d -> System.out.printf("[%s] %s%n", d.getKind(), d.getMessage(Locale.ROOT)));
 
-        assertThat(compilation.status()).isEqualTo(SUCCESS);
+        assertThat(compilation.status()).isEqualTo(Compilation.Status.SUCCESS);
         return compilation;
     }
 
@@ -43,7 +42,7 @@ abstract class AnnotationProcessorTests {
     private static Compiler makeCompiler(final AnnotationProcessor processor) {
         final var classPath = Arrays.stream(System.getProperty("java.class.path", "").split(File.pathSeparator))
             .filter(s -> !s.isBlank())
-            .map(p -> FileSystems.getDefault().getPath(p).toFile())
+            .map(p -> FileSystems.getDefault().getPath(p))
             .toList();
 
         var compiler = Compiler.javac()

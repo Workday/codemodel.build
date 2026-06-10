@@ -1,12 +1,12 @@
 package build.codemodel.jdk;
 
+import build.base.compile.testing.JavaFileObjects;
 import build.codemodel.foundation.descriptor.ThrowableDescriptor;
 import build.codemodel.foundation.usage.NamedTypeUsage;
 import build.codemodel.jdk.descriptor.Varargs;
 import build.codemodel.objectoriented.descriptor.AccessModifier;
 import build.codemodel.objectoriented.descriptor.ConstructorDescriptor;
 import build.codemodel.objectoriented.descriptor.ParameterizedTypeDescriptor;
-import com.google.testing.compile.JavaFileObjects;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

@@ -5,7 +5,7 @@ import build.codemodel.jdk.expression.MethodInvocation;
 import build.codemodel.jdk.expression.ResolvedMethod;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
 import build.codemodel.jdk.JdkInitializer;
-import com.google.testing.compile.JavaFileObjects;
+import build.base.compile.testing.JavaFileObjects;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
