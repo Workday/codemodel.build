@@ -33,7 +33,6 @@ import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.descriptor.Traitable;
 import build.codemodel.foundation.descriptor.TypeDescriptor;
 import build.codemodel.foundation.naming.NameProvider;
-import jakarta.inject.Inject;
 
 import java.lang.invoke.MethodHandles;
 import java.util.stream.Stream;
@@ -53,7 +52,6 @@ public class ConceptualCodeModel
      *
      * @param nameProvider the {@link NameProvider}
      */
-    @Inject
     public ConceptualCodeModel(final NameProvider nameProvider) {
         super(nameProvider);
     }

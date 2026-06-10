@@ -17,11 +17,6 @@
 
     <dependencies>
         <dependency>
-            <groupId>jakarta.inject</groupId>
-            <artifactId>jakarta.inject-api</artifactId>
-        </dependency>
-
-        <dependency>
             <groupId>build.base</groupId>
             <artifactId>base-foundation</artifactId>
         </dependency>
@@ -125,7 +120,6 @@
                 <configuration>
                     <ignoredUnusedDeclaredDependencies>
                         <!-- required in module-info.java but no direct class imports -->
-                        <ignoredUnusedDeclaredDependency>jakarta.inject:jakarta.inject-api</ignoredUnusedDeclaredDependency>
                         <ignoredUnusedDeclaredDependency>build.base:base-marshalling</ignoredUnusedDeclaredDependency>
                         <ignoredUnusedDeclaredDependency>build.base:base-query</ignoredUnusedDeclaredDependency>
                     </ignoredUnusedDeclaredDependencies>
