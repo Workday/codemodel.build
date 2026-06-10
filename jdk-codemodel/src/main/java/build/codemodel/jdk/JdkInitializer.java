@@ -61,6 +61,7 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.tools.Diagnostic;
+import javax.tools.DiagnosticListener;
 import javax.tools.JavaCompiler;
 import javax.tools.JavaFileObject;
 import javax.tools.StandardJavaFileManager;
@@ -89,6 +90,8 @@ public class JdkInitializer
      * for type resolution without re-registering their already-present descriptors.
      */
     private Predicate<URI> registrationFilter = null;
+
+    private DiagnosticListener<JavaFileObject> diagnosticListener = d -> {};
 
     private boolean initialized = false;
 
@@ -156,6 +159,11 @@ public class JdkInitializer
         return new JdkInitializer(List.of(), List.of(directory), List.of());
     }
 
+    public JdkInitializer withDiagnosticListener(final DiagnosticListener<JavaFileObject> listener) {
+        this.diagnosticListener = listener;
+        return this;
+    }
+
     /**
      * Restricts descriptor registration to compilation units whose source URI satisfies the given
      * predicate. Units that do not match are still compiled (providing type resolution context)
@@ -185,15 +193,14 @@ public class JdkInitializer
         this.codeModel = codeModel;
         this.nameProvider = codeModel.getNameProvider();
         final JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-        try (StandardJavaFileManager fileManager = compiler.getStandardFileManager(null, null, null)) {
+        try (StandardJavaFileManager fileManager = compiler.getStandardFileManager(diagnosticListener, null, null)) {
 
             final List<JavaFileObject> combined = collectSources(fileManager);
             if (combined.isEmpty()) {
                 return;
             }
 
-            final var task = compiler.getTask(null, fileManager, diagnostic -> {
-            }, buildOptions(), null, combined);
+            final var task = compiler.getTask(null, fileManager, diagnosticListener, buildOptions(), null, combined);
             final var javacTask = (JavacTask) task;
             final var compilationUnits = javacTask.parse();
             javacTask.analyze();
