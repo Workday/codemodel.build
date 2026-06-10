@@ -24,8 +24,11 @@ import java.io.File;
 import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import javax.tools.Diagnostic;
+import javax.tools.JavaFileObject;
 import javax.tools.ToolProvider;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -189,6 +192,27 @@ class JdkInitializerTests {
             .findFirst()
             .orElseThrow();
         assertThat(field.type()).isInstanceOf(UnknownTypeUsage.class);
+    }
+
+    @Test
+    void shouldForwardDiagnosticsToCustomListener() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Broken",
+            """
+                package com.example;
+                public class Broken {
+                    private com.example.Missing dep;
+                }
+                """);
+
+        final List<Diagnostic<? extends JavaFileObject>> captured = new ArrayList<>();
+        runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source))
+                .withDiagnosticListener(captured::add));
+
+        assertThat(captured)
+            .as("listener installed via withDiagnosticListener must receive javac diagnostics")
+            .isNotEmpty();
     }
 
     @Test
