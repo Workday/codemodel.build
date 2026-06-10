@@ -1,12 +1,12 @@
 package build.codemodel.jdk;
 
+import build.base.compile.testing.JavaFileObjects;
 import build.codemodel.foundation.usage.AnnotationTypeUsage;
 import build.codemodel.foundation.usage.GenericTypeUsage;
 import build.codemodel.foundation.usage.TypeVariableUsage;
 import build.codemodel.foundation.usage.UnknownTypeUsage;
 import build.codemodel.foundation.usage.WildcardTypeUsage;
 import build.codemodel.objectoriented.descriptor.FieldDescriptor;
-import com.google.testing.compile.JavaFileObjects;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

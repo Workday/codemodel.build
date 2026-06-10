@@ -86,13 +86,6 @@
             <artifactId>codemodel-framework-builder</artifactId>
         </dependency>
 
-        <!-- Test Dependencies -->
-        <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-            <scope>test</scope>
-        </dependency>
-
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
@@ -106,8 +99,8 @@
         </dependency>
 
         <dependency>
-            <groupId>com.google.testing.compile</groupId>
-            <artifactId>compile-testing</artifactId>
+            <groupId>build.base</groupId>
+            <artifactId>base-compile-testing</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

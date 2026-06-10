@@ -68,13 +68,9 @@
 
         <!-- Module Dependency Versions -->
         <assertj.version>3.27.7</assertj.version>
-        <base.version>0.26.1</base.version>
-        <byte-buddy.version>1.18.4</byte-buddy.version>
-        <compile-testing.version>0.23.0</compile-testing.version>
-        <guava.version>33.4.8-jre</guava.version>
+        <base.version>0.27.0</base.version>
         <junit.version>6.0.3</junit.version>
         <jakarta-inject.version>2.0.1</jakarta-inject.version>
-        <mockito.version>5.23.0</mockito.version>
 
         <!-- Plugin Dependency Versions -->
         <maven-compiler-plugin.version>3.15.0</maven-compiler-plugin.version>
@@ -179,6 +175,11 @@
             </dependency>
             <dependency>
                 <groupId>build.base</groupId>
+                <artifactId>base-compile-testing</artifactId>
+                <version>${base.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>build.base</groupId>
                 <artifactId>base-foundation</artifactId>
                 <version>${base.version}</version>
             </dependency>
@@ -239,22 +240,6 @@
             </dependency>
 
             <!-- Third-party -->
-            <dependency>
-                <groupId>net.bytebuddy</groupId>
-                <artifactId>byte-buddy</artifactId>
-                <version>${byte-buddy.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.google.guava</groupId>
-                <artifactId>guava</artifactId>
-                <version>${guava.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.google.testing.compile</groupId>
-                <artifactId>compile-testing</artifactId>
-                <version>${compile-testing.version}</version>
-                <scope>test</scope>
-            </dependency>
             <dependency>
                 <groupId>jakarta.inject</groupId>
                 <artifactId>jakarta.inject-api</artifactId>

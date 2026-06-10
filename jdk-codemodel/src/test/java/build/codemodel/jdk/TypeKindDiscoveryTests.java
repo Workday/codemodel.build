@@ -1,5 +1,6 @@
 package build.codemodel.jdk;
 
+import build.base.compile.testing.JavaFileObjects;
 import build.codemodel.foundation.naming.NonCachingNameProvider;
 import build.codemodel.jdk.descriptor.AnnotationType;
 import build.codemodel.jdk.descriptor.EnumType;
@@ -21,7 +22,7 @@ class TypeKindDiscoveryTests {
 
     @Test
     void shouldDetectEnumType() {
-        final var source = com.google.testing.compile.JavaFileObjects.forSourceString(
+        final var source = JavaFileObjects.forSourceString(
             "com.example.Color",
             """
             package com.example;
@@ -38,7 +39,7 @@ class TypeKindDiscoveryTests {
 
     @Test
     void shouldDetectRecordType() {
-        final var source = com.google.testing.compile.JavaFileObjects.forSourceString(
+        final var source = JavaFileObjects.forSourceString(
             "com.example.Point",
             """
             package com.example;
@@ -55,7 +56,7 @@ class TypeKindDiscoveryTests {
 
     @Test
     void shouldDetectAnnotationType() {
-        final var source = com.google.testing.compile.JavaFileObjects.forSourceString(
+        final var source = JavaFileObjects.forSourceString(
             "com.example.Marker",
             """
             package com.example;
@@ -72,7 +73,7 @@ class TypeKindDiscoveryTests {
 
     @Test
     void shouldCaptureEnumConstants() {
-        final var source = com.google.testing.compile.JavaFileObjects.forSourceString(
+        final var source = JavaFileObjects.forSourceString(
             "com.example.Color",
             """
             package com.example;
@@ -92,7 +93,7 @@ class TypeKindDiscoveryTests {
 
     @Test
     void shouldCaptureRecordComponents() {
-        final var source = com.google.testing.compile.JavaFileObjects.forSourceString(
+        final var source = JavaFileObjects.forSourceString(
             "com.example.Point",
             """
             package com.example;
@@ -113,7 +114,7 @@ class TypeKindDiscoveryTests {
 
     @Test
     void shouldCaptureAnnotationMemberDefault() {
-        final var source = com.google.testing.compile.JavaFileObjects.forSourceString(
+        final var source = JavaFileObjects.forSourceString(
             "com.example.Marker",
             """
             package com.example;
@@ -148,7 +149,7 @@ class TypeKindDiscoveryTests {
 
     @Test
     void shouldCaptureEnclosingTypeForNestedClass() {
-        final var source = com.google.testing.compile.JavaFileObjects.forSourceString(
+        final var source = JavaFileObjects.forSourceString(
             "com.example.Outer",
             """
             package com.example;
@@ -180,7 +181,7 @@ class TypeKindDiscoveryTests {
 
     @Test
     void enumConstantsShouldBeReturnedInSourceDeclarationOrder() {
-        final var source = com.google.testing.compile.JavaFileObjects.forSourceString(
+        final var source = JavaFileObjects.forSourceString(
             "com.example.Planet",
             """
             package com.example;

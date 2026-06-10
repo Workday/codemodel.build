@@ -3,7 +3,7 @@ package build.codemodel.jdk;
 import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
 import build.codemodel.objectoriented.descriptor.ParameterizedTypeDescriptor;
-import com.google.testing.compile.JavaFileObjects;
+import build.base.compile.testing.JavaFileObjects;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

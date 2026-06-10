@@ -15,7 +15,7 @@ import build.codemodel.jdk.statement.Try;
 import build.codemodel.objectoriented.descriptor.ConstructorDescriptor;
 import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
-import com.google.testing.compile.JavaFileObjects;
+import build.base.compile.testing.JavaFileObjects;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

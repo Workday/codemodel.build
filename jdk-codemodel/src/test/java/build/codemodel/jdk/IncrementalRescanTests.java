@@ -20,6 +20,7 @@ package build.codemodel.jdk;
  * #L%
  */
 
+import build.base.compile.testing.JavaFileObjects;
 import build.codemodel.foundation.descriptor.RequiresModuleDescriptor;
 import build.codemodel.foundation.naming.NonCachingNameProvider;
 import build.codemodel.foundation.usage.SpecificTypeUsage;
@@ -28,7 +29,6 @@ import build.codemodel.jdk.descriptor.RequiresModifier;
 import build.codemodel.jdk.descriptor.SourceLocation;
 import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
-import com.google.testing.compile.JavaFileObjects;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

@@ -5,7 +5,7 @@ import build.codemodel.objectoriented.descriptor.Classification;
 import build.codemodel.objectoriented.descriptor.ExtendsTypeDescriptor;
 import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
-import com.google.testing.compile.JavaFileObjects;
+import build.base.compile.testing.JavaFileObjects;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
