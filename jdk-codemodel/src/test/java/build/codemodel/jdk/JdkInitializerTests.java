@@ -425,6 +425,123 @@ class JdkInitializerTests {
     }
 
     @Test
+    void withOptions_shouldForwardOptionsToJavac() {
+        // var was introduced in Java 10; --release 8 must reject it
+        final var source = JavaFileObjects.forSourceString("com.example.Foo", """
+            package com.example;
+            public class Foo {
+                void bar() { var x = 1; }
+            }
+            """);
+        final List<Diagnostic<? extends JavaFileObject>> diagnostics = new ArrayList<>();
+        runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source))
+                .withOptions(List.of("--release", "8"))
+                .withDiagnosticListener(diagnostics::add));
+
+        assertThat(diagnostics)
+            .as("--release 8 must reject 'var' (Java 10+)")
+            .anyMatch(d -> d.getKind() == Diagnostic.Kind.ERROR);
+    }
+
+    @Test
+    void withOptions_calledTwice_accumulatesBothSets() {
+        // First call sets --release 17; second call adds --Werror.
+        // If the second call replaced instead of appended, --release 17 would be lost
+        // and the source would compile under the current release, masking the test intent.
+        final var source = JavaFileObjects.forSourceString("com.example.Chained", """
+            package com.example;
+            public class Chained {
+                void bar() { var x = 1; }
+            }
+            """);
+        final List<Diagnostic<? extends JavaFileObject>> diagnostics = new ArrayList<>();
+        runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source))
+                .withOptions(List.of("--release", "8"))
+                .withOptions(List.of("-Xlint:all"))
+                .withDiagnosticListener(diagnostics::add));
+
+        // --release 8 must still be in effect (not replaced by the second withOptions call)
+        assertThat(diagnostics)
+            .as("--release 8 must still reject 'var' after a second withOptions call")
+            .anyMatch(d -> d.getKind() == Diagnostic.Kind.ERROR);
+    }
+
+    @Test
+    void withOptions_noOptionsNeededForPlainJavaSource() {
+        // Confirm that withOptions is not required for ordinary source — the default path
+        // (no extra options) must still produce a working CodeModel.
+        final var source = JavaFileObjects.forSourceString("com.example.Plain", """
+            package com.example;
+            public class Plain {
+                private final String value;
+                public Plain(String value) { this.value = value; }
+                public String getValue() { return value; }
+            }
+            """);
+        final var codeModel = runInternal(new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Plain");
+        assertThat(codeModel.getTypeDescriptor(typeName)).isPresent();
+    }
+
+    // Primitive patterns (instanceof int i) are a Java 25 preview feature — they require
+    // --enable-preview and fail without it, making them a reliable signal for these tests.
+
+    @Test
+    void withEnablePreview_withoutFlag_rejectsPreviewSyntax() {
+        final var source = primitivePatternSource("com.example.WithoutPreview");
+        final List<Diagnostic<? extends JavaFileObject>> diagnostics = new ArrayList<>();
+        runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source))
+                .withDiagnosticListener(diagnostics::add));
+
+        assertThat(diagnostics)
+            .as("primitive patterns must be rejected without --enable-preview")
+            .anyMatch(d -> d.getKind() == Diagnostic.Kind.ERROR);
+    }
+
+    @Test
+    void withEnablePreview_noArg_compilesPreviewSyntax() {
+        final var source = primitivePatternSource("com.example.WithPreview");
+        final List<Diagnostic<? extends JavaFileObject>> diagnostics = new ArrayList<>();
+        runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source))
+                .withEnablePreview()
+                .withDiagnosticListener(diagnostics::add));
+
+        assertThat(diagnostics.stream().filter(d -> d.getKind() == Diagnostic.Kind.ERROR))
+            .as("withEnablePreview() should compile primitive patterns without errors")
+            .isEmpty();
+    }
+
+    @Test
+    void withEnablePreview_explicitVersion_compilesPreviewSyntax() {
+        final var source = primitivePatternSource("com.example.WithPreviewExplicit");
+        final List<Diagnostic<? extends JavaFileObject>> diagnostics = new ArrayList<>();
+        runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source))
+                .withEnablePreview(Runtime.version().feature())
+                .withDiagnosticListener(diagnostics::add));
+
+        assertThat(diagnostics.stream().filter(d -> d.getKind() == Diagnostic.Kind.ERROR))
+            .as("withEnablePreview(version) should compile primitive patterns without errors")
+            .isEmpty();
+    }
+
+    private static JavaFileObject primitivePatternSource(final String className) {
+        return JavaFileObjects.forSourceString(className, """
+            package com.example;
+            public class %s {
+                static boolean isSmallInt(Object o) {
+                    return o instanceof int i && i < 100;
+                }
+            }
+            """.formatted(className.substring(className.lastIndexOf('.') + 1)));
+    }
+
+    @Test
     void shouldStoreRepeatableAnnotationValuesAsAnnotationTypeUsages() {
         // When @Tag is @Repeatable(Tags.class) and a class uses @Tag twice, the compiler wraps
         // them in @Tags({@Tag(...), @Tag(...)}). The nested @Tag values must be stored as
