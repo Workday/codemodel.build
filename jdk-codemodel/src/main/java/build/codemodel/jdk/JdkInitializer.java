@@ -92,6 +92,7 @@ public class JdkInitializer
     private Predicate<URI> registrationFilter = null;
 
     private DiagnosticListener<JavaFileObject> diagnosticListener = d -> {};
+    private final List<String> extraOptions = new ArrayList<>();
 
     private boolean initialized = false;
 
@@ -162,6 +163,42 @@ public class JdkInitializer
     public JdkInitializer withDiagnosticListener(final DiagnosticListener<JavaFileObject> listener) {
         this.diagnosticListener = listener;
         return this;
+    }
+
+    /**
+     * Appends additional options to the javac invocation.
+     * May be called multiple times; options accumulate in call order.
+     * Common uses include {@code --enable-preview} paired with {@code --source <version>},
+     * or release-targeting via {@code --release <version>}.
+     *
+     * @param options the options to append; must not be {@code null}
+     * @return this initializer, for chaining
+     */
+    public JdkInitializer withOptions(final List<String> options) {
+        this.extraOptions.addAll(options);
+        return this;
+    }
+
+    /**
+     * Enables preview features for the given source version.
+     * Equivalent to {@code withOptions(List.of("--enable-preview", "--source", String.valueOf(sourceVersion)))}.
+     * Both flags are always required together; this method enforces that pairing.
+     *
+     * @param sourceVersion the Java source version (e.g. {@code 25})
+     * @return this initializer, for chaining
+     */
+    public JdkInitializer withEnablePreview(final int sourceVersion) {
+        return withOptions(List.of("--enable-preview", "--source", String.valueOf(sourceVersion)));
+    }
+
+    /**
+     * Enables preview features for the current runtime's feature version.
+     * Equivalent to {@link #withEnablePreview(int)} with {@code Runtime.version().feature()}.
+     *
+     * @return this initializer, for chaining
+     */
+    public JdkInitializer withEnablePreview() {
+        return withEnablePreview(Runtime.version().feature());
     }
 
     /**
@@ -257,7 +294,7 @@ public class JdkInitializer
     // --- Compiler options ---
 
     private List<String> buildOptions() {
-        final var options = new ArrayList<String>();
+        final var options = new ArrayList<>(extraOptions);
         if (!classpath.isEmpty()) {
             options.add("--class-path");
             options.add(String.join(File.pathSeparator, classpath.stream().map(Path::toString).toList()));
