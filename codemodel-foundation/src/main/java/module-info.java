@@ -29,9 +29,6 @@ open module build.codemodel.foundation {
     requires build.base.query;
     requires build.base.marshalling;
     requires build.base.transport;
-    requires build.base.telemetry;
-
-    requires java.desktop;
 
     exports build.codemodel.foundation;
     exports build.codemodel.foundation.descriptor;

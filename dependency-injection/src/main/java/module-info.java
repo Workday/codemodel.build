@@ -26,17 +26,11 @@
 module build.codemodel.injection {
     requires jakarta.inject;
     requires transitive build.base.foundation;
-    requires transitive build.base.mereology;
-    requires transitive build.base.query;
-    requires transitive build.base.marshalling;
-    requires transitive build.base.transport;
     requires transitive build.base.telemetry;
     requires build.base.configuration;
     requires build.base.graph;
 
     requires transitive build.codemodel.foundation;
-    requires build.codemodel.expression;
-    requires build.codemodel.imperative;
     requires build.codemodel.objectoriented;
     requires transitive build.codemodel.jdk;
     requires build.codemodel.framework;

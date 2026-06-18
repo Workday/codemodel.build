@@ -32,9 +32,6 @@ module build.codemodel.framework.builder {
     requires build.base.telemetry.foundation;
 
     requires build.codemodel.foundation;
-    requires build.codemodel.expression;
-    requires build.codemodel.imperative;
-    requires build.codemodel.objectoriented;
     requires build.codemodel.jdk;
 
     requires build.codemodel.injection;

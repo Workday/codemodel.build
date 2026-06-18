@@ -27,7 +27,6 @@ open module build.codemodel.objectoriented {
 
     requires transitive build.codemodel.foundation;
     requires transitive build.codemodel.expression;
-    requires transitive build.codemodel.imperative;
     requires transitive build.codemodel.hierarchical;
 
     requires build.base.marshalling;
