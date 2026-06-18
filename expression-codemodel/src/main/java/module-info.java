@@ -25,7 +25,6 @@
  */
 module build.codemodel.expression {
     requires build.codemodel.foundation;
-    requires build.base.parsing;
     requires build.base.marshalling;
     requires build.base.foundation;
     requires build.base.mereology;

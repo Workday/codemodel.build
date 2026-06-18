@@ -42,13 +42,10 @@ module build.codemodel.jdk.annotation.processor {
 
     requires build.base.foundation;
     requires build.base.mereology;
-    requires build.base.query;
-    requires build.base.marshalling;
     requires build.base.telemetry;
     requires build.base.telemetry.foundation;
 
     requires build.codemodel.foundation;
-    requires build.codemodel.imperative;
     requires build.codemodel.objectoriented;
     requires build.codemodel.jdk;
 
