@@ -36,11 +36,6 @@
             <artifactId>base-mereology</artifactId>
         </dependency>
 
-        <dependency>
-            <groupId>build.base</groupId>
-            <artifactId>base-parsing</artifactId>
-        </dependency>
-
         <!-- Test Dependencies -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
@@ -62,28 +57,14 @@
 
         <dependency>
             <groupId>build.base</groupId>
+            <artifactId>base-parsing</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>build.base</groupId>
             <artifactId>base-transport-json</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
-
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-dependency-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>analyze-dependencies</id>
-                        <configuration>
-                            <ignoredNonTestScopedDependencies>
-                                <!-- Required in module-info.java for JPMS test access, but only used in tests -->
-                                <ignoredNonTestScopedDependency>build.base:base-parsing</ignoredNonTestScopedDependency>
-                            </ignoredNonTestScopedDependencies>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-        </plugins>
-    </build>
 </project>

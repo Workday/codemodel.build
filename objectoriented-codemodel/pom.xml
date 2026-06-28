@@ -37,11 +37,6 @@
 
         <dependency>
             <groupId>build.codemodel</groupId>
-            <artifactId>imperative-codemodel</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>build.codemodel</groupId>
             <artifactId>hierarchical-codemodel</artifactId>
         </dependency>
 
@@ -75,22 +70,4 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
-
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-dependency-plugin</artifactId>
-                <configuration>
-                    <ignoredUnusedDeclaredDependencies>
-                        <!-- required in module-info.java but no direct class imports -->
-                        <ignoredUnusedDeclaredDependency>build.codemodel:imperative-codemodel</ignoredUnusedDeclaredDependency>
-                    </ignoredUnusedDeclaredDependencies>
-                    <ignoredNonTestScopedDependencies>
-                        <ignoredUnusedDeclaredDependency>build.base:base-foundation</ignoredUnusedDeclaredDependency>
-                    </ignoredNonTestScopedDependencies>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
 </project>
