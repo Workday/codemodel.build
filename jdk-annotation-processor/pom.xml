@@ -28,16 +28,6 @@
 
         <dependency>
             <groupId>build.base</groupId>
-            <artifactId>base-query</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>build.base</groupId>
-            <artifactId>base-marshalling</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>build.base</groupId>
             <artifactId>base-telemetry</artifactId>
         </dependency>
 
@@ -111,11 +101,6 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
                 <configuration>
-                    <ignoredUnusedDeclaredDependencies>
-                        <!-- required in module-info.java but no direct class imports -->
-                        <ignoredUnusedDeclaredDependency>build.base:base-marshalling</ignoredUnusedDeclaredDependency>
-                        <ignoredUnusedDeclaredDependency>build.base:base-query</ignoredUnusedDeclaredDependency>
-                    </ignoredUnusedDeclaredDependencies>
                     <ignoredUsedUndeclaredDependencies>
                         <!-- transitive via objectoriented-codemodel; referenced in method signatures picked up by bytecode analysis -->
                         <ignoredUsedUndeclaredDependency>build.codemodel:expression-codemodel</ignoredUsedUndeclaredDependency>
