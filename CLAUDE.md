@@ -12,7 +12,7 @@
 - `hierarchical-codemodel` — type hierarchy (ancestors, descendants, assignability)
 - `imperative-codemodel` — statement AST nodes (Block, If, While, Return)
 - `objectoriented-codemodel` — OOP traits (fields, methods, constructors, access modifiers)
-- `jdk-codemodel` — JDK-backed impl via reflection (`JDKCodeModel`) or javac (`JdkInitializer`); symbol resolution, method resolution to `MethodDescriptor`, JPMS module-info parsing, `referencesTo()` API, source-fidelity traits (`LocationTrait`, `ImportDeclaration`, `InitializerBlockDescriptor`, `MemberTypeDescriptor`, `Varargs`)
+- `jdk-codemodel` — JDK-backed impl via reflection (`JDKCodeModel`) or javac (`JdkInitializer`); shared `TypeMirrorResolver` (also used by `jdk-annotation-processor`); symbol resolution, method resolution to `MethodDescriptor`, JPMS module-info parsing, `referencesTo()` API, incremental `rescan()`, source-fidelity traits (`SourceLocation`, `ImportDeclaration`, `InitializerBlockDescriptor`, `MemberTypeDescriptor`, `Varargs`)
 - `dependency-injection` — custom JSR-330 DI built on `jdk-codemodel`
 - `codemodel-framework` — pipeline interfaces (Enricher, TypeChecker, Compiler, Completer)
 - `codemodel-framework-builder` — concrete `FrameworkBuilder` + `InternalFramework`
