@@ -612,7 +612,7 @@ class IncrementalRescanTests {
                 public String extra() { return null; }
             }
             """);
-        codeModel.rescan(fooV2, List.of(consumerModuleInfo), List.of(), List.of(modulePathDir));
+        codeModel.rescan(fooV2, List.of(consumerModuleInfo), List.of(), List.of(modulePathDir), d -> { });
 
         final var fooV3 = JavaFileObjects.forSourceString("com.example.consumer.Foo", """
             package com.example.consumer;
@@ -621,7 +621,7 @@ class IncrementalRescanTests {
                 public Result<String> items() { return null; }
             }
             """);
-        codeModel.rescan(fooV3, List.of(consumerModuleInfo), List.of(), List.of(modulePathDir));
+        codeModel.rescan(fooV3, List.of(consumerModuleInfo), List.of(), List.of(modulePathDir), d -> { });
 
         final var itemsAfterRescan = codeModel.getJDKTypeDescriptor(fooFqn).orElseThrow()
             .traits(MethodDescriptor.class)
@@ -731,7 +731,7 @@ class IncrementalRescanTests {
                 public int extra;
             }
             """);
-        codeModel.rescan(fooV2, List.of(helperSource), List.of(), List.of());
+        codeModel.rescan(fooV2, List.of(helperSource), List.of(), List.of(), d -> { });
 
         final var depAfterRescan = codeModel.getJDKTypeDescriptor(fooName).orElseThrow()
             .traits(FieldDescriptor.class)
@@ -740,5 +740,41 @@ class IncrementalRescanTests {
         assertThat(depAfterRescan.type())
             .as("Helper must not degrade after rescan — sibling types should remain resolvable")
             .isNotInstanceOf(UnknownTypeUsage.class);
+    }
+
+    /**
+     * The {@code diagnosticListener} passed to {@link JDKCodeModel#rescan(javax.tools.JavaFileObject,
+     * List, List, List, javax.tools.DiagnosticListener)} must receive javac diagnostics produced
+     * while re-analyzing the updated file, not just be accepted and discarded.
+     */
+    @Test
+    void rescanForwardsCompileErrorsToDiagnosticListener() {
+        final var v1 = JavaFileObjects.forSourceString("com.example.Foo", """
+            package com.example;
+            public class Foo {
+                public int value;
+            }
+            """);
+        final var codeModel = populate(v1);
+
+        final List<javax.tools.Diagnostic<? extends javax.tools.JavaFileObject>> diagnostics
+            = new java.util.ArrayList<>();
+        final var v2 = JavaFileObjects.forSourceString("com.example.Foo", """
+            package com.example;
+            public class Foo {
+                public int value = "not an int";
+            }
+            """);
+        codeModel.rescan(v2, List.of(), List.of(), List.of(), diagnostics::add);
+
+        final var error = diagnostics.stream()
+            .filter(d -> d.getKind() == javax.tools.Diagnostic.Kind.ERROR)
+            .findFirst()
+            .orElseThrow(() -> new AssertionError("listener installed on rescan() must receive the javac error"));
+        assertThat(error.getMessage(null))
+            .as("diagnostic message must describe the actual type mismatch, not just be present")
+            .contains("incompatible types")
+            .contains("String")
+            .contains("int");
     }
 }
