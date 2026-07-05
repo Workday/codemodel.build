@@ -76,6 +76,7 @@ import build.codemodel.jdk.expression.Symbol;
 import build.codemodel.jdk.expression.Ternary;
 import build.codemodel.jdk.expression.UnknownExpression;
 import build.codemodel.jdk.statement.ExpressionStatement;
+import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
 import com.sun.source.tree.ArrayAccessTree;
 import com.sun.source.tree.AssignmentTree;
@@ -272,13 +273,31 @@ public class JdkExpressionConverter
         if (element == null) {
             return Optional.empty();
         }
-        return Optional.ofNullable(switch (element.getKind()) {
-            case LOCAL_VARIABLE -> new Symbol.LocalVariable(typeUsage);
-            case PARAMETER -> new Symbol.Parameter(typeUsage);
-            case FIELD, ENUM_CONSTANT -> new Symbol.Field(typeUsage);
-            case CLASS, INTERFACE, ENUM, ANNOTATION_TYPE, RECORD -> new Symbol.TypeReference(typeUsage);
-            default -> null;
-        });
+        return switch (element.getKind()) {
+            case LOCAL_VARIABLE -> Optional.<Symbol>of(new Symbol.LocalVariable(typeUsage));
+            case PARAMETER -> Optional.<Symbol>of(new Symbol.Parameter(typeUsage));
+            case FIELD, ENUM_CONSTANT -> resolveField(element).map(Symbol.class::cast);
+            case CLASS, INTERFACE, ENUM, ANNOTATION_TYPE, RECORD ->
+                Optional.<Symbol>of(new Symbol.TypeReference(typeUsage));
+            default -> Optional.empty();
+        };
+    }
+
+    private Optional<Symbol.Field> resolveField(final Element element) {
+        if (!(element.getEnclosingElement() instanceof TypeElement typeElement)) {
+            return Optional.empty();
+        }
+        final var fqn = typeElement.getQualifiedName().toString();
+        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), fqn);
+        final var typeDescriptor = codeModel.getTypeDescriptor(typeName).orElse(null);
+        if (typeDescriptor == null) {
+            return Optional.empty();
+        }
+        final var simpleName = element.getSimpleName().toString();
+        return typeDescriptor.traits(FieldDescriptor.class)
+            .filter(fd -> fd.fieldName().toString().equals(simpleName))
+            .findFirst()
+            .map(Symbol.Field::new);
     }
 
     private Optional<ResolvedMethod> resolveMethod(final MethodInvocationTree t) {

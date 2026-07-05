@@ -25,6 +25,7 @@ import build.base.mereology.Composite;
 import build.codemodel.foundation.descriptor.Singular;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.usage.TypeUsage;
+import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 
 import java.util.Iterator;
 
@@ -76,9 +77,13 @@ public sealed interface Symbol extends Trait, Composite
     /**
      * A field reference, e.g. {@code field} in {@code this.field} or a bare {@code field}.
      *
-     * @param declaredType the declared type of the field
+     * @param descriptor the resolved {@link FieldDescriptor} declaring this field
      */
-    record Field(TypeUsage declaredType) implements Symbol {
+    record Field(FieldDescriptor descriptor) implements Symbol {
+        @Override
+        public TypeUsage declaredType() {
+            return descriptor.type();
+        }
     }
 
     /**
