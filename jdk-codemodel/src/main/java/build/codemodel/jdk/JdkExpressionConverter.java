@@ -47,6 +47,7 @@ import build.codemodel.foundation.usage.TypeUsage;
 import build.codemodel.foundation.usage.UnknownTypeUsage;
 import build.codemodel.imperative.Block;
 import build.codemodel.imperative.Statement;
+import build.codemodel.jdk.descriptor.SourceLocation;
 import build.codemodel.jdk.expression.ArrayAccess;
 import build.codemodel.jdk.expression.AssignmentOperator;
 import build.codemodel.jdk.expression.BitwiseBinary;
@@ -112,6 +113,7 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
+import javax.tools.Diagnostic;
 
 /**
  * Converts {@link ExpressionTree} nodes from the javac tree API to model {@link Expression} nodes.
@@ -228,7 +230,21 @@ public class JdkExpressionConverter
     public Expression visitIdentifier(final IdentifierTree t, final Void v) {
         final var identifier = Identifier.of(codeModel, t.getName().toString());
         resolveSymbol(t).ifPresent(identifier::addTrait);
+        addSourceLocation(t).ifPresent(identifier::addTrait);
         return identifier;
+    }
+
+    private Optional<SourceLocation.FilePosition> addSourceLocation(final Tree tree) {
+        if (trees == null || compilationUnit == null) {
+            return Optional.empty();
+        }
+        final var srcPositions = trees.getSourcePositions();
+        final var start = srcPositions.getStartPosition(compilationUnit, tree);
+        final var end = srcPositions.getEndPosition(compilationUnit, tree);
+        if (start == Diagnostic.NOPOS) {
+            return Optional.empty();
+        }
+        return Optional.of(SourceLocation.filePosition(compilationUnit.getSourceFile().toUri(), start, end));
     }
 
     private Optional<Symbol> resolveSymbol(final IdentifierTree t) {
@@ -341,6 +357,7 @@ public class JdkExpressionConverter
         final var invocation = MethodInvocation.of(codeModel, Optional.ofNullable(target), methodName,
             args.stream(), receiverType);
         resolveMethod(t).ifPresent(invocation::addTrait);
+        addSourceLocation(t.getMethodSelect()).ifPresent(invocation::addTrait);
         return invocation;
     }
 
