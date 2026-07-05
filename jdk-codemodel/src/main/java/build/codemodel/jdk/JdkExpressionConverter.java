@@ -235,7 +235,7 @@ public class JdkExpressionConverter
         return identifier;
     }
 
-    private Optional<SourceLocation.FilePosition> addSourceLocation(final Tree tree) {
+    Optional<SourceLocation.FilePosition> addSourceLocation(final Tree tree) {
         if (trees == null || compilationUnit == null) {
             return Optional.empty();
         }

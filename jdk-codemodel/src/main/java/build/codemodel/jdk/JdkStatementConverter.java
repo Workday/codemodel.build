@@ -168,11 +168,13 @@ public class JdkStatementConverter
         final boolean isFinal = t.getModifiers() != null
             && t.getModifiers().getFlags().contains(Modifier.FINAL);
         final TypeUsage type = exprConverter.resolveTypeUsage(t.getType());
-        return LocalVariableDeclaration.of(codeModel,
+        final var decl = LocalVariableDeclaration.of(codeModel,
             isFinal,
             type,
             t.getName().toString(),
             Optional.ofNullable(t.getInitializer()).map(exprConverter::convert));
+        exprConverter.addSourceLocation(t).ifPresent(decl::addTrait);
+        return decl;
     }
 
     @Override
@@ -195,12 +197,14 @@ public class JdkStatementConverter
         final boolean isFinal = t.getVariable().getModifiers() != null
             && t.getVariable().getModifiers().getFlags().contains(Modifier.FINAL);
         final TypeUsage type = exprConverter.resolveTypeUsage(t.getVariable().getType());
-        return EnhancedFor.of(codeModel,
+        final var enhancedFor = EnhancedFor.of(codeModel,
             isFinal,
             type,
             t.getVariable().getName().toString(),
             exprConverter.convert(t.getExpression()),
             convert(t.getStatement()));
+        exprConverter.addSourceLocation(t.getVariable()).ifPresent(enhancedFor::addTrait);
+        return enhancedFor;
     }
 
     @Override
