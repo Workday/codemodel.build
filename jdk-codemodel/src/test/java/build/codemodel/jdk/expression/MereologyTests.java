@@ -23,6 +23,7 @@ package build.codemodel.jdk.expression;
 import build.codemodel.expression.BooleanLiteral;
 import build.codemodel.expression.Expression;
 import build.codemodel.expression.NumericLiteral;
+import build.codemodel.foundation.naming.IrreducibleName;
 import build.codemodel.foundation.naming.NonCachingNameProvider;
 import build.codemodel.foundation.usage.TypeUsage;
 import build.codemodel.imperative.Block;
@@ -30,6 +31,7 @@ import build.codemodel.jdk.JDKCodeModel;
 import build.codemodel.jdk.statement.Assert;
 import build.codemodel.jdk.statement.ExpressionStatement;
 import build.codemodel.jdk.statement.SwitchCase;
+import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -289,7 +291,8 @@ class MereologyTests {
     @Test
     void symbolField_partsContainsDeclaredType() {
         final var type = stringType();
-        assertThat(new Symbol.Field(type).parts().toList()).containsExactly(type);
+        final var descriptor = FieldDescriptor.of(codeModel, IrreducibleName.of("value"), type);
+        assertThat(new Symbol.Field(descriptor).parts().toList()).containsExactly(type);
     }
 
     @Test

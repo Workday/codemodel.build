@@ -118,7 +118,9 @@ class SymbolResolutionTests {
         final var identifier = (Identifier) ret.expression().orElseThrow();
         final var symbol = identifier.getTrait(Symbol.class).orElseThrow();
         assertThat(symbol).isInstanceOf(Symbol.Field.class);
-        assertThat(((Symbol.Field) symbol).declaredType().toString()).contains("String");
+        final var field = (Symbol.Field) symbol;
+        assertThat(field.declaredType().toString()).contains("String");
+        assertThat(field.descriptor().fieldName().toString()).isEqualTo("value");
     }
 
     @Test
