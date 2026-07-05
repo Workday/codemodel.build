@@ -54,6 +54,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 import javax.lang.model.element.ElementKind;
@@ -420,7 +421,7 @@ public class JdkInitializer
                                     final ExecutableElement methodElement,
                                     final MethodTree ctorTree,
                                     final CompilationUnitTree cut) {
-        final var formalParameters = getFormalParameters(methodElement);
+        final var formalParameters = getFormalParameters(methodElement, ctorTree, cut);
 
         final var constructorDescriptor = ConstructorDescriptor.of(typeDescriptor, formalParameters);
         resolver.modifyConstructor(constructorDescriptor, methodElement);
@@ -442,8 +443,16 @@ public class JdkInitializer
         }
     }
 
-    private Stream<FormalParameterDescriptor> getFormalParameters(final ExecutableElement methodElement) {
-        return resolver.getFormalParameters(methodElement, (_, _) -> {
+    private Stream<FormalParameterDescriptor> getFormalParameters(final ExecutableElement methodElement,
+                                                                   final MethodTree methodTree,
+                                                                   final CompilationUnitTree cut) {
+        final var paramTrees = methodTree.getParameters();
+        final var index = new AtomicInteger();
+        return resolver.getFormalParameters(methodElement, (_, pd) -> {
+            final var i = index.getAndIncrement();
+            if (i < paramTrees.size()) {
+                addSourceLocation(cut, paramTrees.get(i), pd);
+            }
         });
     }
 
@@ -454,7 +463,7 @@ public class JdkInitializer
         final var returnType = resolver.resolve(methodElement.getReturnType(), methodElement);
         final var methodName = resolver.methodName(typeDescriptor, methodElement);
 
-        final var formalParameters = getFormalParameters(methodElement);
+        final var formalParameters = getFormalParameters(methodElement, methodTree, cut);
 
         final var methodDescriptor = MethodDescriptor.of(typeDescriptor, methodName, returnType, formalParameters);
         resolver.modifyMethod(methodDescriptor, methodElement);

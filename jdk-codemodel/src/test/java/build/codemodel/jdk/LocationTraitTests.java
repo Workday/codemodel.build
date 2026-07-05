@@ -20,7 +20,11 @@ package build.codemodel.jdk;
  * #L%
  */
 
+import build.codemodel.jdk.descriptor.MethodBodyDescriptor;
 import build.codemodel.jdk.descriptor.SourceLocation;
+import build.codemodel.jdk.statement.EnhancedFor;
+import build.codemodel.jdk.statement.LocalVariableDeclaration;
+import build.codemodel.objectoriented.descriptor.ConstructorDescriptor;
 import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
 import build.base.compile.testing.JavaFileObjects;
@@ -113,5 +117,102 @@ class LocationTraitTests {
             .getTrait(SourceLocation.FilePosition.class).orElseThrow().startPosition();
 
         assertThat(secondPos).isGreaterThan(firstPos);
+    }
+
+    @Test
+    void methodParameterShouldCarryLocationTrait() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Foo", """
+                package com.example;
+                public class Foo {
+                    public void hello(String name) {}
+                }
+                """);
+
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var method = codeModel.getTypeDescriptor(typeName).orElseThrow()
+            .traits(MethodDescriptor.class).findFirst().orElseThrow();
+        final var param = method.formalParameters().findFirst().orElseThrow();
+
+        assertThat(param.getTrait(SourceLocation.FilePosition.class)).isPresent();
+        final var location = param.getTrait(SourceLocation.FilePosition.class).orElseThrow();
+        assertThat(location.startPosition()).isGreaterThanOrEqualTo(0);
+        assertThat(location.endPosition()).isGreaterThan(location.startPosition());
+    }
+
+    @Test
+    void constructorParameterShouldCarryLocationTrait() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Foo", """
+                package com.example;
+                public class Foo {
+                    public Foo(String name) {}
+                }
+                """);
+
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var ctor = codeModel.getTypeDescriptor(typeName).orElseThrow()
+            .traits(ConstructorDescriptor.class).findFirst().orElseThrow();
+        final var param = ctor.formalParameters().findFirst().orElseThrow();
+
+        assertThat(param.getTrait(SourceLocation.FilePosition.class)).isPresent();
+    }
+
+    @Test
+    void localVariableDeclarationShouldCarryLocationTrait() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Foo", """
+                package com.example;
+                public class Foo {
+                    public void run() {
+                        String value = "hello";
+                    }
+                }
+                """);
+
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var method = codeModel.getTypeDescriptor(typeName).orElseThrow()
+            .traits(MethodDescriptor.class).findFirst().orElseThrow();
+        final var body = method.getTrait(MethodBodyDescriptor.class).orElseThrow().body();
+        final var decl = (LocalVariableDeclaration) body.statements().findFirst().orElseThrow();
+
+        assertThat(decl.getTrait(SourceLocation.FilePosition.class)).isPresent();
+        final var location = decl.getTrait(SourceLocation.FilePosition.class).orElseThrow();
+        assertThat(location.startPosition()).isGreaterThanOrEqualTo(0);
+        assertThat(location.endPosition()).isGreaterThan(location.startPosition());
+    }
+
+    @Test
+    void enhancedForLoopVariableShouldCarryLocationTrait() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Foo", """
+                package com.example;
+                import java.util.List;
+                public class Foo {
+                    public void run(List<String> values) {
+                        for (String value : values) {}
+                    }
+                }
+                """);
+
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var method = codeModel.getTypeDescriptor(typeName).orElseThrow()
+            .traits(MethodDescriptor.class).findFirst().orElseThrow();
+        final var body = method.getTrait(MethodBodyDescriptor.class).orElseThrow().body();
+        final var loop = (EnhancedFor) body.statements().findFirst().orElseThrow();
+
+        assertThat(loop.getTrait(SourceLocation.FilePosition.class)).isPresent();
     }
 }
