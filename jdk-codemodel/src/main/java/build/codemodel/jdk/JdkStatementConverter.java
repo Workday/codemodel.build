@@ -234,10 +234,12 @@ public class JdkStatementConverter
         } else {
             types = List.of(exprConverter.resolveTypeUsage(typeTree));
         }
-        return CatchClause.of(codeModel,
+        final var catchClause = CatchClause.of(codeModel,
             types,
             c.getParameter().getName().toString(),
             convertBlock(c.getBlock()));
+        exprConverter.addSourceLocation(c.getParameter()).ifPresent(catchClause::addTrait);
+        return catchClause;
     }
 
     @Override

@@ -3,8 +3,11 @@ package build.codemodel.jdk;
 import build.codemodel.foundation.usage.NamedTypeUsage;
 import build.codemodel.imperative.Return;
 import build.codemodel.jdk.descriptor.MethodBodyDescriptor;
+import build.codemodel.jdk.expression.CompoundAssignment;
 import build.codemodel.jdk.expression.Identifier;
 import build.codemodel.jdk.expression.Symbol;
+import build.codemodel.jdk.statement.ExpressionStatement;
+import build.codemodel.objectoriented.descriptor.ConstructorDescriptor;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
 import build.base.compile.testing.JavaFileObjects;
 import org.junit.jupiter.api.Test;
@@ -86,7 +89,41 @@ class SymbolResolutionTests {
         final var identifier = (Identifier) ret.expression().orElseThrow();
         final var symbol = identifier.getTrait(Symbol.class).orElseThrow();
         assertThat(symbol).isInstanceOf(Symbol.Parameter.class);
-        assertThat(((Symbol.Parameter) symbol).declaredType().toString()).contains("String");
+        final var parameter = (Symbol.Parameter) symbol;
+        assertThat(parameter.declaredType().toString()).contains("String");
+        assertThat(parameter.descriptor().name().orElseThrow().toString()).isEqualTo("input");
+    }
+
+    @Test
+    void shouldResolveConstructorParameter() {
+        final var source = JavaFileObjects.forSourceString("com.example.Foo", """
+            package com.example;
+            public class Foo {
+                private String value;
+                public Foo(String value) {
+                    this.value = value;
+                }
+            }
+            """);
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
+        final var constructor = descriptor.traits(ConstructorDescriptor.class).findFirst().orElseThrow();
+        final var body = constructor.getTrait(MethodBodyDescriptor.class).orElseThrow().body();
+
+        final var assignment = body.statements()
+            .filter(s -> s instanceof ExpressionStatement)
+            .map(s -> (CompoundAssignment) ((ExpressionStatement) s).expression())
+            .findFirst().orElseThrow();
+
+        final var identifier = (Identifier) assignment.value();
+        final var symbol = identifier.getTrait(Symbol.class).orElseThrow();
+        assertThat(symbol).isInstanceOf(Symbol.Parameter.class);
+        final var parameter = (Symbol.Parameter) symbol;
+        assertThat(parameter.declaredType().toString()).contains("String");
+        assertThat(parameter.descriptor().name().orElseThrow().toString()).isEqualTo("value");
     }
 
     @Test
