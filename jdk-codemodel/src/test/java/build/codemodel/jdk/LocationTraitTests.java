@@ -27,6 +27,7 @@ import build.codemodel.jdk.descriptor.SourceLocation;
 import build.codemodel.jdk.expression.Lambda;
 import build.codemodel.jdk.statement.EnhancedFor;
 import build.codemodel.jdk.statement.LocalVariableDeclaration;
+import build.codemodel.jdk.statement.Try;
 import build.codemodel.objectoriented.descriptor.ConstructorDescriptor;
 import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
@@ -247,6 +248,37 @@ class LocationTraitTests {
         final var param = lambda.parameters().findFirst().orElseThrow();
         assertThat(param.getTrait(SourceLocation.FilePosition.class)).isPresent();
         final var location = param.getTrait(SourceLocation.FilePosition.class).orElseThrow();
+        assertThat(location.startPosition()).isGreaterThanOrEqualTo(0);
+        assertThat(location.endPosition()).isGreaterThan(location.startPosition());
+    }
+
+    @Test
+    void catchClauseExceptionParameterShouldCarryLocationTrait() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Foo", """
+                package com.example;
+                public class Foo {
+                    public void run() {
+                        try {
+                            System.out.println();
+                        } catch (RuntimeException e) {
+                        }
+                    }
+                }
+                """);
+
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var method = codeModel.getTypeDescriptor(typeName).orElseThrow()
+            .traits(MethodDescriptor.class).findFirst().orElseThrow();
+        final var body = method.getTrait(MethodBodyDescriptor.class).orElseThrow().body();
+        final var tryStatement = (Try) body.statements().findFirst().orElseThrow();
+        final var catchClause = tryStatement.catches().findFirst().orElseThrow();
+
+        assertThat(catchClause.getTrait(SourceLocation.FilePosition.class)).isPresent();
+        final var location = catchClause.getTrait(SourceLocation.FilePosition.class).orElseThrow();
         assertThat(location.startPosition()).isGreaterThanOrEqualTo(0);
         assertThat(location.endPosition()).isGreaterThan(location.startPosition());
     }

@@ -23,6 +23,7 @@ package build.codemodel.jdk.expression;
 import build.codemodel.expression.BooleanLiteral;
 import build.codemodel.expression.Expression;
 import build.codemodel.expression.NumericLiteral;
+import build.codemodel.foundation.descriptor.FormalParameterDescriptor;
 import build.codemodel.foundation.naming.IrreducibleName;
 import build.codemodel.foundation.naming.NonCachingNameProvider;
 import build.codemodel.foundation.usage.TypeUsage;
@@ -285,7 +286,8 @@ class MereologyTests {
     @Test
     void symbolParameter_partsContainsDeclaredType() {
         final var type = stringType();
-        assertThat(new Symbol.Parameter(type).parts().toList()).containsExactly(type);
+        final var descriptor = FormalParameterDescriptor.of(codeModel, Optional.of(IrreducibleName.of("value")), type);
+        assertThat(new Symbol.Parameter(descriptor).parts().toList()).containsExactly(type);
     }
 
     @Test

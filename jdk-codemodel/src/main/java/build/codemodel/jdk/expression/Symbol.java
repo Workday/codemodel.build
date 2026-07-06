@@ -22,6 +22,7 @@ package build.codemodel.jdk.expression;
 
 import build.base.foundation.iterator.Iterators;
 import build.base.mereology.Composite;
+import build.codemodel.foundation.descriptor.FormalParameterDescriptor;
 import build.codemodel.foundation.descriptor.Singular;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.usage.TypeUsage;
@@ -69,9 +70,13 @@ public sealed interface Symbol extends Trait, Composite
     /**
      * A method or constructor parameter reference.
      *
-     * @param declaredType the declared type of the parameter
+     * @param descriptor the resolved {@link FormalParameterDescriptor} declaring this parameter
      */
-    record Parameter(TypeUsage declaredType) implements Symbol {
+    record Parameter(FormalParameterDescriptor descriptor) implements Symbol {
+        @Override
+        public TypeUsage declaredType() {
+            return descriptor.type();
+        }
     }
 
     /**

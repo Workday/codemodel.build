@@ -42,6 +42,7 @@ import build.codemodel.expression.NumericLiteral;
 import build.codemodel.expression.StringLiteral;
 import build.codemodel.expression.Subtraction;
 import build.codemodel.foundation.CodeModel;
+import build.codemodel.foundation.descriptor.CallableDescriptor;
 import build.codemodel.foundation.usage.NamedTypeUsage;
 import build.codemodel.foundation.usage.TypeUsage;
 import build.codemodel.foundation.usage.UnknownTypeUsage;
@@ -76,6 +77,7 @@ import build.codemodel.jdk.expression.Symbol;
 import build.codemodel.jdk.expression.Ternary;
 import build.codemodel.jdk.expression.UnknownExpression;
 import build.codemodel.jdk.statement.ExpressionStatement;
+import build.codemodel.objectoriented.descriptor.ConstructorDescriptor;
 import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
 import com.sun.source.tree.ArrayAccessTree;
@@ -110,6 +112,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeKind;
@@ -275,7 +278,7 @@ public class JdkExpressionConverter
         }
         return switch (element.getKind()) {
             case LOCAL_VARIABLE -> Optional.<Symbol>of(new Symbol.LocalVariable(typeUsage));
-            case PARAMETER -> Optional.<Symbol>of(new Symbol.Parameter(typeUsage));
+            case PARAMETER -> resolveParameter(element).map(Symbol.class::cast);
             case FIELD, ENUM_CONSTANT -> resolveField(element).map(Symbol.class::cast);
             case CLASS, INTERFACE, ENUM, ANNOTATION_TYPE, RECORD ->
                 Optional.<Symbol>of(new Symbol.TypeReference(typeUsage));
@@ -300,6 +303,44 @@ public class JdkExpressionConverter
             .map(Symbol.Field::new);
     }
 
+    private Optional<Symbol.Parameter> resolveParameter(final Element element) {
+        if (!(element.getEnclosingElement() instanceof ExecutableElement executableElement)) {
+            return Optional.empty();
+        }
+        // A lambda expression's parameters are owned by the enclosing method/constructor rather than
+        // a symbol of their own, so they won't appear here — leave them without a Symbol trait.
+        final var index = executableElement.getParameters().indexOf(element);
+        if (index < 0) {
+            return Optional.empty();
+        }
+        if (!(executableElement.getEnclosingElement() instanceof TypeElement typeElement)) {
+            return Optional.empty();
+        }
+        final var fqn = typeElement.getQualifiedName().toString();
+        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), fqn);
+        final var typeDescriptor = codeModel.getTypeDescriptor(typeName).orElse(null);
+        if (typeDescriptor == null) {
+            return Optional.empty();
+        }
+        final var paramTypes = executableElement.getParameters().stream()
+            .map(p -> typeResolver.apply(p.asType()))
+            .toList();
+        final var arity = paramTypes.size();
+        final Optional<? extends CallableDescriptor> callable = executableElement.getKind() == ElementKind.CONSTRUCTOR
+            ? typeDescriptor.traits(ConstructorDescriptor.class)
+                .filter(cd -> cd.getFormalParameterCount() == arity)
+                .filter(cd -> parametersMatch(cd, paramTypes))
+                .findFirst()
+            : typeDescriptor.traits(MethodDescriptor.class)
+                .filter(md -> md.methodName().name().toString().equals(executableElement.getSimpleName().toString()))
+                .filter(md -> md.getFormalParameterCount() == arity)
+                .filter(md -> parametersMatch(md, paramTypes))
+                .findFirst();
+        return callable
+            .map(c -> c.getFormalParameter(index))
+            .map(Symbol.Parameter::new);
+    }
+
     private Optional<ResolvedMethod> resolveMethod(final MethodInvocationTree t) {
         if (trees == null || compilationUnit == null || typeResolver == null) {
             return Optional.empty();
@@ -310,36 +351,56 @@ public class JdkExpressionConverter
                 return Optional.empty();
             }
             final var element = trees.getElement(selectPath);
-            if (!(element instanceof ExecutableElement executableElement)) {
-                return Optional.empty();
-            }
-            if (!(executableElement.getEnclosingElement() instanceof TypeElement typeElement)) {
-                return Optional.empty();
-            }
-            final var fqn = typeElement.getQualifiedName().toString();
-            final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), fqn);
-            final var typeDescriptor = codeModel.getTypeDescriptor(typeName).orElse(null);
-            if (typeDescriptor == null) {
-                return Optional.empty();
-            }
-            final var simpleName = executableElement.getSimpleName().toString();
-            final var arity = executableElement.getParameters().size();
-            final var paramTypes = executableElement.getParameters().stream()
-                .map(p -> typeResolver.apply(p.asType()))
-                .toList();
-            return typeDescriptor.traits(MethodDescriptor.class)
-                .filter(md -> md.methodName().name().toString().equals(simpleName))
-                .filter(md -> md.getFormalParameterCount() == arity)
-                .filter(md -> parametersMatch(md, paramTypes))
-                .findFirst()
-                .map(ResolvedMethod::new);
+            return resolveMethod(element);
         } catch (final Exception e) {
             return Optional.empty();
         }
     }
 
-    private boolean parametersMatch(final MethodDescriptor md, final List<TypeUsage> paramTypes) {
-        final var formals = md.formalParameters().toList();
+    private Optional<ResolvedMethod> resolveMethod(final MemberReferenceTree t) {
+        if (trees == null || compilationUnit == null || typeResolver == null) {
+            return Optional.empty();
+        }
+        try {
+            final var path = TreePath.getPath(compilationUnit, t);
+            if (path == null) {
+                return Optional.empty();
+            }
+            final var element = trees.getElement(path);
+            return resolveMethod(element);
+        } catch (final Exception e) {
+            return Optional.empty();
+        }
+    }
+
+    private Optional<ResolvedMethod> resolveMethod(final Element element) {
+        if (!(element instanceof ExecutableElement executableElement)) {
+            return Optional.empty();
+        }
+        if (!(executableElement.getEnclosingElement() instanceof TypeElement typeElement)) {
+            return Optional.empty();
+        }
+        final var fqn = typeElement.getQualifiedName().toString();
+        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), fqn);
+        final var typeDescriptor = codeModel.getTypeDescriptor(typeName).orElse(null);
+        if (typeDescriptor == null) {
+            return Optional.empty();
+        }
+        final var simpleName = executableElement.getSimpleName().toString();
+        final var arity = executableElement.getParameters().size();
+        final var paramTypes = executableElement.getParameters().stream()
+            .map(p -> typeResolver.apply(p.asType()))
+            .toList();
+        return typeDescriptor.traits(MethodDescriptor.class)
+            .filter(md -> md.methodName().name().toString().equals(simpleName))
+            .filter(md -> md.getFormalParameterCount() == arity)
+            .filter(md -> parametersMatch(md, paramTypes))
+            .findFirst()
+            .map(ResolvedMethod::new);
+    }
+
+    private boolean parametersMatch(final CallableDescriptor cd, final List<TypeUsage> paramTypes) {
+        final var formals = cd.formalParameters().toList();
         for (int i = 0; i < formals.size(); i++) {
             if (!typeUsageNamesMatch(formals.get(i).type(), paramTypes.get(i))) {
                 return false;
@@ -601,10 +662,13 @@ public class JdkExpressionConverter
     @Override
     public Expression visitMemberReference(final MemberReferenceTree t, final Void v) {
         final var qualifierExpr = t.getQualifierExpression();
-        return MethodReference.of(
+        final var reference = MethodReference.of(
             convert(qualifierExpr),
             t.getName().toString(),
             resolveReceiverType(qualifierExpr));
+        resolveMethod(t).ifPresent(reference::addTrait);
+        addSourceLocation(t).ifPresent(reference::addTrait);
+        return reference;
     }
 
     @Override
