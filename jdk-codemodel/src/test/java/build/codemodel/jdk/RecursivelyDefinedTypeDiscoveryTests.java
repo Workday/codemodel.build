@@ -43,7 +43,10 @@ public class RecursivelyDefinedTypeDiscoveryTests {
 
         final var typeVar = typeDescriptor.getTrait(ParameterizedTypeDescriptor.class)
             .orElseThrow().typeVariables().findFirst().orElseThrow();
-        assertThat(typeVar.toString()).isEqualTo("T extends com.example/com.example.Discover<T>");
-        assertThat(typeVar.canonicalName()).isEqualTo("T extends com.example.Discover<T>");
+        // T is scoped under its declaring type (Discover.T, not bare "T") so that a type variable
+        // sharing a name with one declared elsewhere (e.g. another class's own <T>) doesn't collide.
+        assertThat(typeVar.toString())
+            .isEqualTo("T extends com.example/com.example.Discover<com.example/com.example.Discover$T>");
+        assertThat(typeVar.canonicalName()).isEqualTo("T extends com.example.Discover<com.example.Discover.T>");
     }
 }

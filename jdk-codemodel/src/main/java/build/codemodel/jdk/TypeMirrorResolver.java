@@ -317,6 +317,30 @@ public final class TypeMirrorResolver {
         };
     }
 
+    /**
+     * Resolves the {@link TypeName} for a type variable (e.g. {@code T} in {@code class Foo<T>}).
+     * A bare simple name alone (e.g. just {@code "T"}) can't distinguish one type variable from
+     * another of the same name declared elsewhere (e.g. {@code Foo<T>} vs {@code Bar<T>}), so this
+     * scopes the name under the class that declares it - directly for a class type parameter, or
+     * via its enclosing class for a method/constructor type parameter.
+     */
+    private TypeName resolveTypeVariableTypeName(final TypeParameterElement typeParameterElement) {
+        final var irreducibleName = nameProvider.getIrreducibleName(typeParameterElement.getSimpleName().toString());
+        final var declaringType = switch (typeParameterElement.getGenericElement()) {
+            case TypeElement typeElement -> typeElement;
+            case Element element when element.getEnclosingElement() instanceof TypeElement typeElement -> typeElement;
+            default -> null;
+        };
+
+        if (declaringType == null) {
+            return nameProvider.getTypeName(Optional.empty(), Optional.empty(), Optional.empty(), irreducibleName);
+        }
+
+        final var enclosingTypeName = resolveTypeName(declaringType);
+        return nameProvider.getTypeName(enclosingTypeName.moduleName(), enclosingTypeName.namespace(),
+            Optional.of(enclosingTypeName), irreducibleName);
+    }
+
     private TypeName resolveElementTypeName(final Element element) {
         if (element instanceof TypeElement typeElement && !typeElement.getQualifiedName().toString().isEmpty()) {
             return resolveTypeName(typeElement);
@@ -364,11 +388,25 @@ public final class TypeMirrorResolver {
             case DeclaredType declaredType -> new AnnotationValue.Value.ClassRef(
                 resolveTypeName((TypeElement) declaredType.asElement()));
             case TypeMirror typeMirror -> new AnnotationValue.Value.ClassRef(
-                nameProvider.getTypeName(Optional.empty(), typeMirror.toString()));
+                resolveClassLiteralTypeName(typeMirror));
             case VariableElement varElement -> new AnnotationValue.Value.EnumConstant(
                 resolveTypeName((TypeElement) varElement.getEnclosingElement()),
                 varElement.getSimpleName().toString());
             default -> new AnnotationValue.Value.Literal(raw);
+        };
+    }
+
+    /**
+     * Resolves the {@link TypeName} for a {@code Class}-valued annotation member whose
+     * {@link TypeMirror} isn't a {@link DeclaredType} - namely an array type (unwrapped to its
+     * element type, since a {@link TypeName} has no notion of array dimensions) or a primitive/void
+     * type (which has no declaring module).
+     */
+    private TypeName resolveClassLiteralTypeName(final TypeMirror typeMirror) {
+        return switch (typeMirror) {
+            case ArrayType arrayType -> resolveClassLiteralTypeName(arrayType.getComponentType());
+            case DeclaredType declaredType -> resolveTypeName((TypeElement) declaredType.asElement());
+            default -> nameProvider.getTypeName(Optional.empty(), typeMirror.toString());
         };
     }
 
@@ -633,7 +671,7 @@ public final class TypeMirrorResolver {
 
             @Override
             public Lazy<TypeUsage> visitTypeVariable(final TypeVariable t, final Lazy<TypeUsage> lazy) {
-                final var typeName = nameProvider.getTypeName(Optional.empty(), t.asElement().getSimpleName().toString());
+                final var typeName = resolveTypeVariableTypeName((TypeParameterElement) t.asElement());
 
                 final Optional<Lazy<TypeUsage>> optLower = resolveOptionalBound(
                     t.getLowerBound(), pending, enclosing, resolved, t.asElement());

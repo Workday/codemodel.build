@@ -54,6 +54,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
@@ -268,7 +269,7 @@ public class JdkInitializer
                         }
                         final TreePath classPath = getCurrentPath();
                         exprConverter.setTypeContext(trees, classPath.getCompilationUnit(),
-                            mirror -> resolver.resolve(mirror, null));
+                            mirror -> resolver.resolve(mirror, null), resolver::resolveTypeName);
                         final var typeElement = (TypeElement) trees.getElement(classPath);
                         if (typeElement != null
                             && !typeElement.getQualifiedName().toString().isEmpty()) {
@@ -283,11 +284,18 @@ public class JdkInitializer
                         if (!register) {
                             return null;
                         }
-                        final var moduleCut = getCurrentPath().getCompilationUnit();
+                        final var modulePath = getCurrentPath();
+                        final var moduleCut = modulePath.getCompilationUnit();
                         nameProvider.getModuleName(moduleTree.getName().toString()).ifPresent(moduleName -> {
                             final var descriptor = codeModel.createModuleDescriptor(
                                 moduleName, JDKModuleDescriptor::of);
-                            descriptor.populateFrom(moduleTree);
+                            descriptor.populateFrom(moduleTree, ann -> {
+                                final var annotationPath = new TreePath(modulePath, ann.getAnnotationType());
+                                final var element = trees.getElement(annotationPath);
+                                return element instanceof TypeElement typeElement
+                                    ? resolver.resolveTypeName(typeElement)
+                                    : nameProvider.getTypeName(Optional.empty(), ann.getAnnotationType().toString());
+                            });
                             addSourceLocation(moduleCut, moduleTree, descriptor);
                         });
                         return null;
@@ -366,7 +374,7 @@ public class JdkInitializer
         if (!bodyTasks.isEmpty()) {
             deferredConversions.add(() -> {
                 exprConverter.setTypeContext(trees, classPath.getCompilationUnit(),
-                    mirror -> resolver.resolve(mirror, null));
+                    mirror -> resolver.resolve(mirror, null), resolver::resolveTypeName);
                 exprConverter.setEnclosingType(resolver.resolve(typeElement.asType(), null));
                 bodyTasks.forEach(Runnable::run);
             });

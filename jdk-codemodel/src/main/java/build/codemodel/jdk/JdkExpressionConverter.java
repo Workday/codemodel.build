@@ -43,6 +43,7 @@ import build.codemodel.expression.StringLiteral;
 import build.codemodel.expression.Subtraction;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.CallableDescriptor;
+import build.codemodel.foundation.naming.TypeName;
 import build.codemodel.foundation.usage.NamedTypeUsage;
 import build.codemodel.foundation.usage.TypeUsage;
 import build.codemodel.foundation.usage.UnknownTypeUsage;
@@ -133,6 +134,7 @@ public class JdkExpressionConverter
     private Trees trees;
     private CompilationUnitTree compilationUnit;
     private Function<TypeMirror, TypeUsage> typeResolver;
+    private Function<TypeElement, TypeName> typeNameResolver;
     private TypeUsage enclosingType;
 
     /**
@@ -158,16 +160,20 @@ public class JdkExpressionConverter
      * Provides the type-resolution context required to tag expressions with their
      * {@link build.codemodel.expression.ExpressionType} trait.
      *
-     * @param trees           the javac {@link Trees} utility
-     * @param compilationUnit the {@link CompilationUnitTree} being processed
-     * @param typeResolver    a function mapping a {@link TypeMirror} to a {@link TypeUsage}
+     * @param trees            the javac {@link Trees} utility
+     * @param compilationUnit  the {@link CompilationUnitTree} being processed
+     * @param typeResolver     a function mapping a {@link TypeMirror} to a {@link TypeUsage}
+     * @param typeNameResolver a function mapping a {@link TypeElement} to its module-qualified
+     *                         {@link TypeName}, matching how that type's descriptor was registered
      */
     public void setTypeContext(final Trees trees,
                                final CompilationUnitTree compilationUnit,
-                               final Function<TypeMirror, TypeUsage> typeResolver) {
+                               final Function<TypeMirror, TypeUsage> typeResolver,
+                               final Function<TypeElement, TypeName> typeNameResolver) {
         this.trees = trees;
         this.compilationUnit = compilationUnit;
         this.typeResolver = typeResolver;
+        this.typeNameResolver = typeNameResolver;
     }
 
     /**
@@ -290,8 +296,7 @@ public class JdkExpressionConverter
         if (!(element.getEnclosingElement() instanceof TypeElement typeElement)) {
             return Optional.empty();
         }
-        final var fqn = typeElement.getQualifiedName().toString();
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), fqn);
+        final var typeName = typeNameResolver.apply(typeElement);
         final var typeDescriptor = codeModel.getTypeDescriptor(typeName).orElse(null);
         if (typeDescriptor == null) {
             return Optional.empty();
@@ -316,8 +321,7 @@ public class JdkExpressionConverter
         if (!(executableElement.getEnclosingElement() instanceof TypeElement typeElement)) {
             return Optional.empty();
         }
-        final var fqn = typeElement.getQualifiedName().toString();
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), fqn);
+        final var typeName = typeNameResolver.apply(typeElement);
         final var typeDescriptor = codeModel.getTypeDescriptor(typeName).orElse(null);
         if (typeDescriptor == null) {
             return Optional.empty();
@@ -380,8 +384,7 @@ public class JdkExpressionConverter
         if (!(executableElement.getEnclosingElement() instanceof TypeElement typeElement)) {
             return Optional.empty();
         }
-        final var fqn = typeElement.getQualifiedName().toString();
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), fqn);
+        final var typeName = typeNameResolver.apply(typeElement);
         final var typeDescriptor = codeModel.getTypeDescriptor(typeName).orElse(null);
         if (typeDescriptor == null) {
             return Optional.empty();
