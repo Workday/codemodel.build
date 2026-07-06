@@ -29,6 +29,7 @@ import build.codemodel.foundation.descriptor.AbstractModuleDescriptor;
 import build.codemodel.foundation.descriptor.RequiresModuleDescriptor;
 import build.codemodel.foundation.naming.ModuleName;
 import build.codemodel.foundation.naming.Namespace;
+import build.codemodel.foundation.naming.TypeName;
 import build.codemodel.foundation.usage.AnnotationTypeUsage;
 import build.codemodel.foundation.usage.SpecificTypeUsage;
 import build.codemodel.foundation.usage.TypeUsage;
@@ -53,6 +54,7 @@ import java.util.ArrayList;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
@@ -114,18 +116,21 @@ public final class JDKModuleDescriptor
      * Populates this descriptor's traits from a javac {@link ModuleTree}.
      * Called by {@link build.codemodel.jdk.JdkInitializer} after creating the descriptor.
      *
-     * @param moduleTree the {@link ModuleTree} produced by javac
+     * @param moduleTree             the {@link ModuleTree} produced by javac
+     * @param annotationTypeNameResolver resolves an annotation's {@link AnnotationTree} to the
+     *                                   module-qualified {@link TypeName} of its declaring type,
+     *                                   matching how that type's descriptor was registered
      */
-    public void populateFrom(final ModuleTree moduleTree) {
+    public void populateFrom(final ModuleTree moduleTree,
+                             final Function<AnnotationTree, TypeName> annotationTypeNameResolver) {
 
         if (moduleTree.getModuleType() == ModuleTree.ModuleKind.OPEN) {
             addTrait(OpenModule.OPEN);
         }
 
         for (final AnnotationTree ann : moduleTree.getAnnotations()) {
-            final String name = ann.getAnnotationType().toString();
             addTrait(AnnotationTypeUsage.of(codeModel(),
-                codeModel().getNameProvider().getTypeName(Optional.empty(), name),
+                annotationTypeNameResolver.apply(ann),
                 Stream.empty()));
         }
 
@@ -312,7 +317,7 @@ public final class JDKModuleDescriptor
 
         annotationNames.forEach(name ->
             descriptor.addTrait(AnnotationTypeUsage.of(codeModel,
-                codeModel.getNameProvider().getTypeName(Optional.empty(), name),
+                resolveTypeNameByFqn(codeModel, name),
                 Stream.empty())));
 
         scanner.consume(OPEN_BRACE);
@@ -741,8 +746,26 @@ public final class JDKModuleDescriptor
 
     private TypeUsage typeUsage(final String rawName) {
         final String canonical = rawName.replace('/', '.');
-        return SpecificTypeUsage.of(codeModel(),
-            codeModel().getNameProvider().getTypeName(Optional.empty(), canonical));
+        return SpecificTypeUsage.of(codeModel(), resolveTypeNameByFqn(codeModel(), canonical));
+    }
+
+    /**
+     * Resolves a {@link TypeName} for a fully-qualified type name known only as a {@link String} -
+     * there being no javac AST or {@code Elements} available at this call site (text-based
+     * {@code module-info} parsing, or {@code provides}/{@code uses} directives naming arbitrary
+     * types). Reflectively looks up the {@link ModuleName} declaring the type when it happens to be
+     * loadable on this JVM (e.g. a real JDK type such as {@code java.lang.Deprecated}), without
+     * running its static initializers. Falls back to no module when the type can't be loaded this
+     * way (e.g. names in tests that don't correspond to real classes).
+     */
+    private static TypeName resolveTypeNameByFqn(final CodeModel codeModel, final String fullyQualifiedName) {
+        final var nameProvider = codeModel.getNameProvider();
+        try {
+            final var clazz = Class.forName(fullyQualifiedName, false, JDKModuleDescriptor.class.getClassLoader());
+            return nameProvider.getTypeName(clazz);
+        } catch (final ClassNotFoundException | LinkageError e) {
+            return nameProvider.getTypeName(Optional.empty(), fullyQualifiedName);
+        }
     }
 
     private static Optional<Version> manifestVersion(final Manifest manifest) {

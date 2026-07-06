@@ -82,6 +82,7 @@ import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.AnnotatedType;
 import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Member;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.ParameterizedType;
@@ -312,7 +313,7 @@ public class JDKCodeModel
             typeUsage = GenericTypeUsage.of(this, rawTypeUsage.typeName(), parameters);
         } else if (type instanceof TypeVariable<?> typeVariable) {
             final var variableName = nameProvider.getIrreducibleName(typeVariable.getName());
-            final var typeName = nameProvider.getTypeName(Optional.empty(), variableName);
+            final var typeName = resolveTypeVariableTypeName(typeVariable, variableName);
 
             // guard against self-referential bounds like T extends Comparable<T> or E extends Enum<E>
             final var inProgress = IN_PROGRESS_TYPE_VARIABLES.get();
@@ -366,6 +367,31 @@ public class JDKCodeModel
         }
 
         return typeUsage;
+    }
+
+    /**
+     * Resolves the {@link TypeName} for a type variable (e.g. {@code T} in {@code class Foo<T>}).
+     * A bare simple name alone (e.g. just {@code "T"}) can't distinguish one type variable from
+     * another of the same name declared elsewhere (e.g. {@code List<E>} vs {@code Set<E>}), so this
+     * scopes the name under the class that declares it - directly for a class type parameter, or
+     * via {@link Member#getDeclaringClass()} for a method/constructor type parameter.
+     */
+    private TypeName resolveTypeVariableTypeName(final TypeVariable<?> typeVariable,
+                                                 final IrreducibleName variableName) {
+        final var nameProvider = getNameProvider();
+        final var declaringClass = switch (typeVariable.getGenericDeclaration()) {
+            case Class<?> clazz -> clazz;
+            case Member member -> member.getDeclaringClass();
+            default -> null;
+        };
+
+        if (declaringClass == null) {
+            return nameProvider.getTypeName(Optional.empty(), Optional.empty(), Optional.empty(), variableName);
+        }
+
+        final var enclosingTypeName = nameProvider.getTypeName(declaringClass);
+        return nameProvider.getTypeName(enclosingTypeName.moduleName(), enclosingTypeName.namespace(),
+            Optional.of(enclosingTypeName), variableName);
     }
 
     /**
