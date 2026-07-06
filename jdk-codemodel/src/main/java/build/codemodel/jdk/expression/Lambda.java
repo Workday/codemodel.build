@@ -31,14 +31,11 @@ import build.base.mereology.Composite;
 import build.codemodel.expression.AbstractExpression;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.Trait;
-import build.codemodel.foundation.usage.TypeUsage;
 import build.codemodel.imperative.Statement;
 
 import java.lang.invoke.MethodHandles;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 /**
@@ -74,29 +71,22 @@ public final class Lambda
     public Lambda(@Bound final CodeModel codeModel,
                   final Marshaller marshaller,
                   final Stream<Marshalled<Trait>> traits,
-                  final Stream<Marshalled<TypeUsage>> paramTypes,
-                  final Stream<String> paramNames,
+                  final Stream<Marshalled<LambdaParameter>> parameters,
                   final Marshalled<Statement> body) {
         super(codeModel, marshaller, traits);
-        final var typeList = paramTypes == null
-            ? List.<Optional<TypeUsage>>of()
-            : paramTypes.map(mt -> Optional.<TypeUsage>ofNullable(marshaller.unmarshal(mt))).toList();
-        final var nameList = paramNames == null ? List.<String>of() : paramNames.toList();
-        this.parameters = IntStream.range(0, Math.min(typeList.size(), nameList.size()))
-            .mapToObj(i -> new LambdaParameter(typeList.get(i), nameList.get(i)))
-            .toList();
+        this.parameters = parameters == null
+            ? List.of()
+            : parameters.map(marshaller::unmarshal).toList();
         this.body = marshaller.unmarshal(body);
     }
 
     @Marshal
     public void destructor(final Marshaller marshaller,
                            final Out<Stream<Marshalled<Trait>>> traits,
-                           final Out<Stream<Marshalled<TypeUsage>>> paramTypes,
-                           final Out<Stream<String>> paramNames,
+                           final Out<Stream<Marshalled<LambdaParameter>>> parameters,
                            final Out<Marshalled<Statement>> body) {
         super.destructor(marshaller, traits);
-        paramTypes.set(this.parameters.stream().map(p -> marshaller.marshal(p.type().orElse(null))));
-        paramNames.set(this.parameters.stream().map(LambdaParameter::name));
+        parameters.set(this.parameters.stream().map(marshaller::marshal));
         body.set(marshaller.marshal(this.body));
     }
 

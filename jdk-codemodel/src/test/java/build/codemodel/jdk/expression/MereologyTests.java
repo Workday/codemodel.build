@@ -253,7 +253,7 @@ class MereologyTests {
 
     @Test
     void lambdaPartsContainsParametersAndBody() {
-        final var param = new LambdaParameter(Optional.of(stringType()), "s");
+        final var param = new LambdaParameter(codeModel, Optional.of(stringType()), "s");
         final var body = Block.of(Assert.of(BooleanLiteral.of(codeModel, true), Optional.empty()));
         final var expr = Lambda.of(codeModel, List.of(param), body);
         assertThat(expr.parts().toList()).containsExactlyInAnyOrder(param, body);
@@ -262,13 +262,13 @@ class MereologyTests {
     @Test
     void lambdaParameterWithType_partsContainsType() {
         final var type = stringType();
-        final var param = new LambdaParameter(Optional.of(type), "s");
+        final var param = new LambdaParameter(codeModel, Optional.of(type), "s");
         assertThat(param.parts().toList()).containsExactly(type);
     }
 
     @Test
     void lambdaParameterWithoutType_partsIsEmpty() {
-        final var param = new LambdaParameter(Optional.empty(), "s");
+        final var param = new LambdaParameter(codeModel, Optional.empty(), "s");
         assertThat(param.parts().toList()).isEmpty();
     }
 
