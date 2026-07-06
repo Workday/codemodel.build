@@ -580,7 +580,11 @@ public class JdkExpressionConverter
             body = Block.empty(codeModel);
         }
         final var params = t.getParameters().stream()
-            .map(p -> new LambdaParameter(resolveLambdaParameterType(p), p.getName().toString()))
+            .map(p -> {
+                final var param = new LambdaParameter(codeModel, resolveLambdaParameterType(p), p.getName().toString());
+                addSourceLocation(p).ifPresent(param::addTrait);
+                return param;
+            })
             .toList();
         return Lambda.of(codeModel, params, body);
     }

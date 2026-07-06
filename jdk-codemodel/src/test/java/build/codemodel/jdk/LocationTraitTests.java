@@ -20,8 +20,11 @@ package build.codemodel.jdk;
  * #L%
  */
 
+import build.codemodel.expression.Expression;
+import build.codemodel.imperative.Return;
 import build.codemodel.jdk.descriptor.MethodBodyDescriptor;
 import build.codemodel.jdk.descriptor.SourceLocation;
+import build.codemodel.jdk.expression.Lambda;
 import build.codemodel.jdk.statement.EnhancedFor;
 import build.codemodel.jdk.statement.LocalVariableDeclaration;
 import build.codemodel.objectoriented.descriptor.ConstructorDescriptor;
@@ -214,5 +217,37 @@ class LocationTraitTests {
         final var loop = (EnhancedFor) body.statements().findFirst().orElseThrow();
 
         assertThat(loop.getTrait(SourceLocation.FilePosition.class)).isPresent();
+    }
+
+    @Test
+    void lambdaParameterShouldCarryLocationTrait() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Foo", """
+                package com.example;
+                import java.util.Comparator;
+                public class Foo {
+                    public Comparator<String> comparator() {
+                        return (String a, String b) -> a.compareTo(b);
+                    }
+                }
+                """);
+
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var method = codeModel.getTypeDescriptor(typeName).orElseThrow()
+            .traits(MethodDescriptor.class).findFirst().orElseThrow();
+        final var body = method.getTrait(MethodBodyDescriptor.class).orElseThrow().body();
+        final var lambda = (Lambda) body.statements()
+            .map(s -> s instanceof Return r ? r.expression().orElse(null) : (Expression) null)
+            .filter(e -> e instanceof Lambda)
+            .findFirst().orElseThrow();
+
+        final var param = lambda.parameters().findFirst().orElseThrow();
+        assertThat(param.getTrait(SourceLocation.FilePosition.class)).isPresent();
+        final var location = param.getTrait(SourceLocation.FilePosition.class).orElseThrow();
+        assertThat(location.startPosition()).isGreaterThanOrEqualTo(0);
+        assertThat(location.endPosition()).isGreaterThan(location.startPosition());
     }
 }
