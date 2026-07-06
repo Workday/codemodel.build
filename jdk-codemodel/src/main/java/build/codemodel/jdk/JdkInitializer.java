@@ -92,7 +92,8 @@ public class JdkInitializer
      */
     private Predicate<URI> registrationFilter = null;
 
-    private DiagnosticListener<JavaFileObject> diagnosticListener = d -> {};
+    private DiagnosticListener<JavaFileObject> diagnosticListener = d -> {
+    };
     private final List<String> extraOptions = new ArrayList<>();
 
     private boolean initialized = false;
@@ -104,6 +105,14 @@ public class JdkInitializer
     private DocTrees trees;
     private JdkExpressionConverter exprConverter;
     private JdkStatementConverter stmtConverter;
+
+    /**
+     * Body/initializer conversions deferred until every compilation unit's type descriptors have
+     * been registered, so that a call to a type processed later in source order still resolves.
+     * Each task re-establishes the expression converter's type context for its declaring class
+     * before converting, since that context is mutated while scanning subsequent classes.
+     */
+    private final List<Runnable> deferredConversions = new ArrayList<>();
 
     /**
      * Creates a {@link JdkInitializer} with explicit source inputs.
@@ -286,6 +295,9 @@ public class JdkInitializer
                 }.scan(cut, null);
             }
 
+            deferredConversions.forEach(Runnable::run);
+            deferredConversions.clear();
+
         } catch (final IOException e) {
             initialized = false;
             throw new RuntimeException("Failed to initialize CodeModel from source files", e);
@@ -347,7 +359,18 @@ public class JdkInitializer
         if (!(typeElement.getEnclosingElement() instanceof TypeElement)) {
             addImports(typeDescriptor, cut);
         }
-        processMembers(typeDescriptor, classPath);
+
+        final List<Runnable> bodyTasks = new ArrayList<>();
+        processMembers(typeDescriptor, classPath, bodyTasks);
+
+        if (!bodyTasks.isEmpty()) {
+            deferredConversions.add(() -> {
+                exprConverter.setTypeContext(trees, classPath.getCompilationUnit(),
+                    mirror -> resolver.resolve(mirror, null));
+                exprConverter.setEnclosingType(resolver.resolve(typeElement.asType(), null));
+                bodyTasks.forEach(Runnable::run);
+            });
+        }
     }
 
     private void addImports(final JDKTypeDescriptor typeDescriptor, final CompilationUnitTree cut) {
@@ -371,7 +394,8 @@ public class JdkInitializer
     }
 
     private void processMembers(final JDKTypeDescriptor typeDescriptor,
-                                final TreePath classPath) {
+                                final TreePath classPath,
+                                final List<Runnable> bodyTasks) {
         final var cut = classPath.getCompilationUnit();
         final var classTree = (ClassTree) classPath.getLeaf();
         final var srcPositions = trees.getSourcePositions();
@@ -384,20 +408,20 @@ public class JdkInitializer
             final var elem = trees.getElement(path);
             if (member instanceof VariableTree vt && elem instanceof VariableElement ve) {
                 if (ve.getKind() == ElementKind.FIELD) {
-                    processField(typeDescriptor, ve, vt, cut);
+                    processField(typeDescriptor, ve, vt, cut, bodyTasks);
                 } else if (ve.getKind() == ElementKind.ENUM_CONSTANT) {
                     final var name = nameProvider.getIrreducibleName(ve.getSimpleName());
                     typeDescriptor.addTrait(EnumConstantDescriptor.of(name, enumConstantOrder++));
                 }
             } else if (member instanceof MethodTree mt && elem instanceof ExecutableElement ee) {
                 if (ee.getKind() == ElementKind.CONSTRUCTOR) {
-                    processConstructor(typeDescriptor, ee, mt, cut);
+                    processConstructor(typeDescriptor, ee, mt, cut, bodyTasks);
                 } else if (ee.getKind() == ElementKind.METHOD) {
-                    processMethod(typeDescriptor, ee, mt, cut);
+                    processMethod(typeDescriptor, ee, mt, cut, bodyTasks);
                 }
             } else if (member instanceof BlockTree bt) {
-                typeDescriptor.addTrait(
-                    new InitializerBlockDescriptor(bt.isStatic(), stmtConverter.convertStatements(bt.getStatements())));
+                bodyTasks.add(() -> typeDescriptor.addTrait(
+                    new InitializerBlockDescriptor(bt.isStatic(), stmtConverter.convertStatements(bt.getStatements()))));
             }
         }
     }
@@ -405,22 +429,24 @@ public class JdkInitializer
     private void processField(final JDKTypeDescriptor typeDescriptor,
                               final VariableElement fieldElement,
                               final VariableTree varTree,
-                              final CompilationUnitTree cut) {
+                              final CompilationUnitTree cut,
+                              final List<Runnable> bodyTasks) {
         final var fieldDescriptor = resolver.createFieldDescriptor(fieldElement);
         addSourceLocation(cut, varTree, fieldDescriptor);
 
         typeDescriptor.addTrait(fieldDescriptor);
 
         if (varTree.getInitializer() != null) {
-            fieldDescriptor.addTrait(
-                new FieldInitializerDescriptor(exprConverter.convert(varTree.getInitializer())));
+            bodyTasks.add(() -> fieldDescriptor.addTrait(
+                new FieldInitializerDescriptor(exprConverter.convert(varTree.getInitializer()))));
         }
     }
 
     private void processConstructor(final JDKTypeDescriptor typeDescriptor,
                                     final ExecutableElement methodElement,
                                     final MethodTree ctorTree,
-                                    final CompilationUnitTree cut) {
+                                    final CompilationUnitTree cut,
+                                    final List<Runnable> bodyTasks) {
         final var formalParameters = getFormalParameters(methodElement, ctorTree, cut);
 
         final var constructorDescriptor = ConstructorDescriptor.of(typeDescriptor, formalParameters);
@@ -439,13 +465,14 @@ public class JdkInitializer
                     return pos != Diagnostic.NOPOS && pos > bodyStart;
                 })
                 .toList();
-            constructorDescriptor.addTrait(new MethodBodyDescriptor(stmtConverter.convertStatements(realStmts)));
+            bodyTasks.add(() -> constructorDescriptor.addTrait(
+                new MethodBodyDescriptor(stmtConverter.convertStatements(realStmts))));
         }
     }
 
     private Stream<FormalParameterDescriptor> getFormalParameters(final ExecutableElement methodElement,
-                                                                   final MethodTree methodTree,
-                                                                   final CompilationUnitTree cut) {
+                                                                  final MethodTree methodTree,
+                                                                  final CompilationUnitTree cut) {
         final var paramTrees = methodTree.getParameters();
         final var index = new AtomicInteger();
         return resolver.getFormalParameters(methodElement, (_, pd) -> {
@@ -459,7 +486,8 @@ public class JdkInitializer
     private void processMethod(final JDKTypeDescriptor typeDescriptor,
                                final ExecutableElement methodElement,
                                final MethodTree methodTree,
-                               final CompilationUnitTree cut) {
+                               final CompilationUnitTree cut,
+                               final List<Runnable> bodyTasks) {
         final var returnType = resolver.resolve(methodElement.getReturnType(), methodElement);
         final var methodName = resolver.methodName(typeDescriptor, methodElement);
 
@@ -473,7 +501,8 @@ public class JdkInitializer
         typeDescriptor.addTrait(methodDescriptor);
 
         if (methodTree.getBody() != null) {
-            methodDescriptor.addTrait(new MethodBodyDescriptor(stmtConverter.convertBlock(methodTree.getBody())));
+            bodyTasks.add(() -> methodDescriptor.addTrait(
+                new MethodBodyDescriptor(stmtConverter.convertBlock(methodTree.getBody()))));
         }
     }
 
