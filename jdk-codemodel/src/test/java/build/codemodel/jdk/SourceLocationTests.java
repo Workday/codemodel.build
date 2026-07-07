@@ -41,15 +41,15 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for source position capture ({@link LocationTrait}) via {@link JdkInitializer}.
+ * Tests for source position capture ({@link SourceLocation}) via {@link JdkInitializer}.
  *
  * @author reed.vonredwitz
  * @since May-2026
  */
-class LocationTraitTests {
+class SourceLocationTests {
 
     @Test
-    void fieldShouldCarryLocationTrait() {
+    void fieldShouldCarrySourceLocation() {
         final var source = JavaFileObjects.forSourceString(
             "com.example.Foo", """
                 package com.example;
@@ -72,7 +72,7 @@ class LocationTraitTests {
     }
 
     @Test
-    void methodShouldCarryLocationTrait() {
+    void methodShouldCarrySourceLocation() {
         final var source = JavaFileObjects.forSourceString(
             "com.example.Foo", """
                 package com.example;
@@ -125,7 +125,7 @@ class LocationTraitTests {
     }
 
     @Test
-    void methodParameterShouldCarryLocationTrait() {
+    void methodParameterShouldCarrySourceLocation() {
         final var source = JavaFileObjects.forSourceString(
             "com.example.Foo", """
                 package com.example;
@@ -149,7 +149,7 @@ class LocationTraitTests {
     }
 
     @Test
-    void constructorParameterShouldCarryLocationTrait() {
+    void constructorParameterShouldCarrySourceLocation() {
         final var source = JavaFileObjects.forSourceString(
             "com.example.Foo", """
                 package com.example;
@@ -170,7 +170,7 @@ class LocationTraitTests {
     }
 
     @Test
-    void localVariableDeclarationShouldCarryLocationTrait() {
+    void localVariableDeclarationShouldCarrySourceLocation() {
         final var source = JavaFileObjects.forSourceString(
             "com.example.Foo", """
                 package com.example;
@@ -197,7 +197,7 @@ class LocationTraitTests {
     }
 
     @Test
-    void enhancedForLoopVariableShouldCarryLocationTrait() {
+    void enhancedForLoopVariableShouldCarrySourceLocation() {
         final var source = JavaFileObjects.forSourceString(
             "com.example.Foo", """
                 package com.example;
@@ -222,7 +222,7 @@ class LocationTraitTests {
     }
 
     @Test
-    void lambdaParameterShouldCarryLocationTrait() {
+    void lambdaParameterShouldCarrySourceLocation() {
         final var source = JavaFileObjects.forSourceString(
             "com.example.Foo", """
                 package com.example;
@@ -254,7 +254,7 @@ class LocationTraitTests {
     }
 
     @Test
-    void enumConstantShouldCarryLocationTrait() {
+    void enumConstantShouldCarrySourceLocation() {
         final var source = JavaFileObjects.forSourceString(
             "com.example.Color", """
                 package com.example;
@@ -287,7 +287,7 @@ class LocationTraitTests {
     }
 
     @Test
-    void catchClauseExceptionParameterShouldCarryLocationTrait() {
+    void catchClauseExceptionParameterShouldCarrySourceLocation() {
         final var source = JavaFileObjects.forSourceString(
             "com.example.Foo", """
                 package com.example;
