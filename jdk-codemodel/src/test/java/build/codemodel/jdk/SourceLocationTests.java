@@ -20,8 +20,10 @@ package build.codemodel.jdk;
  * #L%
  */
 
+import build.base.compile.testing.JavaFileObjects;
 import build.codemodel.expression.Expression;
 import build.codemodel.imperative.Return;
+import build.codemodel.jdk.descriptor.EnumConstantDescriptor;
 import build.codemodel.jdk.descriptor.MethodBodyDescriptor;
 import build.codemodel.jdk.descriptor.SourceLocation;
 import build.codemodel.jdk.expression.Lambda;
@@ -31,7 +33,6 @@ import build.codemodel.jdk.statement.Try;
 import build.codemodel.objectoriented.descriptor.ConstructorDescriptor;
 import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
-import build.base.compile.testing.JavaFileObjects;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -250,6 +251,39 @@ class LocationTraitTests {
         final var location = param.getTrait(SourceLocation.FilePosition.class).orElseThrow();
         assertThat(location.startPosition()).isGreaterThanOrEqualTo(0);
         assertThat(location.endPosition()).isGreaterThan(location.startPosition());
+    }
+
+    @Test
+    void enumConstantShouldCarryLocationTrait() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Color", """
+                package com.example;
+                public enum Color {
+                    RED,
+                    GREEN
+                }
+                """);
+
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Color");
+        final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
+
+        final var red = descriptor.traits(EnumConstantDescriptor.class)
+            .filter(c -> c.name().toString().equals("RED"))
+            .findFirst().orElseThrow();
+        final var green = descriptor.traits(EnumConstantDescriptor.class)
+            .filter(c -> c.name().toString().equals("GREEN"))
+            .findFirst().orElseThrow();
+
+        assertThat(red.getTrait(SourceLocation.FilePosition.class)).isPresent();
+        final var redLocation = red.getTrait(SourceLocation.FilePosition.class).orElseThrow();
+        assertThat(redLocation.startPosition()).isGreaterThanOrEqualTo(0);
+        assertThat(redLocation.endPosition()).isGreaterThan(redLocation.startPosition());
+
+        final var greenLocation = green.getTrait(SourceLocation.FilePosition.class).orElseThrow();
+        assertThat(greenLocation.startPosition()).isGreaterThan(redLocation.startPosition());
     }
 
     @Test
