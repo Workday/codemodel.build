@@ -7,6 +7,7 @@ import build.codemodel.jdk.expression.CompoundAssignment;
 import build.codemodel.jdk.expression.Identifier;
 import build.codemodel.jdk.expression.Symbol;
 import build.codemodel.jdk.statement.ExpressionStatement;
+import build.codemodel.jdk.statement.LocalVariableDeclaration;
 import build.codemodel.objectoriented.descriptor.ConstructorDescriptor;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
 import build.base.compile.testing.JavaFileObjects;
@@ -59,6 +60,50 @@ class SymbolResolutionTests {
         final var local = (Symbol.LocalVariable) symbol;
         assertThat(local.declaredType()).isInstanceOf(NamedTypeUsage.class);
         assertThat(local.declaredType().toString()).contains("String");
+
+        final var decl = (LocalVariableDeclaration) body.statements()
+            .filter(s -> s instanceof LocalVariableDeclaration)
+            .findFirst().orElseThrow();
+        assertThat(local.declaration()).contains(decl);
+    }
+
+    @Test
+    void shouldResolveShadowedLocalVariableToItsOwnDeclaration() {
+        final var source = JavaFileObjects.forSourceString("com.example.Foo", """
+            package com.example;
+            public class Foo {
+                public int bar() {
+                    int value = 1;
+                    {
+                        int value2 = 2;
+                        System.out.println(value2);
+                    }
+                    return value;
+                }
+            }
+            """);
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
+        final var method = descriptor.traits(MethodDescriptor.class)
+            .filter(m -> m.methodName().name().toString().equals("bar"))
+            .findFirst().orElseThrow();
+        final var body = method.getTrait(MethodBodyDescriptor.class).orElseThrow().body();
+
+        final var outerDecl = (LocalVariableDeclaration) body.statements()
+            .filter(s -> s instanceof LocalVariableDeclaration)
+            .findFirst().orElseThrow();
+
+        final var ret = body.statements()
+            .filter(s -> s instanceof Return)
+            .map(s -> (Return) s)
+            .findFirst().orElseThrow();
+        final var identifier = (Identifier) ret.expression().orElseThrow();
+        final var local = (Symbol.LocalVariable) identifier.getTrait(Symbol.class).orElseThrow();
+
+        assertThat(local.declaration()).contains(outerDecl);
     }
 
     @Test

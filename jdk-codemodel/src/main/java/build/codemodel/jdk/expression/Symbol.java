@@ -26,9 +26,11 @@ import build.codemodel.foundation.descriptor.FormalParameterDescriptor;
 import build.codemodel.foundation.descriptor.Singular;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.usage.TypeUsage;
+import build.codemodel.jdk.statement.LocalVariableDeclaration;
 import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 
 import java.util.Iterator;
+import java.util.Optional;
 
 /**
  * A {@link Trait} on an {@link Identifier} that captures the result of javac symbol resolution:
@@ -63,8 +65,20 @@ public sealed interface Symbol extends Trait, Composite
      * A local variable reference, e.g. {@code x} in {@code int x = 1; return x;}.
      *
      * @param declaredType the declared type of the variable
+     * @param declaration  the {@link Optional} {@link LocalVariableDeclaration} statement that
+     *                     declared this variable, when it could be resolved back to the
+     *                     declaring statement within the same body conversion
      */
-    record LocalVariable(TypeUsage declaredType) implements Symbol {
+    record LocalVariable(TypeUsage declaredType, Optional<LocalVariableDeclaration> declaration) implements Symbol {
+
+        /**
+         * Constructs a {@link LocalVariable} with no resolved declaring statement.
+         *
+         * @param declaredType the declared type of the variable
+         */
+        public LocalVariable(final TypeUsage declaredType) {
+            this(declaredType, Optional.empty());
+        }
     }
 
     /**

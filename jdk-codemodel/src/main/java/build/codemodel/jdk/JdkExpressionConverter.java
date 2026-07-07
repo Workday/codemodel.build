@@ -78,6 +78,7 @@ import build.codemodel.jdk.expression.Symbol;
 import build.codemodel.jdk.expression.Ternary;
 import build.codemodel.jdk.expression.UnknownExpression;
 import build.codemodel.jdk.statement.ExpressionStatement;
+import build.codemodel.jdk.statement.LocalVariableDeclaration;
 import build.codemodel.objectoriented.descriptor.ConstructorDescriptor;
 import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
@@ -105,11 +106,14 @@ import com.sun.source.tree.SwitchExpressionTree;
 import com.sun.source.tree.Tree;
 import com.sun.source.tree.TypeCastTree;
 import com.sun.source.tree.UnaryTree;
+import com.sun.source.tree.VariableTree;
 import com.sun.source.util.SimpleTreeVisitor;
 import com.sun.source.util.TreePath;
 import com.sun.source.util.Trees;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import javax.lang.model.element.Element;
@@ -136,6 +140,13 @@ public class JdkExpressionConverter
     private Function<TypeMirror, TypeUsage> typeResolver;
     private Function<TypeElement, TypeName> typeNameResolver;
     private TypeUsage enclosingType;
+
+    /**
+     * Maps a resolved javac {@link Element} for a local variable to the {@link LocalVariableDeclaration}
+     * that declared it, populated as {@link JdkStatementConverter} converts each declaration so that later
+     * identifier usages within the same body conversion can be linked back to their declaring statement.
+     */
+    private final Map<Element, LocalVariableDeclaration> localVariableDeclarations = new HashMap<>();
 
     /**
      * Creates a {@link JdkExpressionConverter}.
@@ -257,6 +268,27 @@ public class JdkExpressionConverter
         return Optional.of(SourceLocation.filePosition(compilationUnit.getSourceFile().toUri(), start, end));
     }
 
+    /**
+     * Records that the given local variable {@link VariableTree} declares {@code declaration}, so that
+     * later {@link Symbol.LocalVariable} resolution can link an identifier usage back to it.
+     *
+     * @param tree        the {@link VariableTree} declaring the local variable
+     * @param declaration the {@link LocalVariableDeclaration} converted from {@code tree}
+     */
+    void registerLocalVariableDeclaration(final VariableTree tree, final LocalVariableDeclaration declaration) {
+        if (trees == null || compilationUnit == null) {
+            return;
+        }
+        final var path = trees.getPath(compilationUnit, tree);
+        if (path == null) {
+            return;
+        }
+        final var element = trees.getElement(path);
+        if (element != null) {
+            localVariableDeclarations.put(element, declaration);
+        }
+    }
+
     private Optional<Symbol> resolveSymbol(final IdentifierTree t) {
         if (trees == null || compilationUnit == null) {
             return Optional.empty();
@@ -283,7 +315,8 @@ public class JdkExpressionConverter
             return Optional.empty();
         }
         return switch (element.getKind()) {
-            case LOCAL_VARIABLE -> Optional.<Symbol>of(new Symbol.LocalVariable(typeUsage));
+            case LOCAL_VARIABLE -> Optional.<Symbol>of(new Symbol.LocalVariable(
+                typeUsage, Optional.ofNullable(localVariableDeclarations.get(element))));
             case PARAMETER -> resolveParameter(element).map(Symbol.class::cast);
             case FIELD, ENUM_CONSTANT -> resolveField(element).map(Symbol.class::cast);
             case CLASS, INTERFACE, ENUM, ANNOTATION_TYPE, RECORD ->

@@ -174,6 +174,7 @@ public class JdkStatementConverter
             t.getName().toString(),
             Optional.ofNullable(t.getInitializer()).map(exprConverter::convert));
         exprConverter.addSourceLocation(t).ifPresent(decl::addTrait);
+        exprConverter.registerLocalVariableDeclaration(t, decl);
         return decl;
     }
 
