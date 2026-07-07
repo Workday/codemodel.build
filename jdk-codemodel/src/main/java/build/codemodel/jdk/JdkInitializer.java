@@ -419,7 +419,9 @@ public class JdkInitializer
                     processField(typeDescriptor, ve, vt, cut, bodyTasks);
                 } else if (ve.getKind() == ElementKind.ENUM_CONSTANT) {
                     final var name = nameProvider.getIrreducibleName(ve.getSimpleName());
-                    typeDescriptor.addTrait(EnumConstantDescriptor.of(name, enumConstantOrder++));
+                    final var enumConstantDescriptor = EnumConstantDescriptor.of(codeModel, name, enumConstantOrder++);
+                    addSourceLocation(cut, vt, enumConstantDescriptor);
+                    typeDescriptor.addTrait(enumConstantDescriptor);
                 }
             } else if (member instanceof MethodTree mt && elem instanceof ExecutableElement ee) {
                 if (ee.getKind() == ElementKind.CONSTRUCTOR) {
