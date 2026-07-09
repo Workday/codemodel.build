@@ -174,6 +174,7 @@ public class JdkStatementConverter
         final boolean isFinal = t.getModifiers() != null
             && t.getModifiers().getFlags().contains(Modifier.FINAL);
         final TypeUsage type = exprConverter.resolveTypeUsage(t.getType());
+        exprConverter.addSourceLocation(t.getType()).ifPresent(type::addTrait);
         final var decl = LocalVariableDeclaration.of(codeModel,
             isFinal,
             type,
@@ -204,6 +205,7 @@ public class JdkStatementConverter
         final boolean isFinal = t.getVariable().getModifiers() != null
             && t.getVariable().getModifiers().getFlags().contains(Modifier.FINAL);
         final TypeUsage type = exprConverter.resolveTypeUsage(t.getVariable().getType());
+        exprConverter.addSourceLocation(t.getVariable().getType()).ifPresent(type::addTrait);
         final var enhancedFor = EnhancedFor.of(codeModel,
             isFinal,
             type,
@@ -236,10 +238,16 @@ public class JdkStatementConverter
         final List<TypeUsage> types;
         if (typeTree instanceof UnionTypeTree unionType) {
             types = unionType.getTypeAlternatives().stream()
-                .map(exprConverter::resolveTypeUsage)
+                .map(alt -> {
+                    final var type = exprConverter.resolveTypeUsage(alt);
+                    exprConverter.addSourceLocation(alt).ifPresent(type::addTrait);
+                    return type;
+                })
                 .toList();
         } else {
-            types = List.of(exprConverter.resolveTypeUsage(typeTree));
+            final var type = exprConverter.resolveTypeUsage(typeTree);
+            exprConverter.addSourceLocation(typeTree).ifPresent(type::addTrait);
+            types = List.of(type);
         }
         final var catchClause = CatchClause.of(codeModel,
             types,
@@ -324,6 +332,7 @@ public class JdkStatementConverter
                                                       final Expression selector) {
         if (pattern instanceof BindingPatternTree binding) {
             final var type = exprConverter.resolveTypeUsage(binding.getVariable().getType());
+            exprConverter.addSourceLocation(binding.getVariable().getType()).ifPresent(type::addTrait);
             final var instanceOf = InstanceOf.of(selector, type, Optional.of(binding.getVariable().getName().toString()));
             exprConverter.addSourceLocation(binding.getVariable()).ifPresent(instanceOf::addTrait);
             return Optional.of(instanceOf);
@@ -332,6 +341,7 @@ public class JdkStatementConverter
             // Nested binding variables of a record deconstruction pattern are not yet captured;
             // only the deconstructed type is preserved.
             final var type = exprConverter.resolveTypeUsage(deconstruction.getDeconstructor());
+            exprConverter.addSourceLocation(deconstruction.getDeconstructor()).ifPresent(type::addTrait);
             return Optional.of(InstanceOf.of(selector, type));
         }
         return Optional.empty();
