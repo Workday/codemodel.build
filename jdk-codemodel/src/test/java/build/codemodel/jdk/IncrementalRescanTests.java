@@ -25,12 +25,20 @@ import build.codemodel.foundation.descriptor.RequiresModuleDescriptor;
 import build.codemodel.foundation.naming.NonCachingNameProvider;
 import build.codemodel.foundation.usage.SpecificTypeUsage;
 import build.codemodel.foundation.usage.UnknownTypeUsage;
+import build.codemodel.imperative.Return;
+import build.codemodel.jdk.descriptor.MethodBodyDescriptor;
 import build.codemodel.jdk.descriptor.RequiresModifier;
 import build.codemodel.jdk.descriptor.SourceLocation;
+import build.codemodel.jdk.expression.Identifier;
+import build.codemodel.jdk.expression.MethodInvocation;
+import build.codemodel.jdk.expression.ResolvedMethod;
+import build.codemodel.jdk.expression.Symbol;
+import build.codemodel.jdk.statement.ExpressionStatement;
 import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 
@@ -612,7 +620,8 @@ class IncrementalRescanTests {
                 public String extra() { return null; }
             }
             """);
-        codeModel.rescan(fooV2, List.of(consumerModuleInfo), List.of(), List.of(modulePathDir), d -> { });
+        codeModel.rescan(fooV2, List.of(consumerModuleInfo), List.of(), List.of(modulePathDir), d -> {
+        });
 
         final var fooV3 = JavaFileObjects.forSourceString("com.example.consumer.Foo", """
             package com.example.consumer;
@@ -621,7 +630,8 @@ class IncrementalRescanTests {
                 public Result<String> items() { return null; }
             }
             """);
-        codeModel.rescan(fooV3, List.of(consumerModuleInfo), List.of(), List.of(modulePathDir), d -> { });
+        codeModel.rescan(fooV3, List.of(consumerModuleInfo), List.of(), List.of(modulePathDir), d -> {
+        });
 
         final var itemsAfterRescan = codeModel.getJDKTypeDescriptor(fooFqn).orElseThrow()
             .traits(MethodDescriptor.class)
@@ -731,7 +741,8 @@ class IncrementalRescanTests {
                 public int extra;
             }
             """);
-        codeModel.rescan(fooV2, List.of(helperSource), List.of(), List.of(), d -> { });
+        codeModel.rescan(fooV2, List.of(helperSource), List.of(), List.of(), d -> {
+        });
 
         final var depAfterRescan = codeModel.getJDKTypeDescriptor(fooName).orElseThrow()
             .traits(FieldDescriptor.class)
@@ -776,5 +787,195 @@ class IncrementalRescanTests {
             .contains("incompatible types")
             .contains("String")
             .contains("int");
+    }
+
+    @Test
+    void callersCachedResolutionGoesStaleAfterCalleeIsRescanned() throws IOException {
+        final var calleeSource = JavaFileObjects.forSourceString("com.example.Callee", """
+            package com.example;
+            
+            public class Callee {
+            
+                public void target() {
+                }
+            }
+            """);
+
+        final var callerSource = JavaFileObjects.forSourceString("com.example.Caller", """
+            package com.example;
+            
+            public class Caller {
+            
+                public void invoke() {
+                    new Callee().target();
+                }
+            }
+            """);
+
+        final var nameProvider = new NonCachingNameProvider();
+        final var codeModel = new JDKCodeModel(nameProvider);
+        new JdkInitializer(List.of(), List.of(), List.of(calleeSource, callerSource))
+            .initialize(codeModel);
+        final var callerTd = codeModel.getJDKTypeDescriptor("com.example.Caller").orElseThrow();
+
+        final var invokeMethod = callerTd.traits(MethodDescriptor.class)
+            .filter(m -> m.methodName().name().toString().equals("invoke"))
+            .findFirst()
+            .orElseThrow();
+        final var invocation = invokeMethod.trait(MethodBodyDescriptor.class).body().statements()
+            .filter(s -> s instanceof ExpressionStatement)
+            .map(s -> (ExpressionStatement) s)
+            .map(ExpressionStatement::expression)
+            .filter(e -> e instanceof MethodInvocation)
+            .map(e -> (MethodInvocation) e)
+            .findFirst()
+            .orElseThrow();
+        assertThat(invocation.methodName()).isEqualTo("target");
+
+        // Sanity check: before any rescan, Caller's call resolves correctly into Callee.java.
+        final var resolvedBeforeRescan = invocation.trait(ResolvedMethod.class).descriptor().orElseThrow();
+        assertThat(resolvedBeforeRescan.typeDescriptor().typeName())
+            .isEqualTo(nameProvider.getTypeName(Optional.empty(), "com.example.Callee"));
+
+        // Simulate an editor save of Callee.java (WorkspaceModel.rescan()'s onDidSave path):
+        // same package/class/method name, but padded so target()'s offset moves.
+        final var calleeV2 = JavaFileObjects.forSourceString("com.example.Callee", """
+            package com.example;
+            
+            public class Callee {
+            
+                // several new lines added above, shifting every subsequent offset
+                // several new lines added above, shifting every subsequent offset
+                // several new lines added above, shifting every subsequent offset
+            
+                public void target() {
+                }
+            }
+            """);
+        codeModel.rescan(calleeV2, List.of(), List.of(), List.of(), d -> {
+        });
+        final var calleeTdEdited = codeModel.getJDKTypeDescriptor("com.example.Callee").orElseThrow();
+
+        final var freshTarget = calleeTdEdited.traits(MethodDescriptor.class)
+            .filter(m -> m.methodName().name().toString().equals("target"))
+            .findFirst()
+            .orElseThrow();
+
+        // Caller.java was never rescanned. Its cached resolution of the target() call should
+        // either (a) still correctly point at target()'s new position in Callee.java, or
+        // (b) be gone/re-resolved cleanly. It must NOT point at a stale/wrong offset.
+        final var resolvedAfterRescan = invocation.trait(ResolvedMethod.class).descriptor()
+            .orElseThrow(() -> new AssertionError(
+                "Caller's cached ResolvedMethod must still resolve to a MethodDescriptor "
+                    + "after Callee is rescanned"));
+
+        assertThat(resolvedAfterRescan)
+            .as("Caller's cached ResolvedMethod for target() must track the rescanned Callee, "
+                + "not remain pinned to the descriptor evicted by rescan()")
+            .isEqualTo(freshTarget);
+
+        final var freshPosition = freshTarget.trait(SourceLocation.FilePosition.class);
+        final var resolvedPosition = resolvedAfterRescan.trait(SourceLocation.FilePosition.class);
+        assertThat(resolvedPosition)
+            .as("Caller's cached call site must point at target()'s current position in the "
+                + "rescanned Callee.java, not its pre-rescan offset")
+            .isEqualTo(freshPosition);
+    }
+
+    /**
+     * Same staleness bug as {@link #callersCachedResolutionGoesStaleAfterCalleeIsRescanned()}, but
+     * for a bare-identifier field reference resolved through {@link Symbol.Field} instead of a
+     * method call resolved through {@link ResolvedMethod}. {@code Sub} inherits {@code value} from
+     * {@code Base} declared in a separate file, so {@code Sub.read()}'s cached {@link Symbol.Field}
+     * pins a {@link FieldDescriptor} object belonging to {@code Base} — exactly the kind of
+     * cross-file reference that goes stale when only {@code Base} is rescanned.
+     */
+    @Test
+    void callersCachedFieldSymbolGoesStaleAfterDeclaringTypeIsRescanned() {
+        final var baseSource = JavaFileObjects.forSourceString("com.example.Base", """
+            package com.example;
+
+            public class Base {
+
+                protected int value;
+            }
+            """);
+
+        final var subSource = JavaFileObjects.forSourceString("com.example.Sub", """
+            package com.example;
+
+            public class Sub extends Base {
+
+                public int read() {
+                    return value;
+                }
+            }
+            """);
+
+        final var nameProvider = new NonCachingNameProvider();
+        final var codeModel = new JDKCodeModel(nameProvider);
+        new JdkInitializer(List.of(), List.of(), List.of(baseSource, subSource))
+            .initialize(codeModel);
+
+        final var subTd = codeModel.getJDKTypeDescriptor("com.example.Sub").orElseThrow();
+        final var readMethod = subTd.traits(MethodDescriptor.class)
+            .filter(m -> m.methodName().name().toString().equals("read"))
+            .findFirst()
+            .orElseThrow();
+        final var ret = readMethod.trait(MethodBodyDescriptor.class).body().statements()
+            .filter(s -> s instanceof Return)
+            .map(s -> (Return) s)
+            .findFirst()
+            .orElseThrow();
+        final var identifier = (Identifier) ret.expression().orElseThrow();
+
+        // Sanity check: before any rescan, Sub's `value` reference resolves correctly into Base.java.
+        final var symbolBeforeRescan = identifier.trait(Symbol.class);
+        assertThat(symbolBeforeRescan).isInstanceOf(Symbol.Field.class);
+        final var resolvedBeforeRescan = ((Symbol.Field) symbolBeforeRescan).descriptor().orElseThrow();
+        assertThat(resolvedBeforeRescan.fieldName().toString()).isEqualTo("value");
+
+        // Simulate an editor save of Base.java: same field name, but padded so its offset moves.
+        final var baseV2 = JavaFileObjects.forSourceString("com.example.Base", """
+            package com.example;
+
+            public class Base {
+
+                // several new lines added above, shifting every subsequent offset
+                // several new lines added above, shifting every subsequent offset
+                // several new lines added above, shifting every subsequent offset
+
+                protected int value;
+            }
+            """);
+        codeModel.rescan(baseV2, List.of(), List.of(), List.of(), d -> {
+        });
+        final var baseTdEdited = codeModel.getJDKTypeDescriptor("com.example.Base").orElseThrow();
+
+        final var freshValue = baseTdEdited.traits(FieldDescriptor.class)
+            .filter(f -> f.fieldName().toString().equals("value"))
+            .findFirst()
+            .orElseThrow();
+
+        // Sub.java was never rescanned. Its cached Symbol.Field for `value` must track the
+        // rescanned Base, not remain pinned to the descriptor evicted by rescan().
+        final var symbolAfterRescan = identifier.trait(Symbol.class);
+        assertThat(symbolAfterRescan).isInstanceOf(Symbol.Field.class);
+        final var resolvedAfterRescan = ((Symbol.Field) symbolAfterRescan).descriptor()
+            .orElseThrow(() -> new AssertionError(
+                "Sub's cached Symbol.Field must still resolve to a FieldDescriptor "
+                    + "after Base is rescanned"));
+
+        assertThat(resolvedAfterRescan)
+            .as("Sub's cached Symbol.Field for `value` must track the rescanned Base, "
+                + "not remain pinned to the descriptor evicted by rescan()")
+            .isEqualTo(freshValue);
+
+        final var freshPosition = freshValue.trait(SourceLocation.FilePosition.class);
+        final var resolvedPosition = resolvedAfterRescan.trait(SourceLocation.FilePosition.class);
+        assertThat(resolvedPosition)
+            .as("Sub's cached field reference must point at `value`'s current position in the "
+                + "rescanned Base.java, not its pre-rescan offset")
+            .isEqualTo(freshPosition);
     }
 }

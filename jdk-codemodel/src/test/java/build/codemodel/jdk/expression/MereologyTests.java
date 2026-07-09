@@ -32,7 +32,6 @@ import build.codemodel.jdk.JDKCodeModel;
 import build.codemodel.jdk.statement.Assert;
 import build.codemodel.jdk.statement.ExpressionStatement;
 import build.codemodel.jdk.statement.SwitchCase;
-import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -293,8 +292,9 @@ class MereologyTests {
     @Test
     void symbolField_partsContainsDeclaredType() {
         final var type = stringType();
-        final var descriptor = FieldDescriptor.of(codeModel, IrreducibleName.of("value"), type);
-        assertThat(new Symbol.Field(descriptor).parts().toList()).containsExactly(type);
+        final var declaringType = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        assertThat(new Symbol.Field(type, codeModel, declaringType, "value").parts().toList())
+            .containsExactly(type);
     }
 
     @Test
