@@ -510,10 +510,12 @@ public class JdkExpressionConverter
             return ClassLiteral.of(codeModel, resolveTypeUsage(t.getExpression()));
         }
         final var receiverExpr = t.getExpression();
-        return FieldAccess.of(
+        final var fieldAccess = FieldAccess.of(
             convert(receiverExpr),
             t.getIdentifier().toString(),
             resolveReceiverType(receiverExpr));
+        addSourceLocation(t).ifPresent(fieldAccess::addTrait);
+        return fieldAccess;
     }
 
     @Override
@@ -532,7 +534,9 @@ public class JdkExpressionConverter
             type = resolveTypeUsage(t.getIdentifier());
             typeArgs = List.of();
         }
-        return NewObject.of(codeModel, type, args.stream(), typeArgs.stream());
+        final var newObject = NewObject.of(codeModel, type, args.stream(), typeArgs.stream());
+        addSourceLocation(t).ifPresent(newObject::addTrait);
+        return newObject;
     }
 
     @Override
