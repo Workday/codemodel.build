@@ -28,6 +28,7 @@ import build.codemodel.imperative.If;
 import build.codemodel.imperative.Return;
 import build.codemodel.imperative.Statement;
 import build.codemodel.imperative.While;
+import build.codemodel.jdk.expression.InstanceOf;
 import build.codemodel.jdk.statement.Assert;
 import build.codemodel.jdk.statement.Break;
 import build.codemodel.jdk.statement.CatchClause;
@@ -44,11 +45,14 @@ import build.codemodel.jdk.statement.Synchronized;
 import build.codemodel.jdk.statement.Throw;
 import build.codemodel.jdk.statement.Try;
 import com.sun.source.tree.AssertTree;
+import com.sun.source.tree.BindingPatternTree;
 import com.sun.source.tree.BlockTree;
 import com.sun.source.tree.BreakTree;
 import com.sun.source.tree.CaseTree;
 import com.sun.source.tree.CatchTree;
+import com.sun.source.tree.ConstantCaseLabelTree;
 import com.sun.source.tree.ContinueTree;
+import com.sun.source.tree.DeconstructionPatternTree;
 import com.sun.source.tree.DoWhileLoopTree;
 import com.sun.source.tree.EmptyStatementTree;
 import com.sun.source.tree.EnhancedForLoopTree;
@@ -57,6 +61,8 @@ import com.sun.source.tree.ExpressionTree;
 import com.sun.source.tree.ForLoopTree;
 import com.sun.source.tree.IfTree;
 import com.sun.source.tree.LabeledStatementTree;
+import com.sun.source.tree.PatternCaseLabelTree;
+import com.sun.source.tree.PatternTree;
 import com.sun.source.tree.ReturnTree;
 import com.sun.source.tree.StatementTree;
 import com.sun.source.tree.SwitchTree;
@@ -272,16 +278,27 @@ public class JdkStatementConverter
 
     @Override
     public Statement visitSwitch(final SwitchTree t, final Void v) {
-        final var cases = t.getCases().stream().map(this::convertCase).toList();
-        return SwitchStatement.of(exprConverter.convert(t.getExpression()), cases.stream());
+        final var selector = exprConverter.convert(t.getExpression());
+        final var cases = t.getCases().stream().map(c -> convertCase(c, selector)).toList();
+        return SwitchStatement.of(selector, cases.stream());
     }
 
-    SwitchCase convertCase(final CaseTree c) {
-        final var labels = c.getExpressions() == null
-            ? List.<Expression>of()
-            : c.getExpressions().stream()
-              .map(e -> exprConverter.convert((ExpressionTree) e))
-              .toList();
+    /**
+     * Converts a {@link CaseTree}. {@code selector} is the already-converted switch selector
+     * expression, needed to build an {@link InstanceOf} label for a type-pattern case.
+     */
+    SwitchCase convertCase(final CaseTree c, final Expression selector) {
+        final var labels = c.getLabels().stream()
+            .<Expression>mapMulti((label, consumer) -> {
+                if (label instanceof ConstantCaseLabelTree constant) {
+                    consumer.accept(exprConverter.convert(constant.getConstantExpression()));
+                } else if (label instanceof PatternCaseLabelTree pattern) {
+                    convertPatternLabel(pattern.getPattern(), selector).ifPresent(consumer::accept);
+                }
+                // DefaultCaseLabelTree contributes no label expression; an empty labels() means default.
+            })
+            .toList();
+        final var guard = Optional.ofNullable(c.getGuard()).map(exprConverter::convert);
         final List<Statement> stmts;
         if (c.getStatements() != null && !c.getStatements().isEmpty()) {
             stmts = c.getStatements().stream().map(this::convert).toList();
@@ -294,7 +311,30 @@ public class JdkStatementConverter
         } else {
             stmts = List.of();
         }
-        return SwitchCase.of(codeModel, labels.stream(), stmts.stream());
+        return SwitchCase.of(codeModel, labels.stream(), stmts.stream(), guard);
+    }
+
+    /**
+     * Converts a type-pattern or deconstruction-pattern case label to an {@link InstanceOf} label
+     * testing the switch {@code selector}. A binding variable's {@code Symbol} resolution is not
+     * wired up here — pattern-bound variables don't yet have a declaration node to resolve back to
+     * (see the TODO on {@code Symbol} resolution gaps).
+     */
+    private Optional<Expression> convertPatternLabel(final PatternTree pattern,
+                                                      final Expression selector) {
+        if (pattern instanceof BindingPatternTree binding) {
+            final var type = exprConverter.resolveTypeUsage(binding.getVariable().getType());
+            final var instanceOf = InstanceOf.of(selector, type, Optional.of(binding.getVariable().getName().toString()));
+            exprConverter.addSourceLocation(binding.getVariable()).ifPresent(instanceOf::addTrait);
+            return Optional.of(instanceOf);
+        }
+        if (pattern instanceof DeconstructionPatternTree deconstruction) {
+            // Nested binding variables of a record deconstruction pattern are not yet captured;
+            // only the deconstructed type is preserved.
+            final var type = exprConverter.resolveTypeUsage(deconstruction.getDeconstructor());
+            return Optional.of(InstanceOf.of(selector, type));
+        }
+        return Optional.empty();
     }
 
     @Override
