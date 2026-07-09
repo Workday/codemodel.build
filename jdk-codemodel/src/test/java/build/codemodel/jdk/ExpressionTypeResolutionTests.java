@@ -5,8 +5,10 @@ import build.codemodel.expression.StringLiteral;
 import build.codemodel.foundation.usage.NamedTypeUsage;
 import build.codemodel.jdk.descriptor.MethodBodyDescriptor;
 import build.codemodel.jdk.descriptor.SourceLocation;
+import build.codemodel.jdk.expression.FieldAccess;
 import build.codemodel.jdk.expression.Identifier;
 import build.codemodel.jdk.expression.MethodInvocation;
+import build.codemodel.jdk.expression.NewObject;
 import build.codemodel.jdk.statement.ExpressionStatement;
 import build.codemodel.jdk.statement.LocalVariableDeclaration;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
@@ -224,5 +226,67 @@ class ExpressionTypeResolutionTests {
         final var expectedStart = source.indexOf("sb.length()");
         assertThat(location.startPosition()).isEqualTo(expectedStart);
         assertThat(location.endPosition()).isEqualTo(expectedStart + "sb.length".length());
+    }
+
+    @Test
+    void shouldStampUsageSiteSourceLocationForFieldAccess() {
+        final var source = """
+            package build.codemodel.jdk.example;
+            public class Example {
+                public void run(StringBuilder sb) {
+                    int n = sb.length;
+                }
+            }
+            """;
+
+        final var codeModel = JdkInitializerTests.runInternal(new JdkInitializer(List.of(), List.of(),
+            List.of(JavaFileObjects.forSourceString("build.codemodel.jdk.example.Example", source))));
+
+        final var typeName = codeModel.getNameProvider()
+            .getTypeName(Optional.empty(), "build.codemodel.jdk.example.Example");
+        final var run = codeModel.getTypeDescriptor(typeName).orElseThrow()
+            .traits(MethodDescriptor.class)
+            .filter(m -> m.methodName().name().toString().equals("run"))
+            .findFirst().orElseThrow();
+
+        final var body = run.getTrait(MethodBodyDescriptor.class).orElseThrow().body();
+        final var decl = (LocalVariableDeclaration) body.statements().findFirst().orElseThrow();
+        final var fieldAccess = (FieldAccess) decl.initializer().orElseThrow();
+
+        final var location = fieldAccess.getTrait(SourceLocation.FilePosition.class).orElseThrow();
+        final var expectedStart = source.indexOf("sb.length;");
+        assertThat(location.startPosition()).isEqualTo(expectedStart);
+        assertThat(location.endPosition()).isEqualTo(expectedStart + "sb.length".length());
+    }
+
+    @Test
+    void shouldStampUsageSiteSourceLocationForNewObject() {
+        final var source = """
+            package build.codemodel.jdk.example;
+            public class Example {
+                public void run() {
+                    StringBuilder sb = new StringBuilder();
+                }
+            }
+            """;
+
+        final var codeModel = JdkInitializerTests.runInternal(new JdkInitializer(List.of(), List.of(),
+            List.of(JavaFileObjects.forSourceString("build.codemodel.jdk.example.Example", source))));
+
+        final var typeName = codeModel.getNameProvider()
+            .getTypeName(Optional.empty(), "build.codemodel.jdk.example.Example");
+        final var run = codeModel.getTypeDescriptor(typeName).orElseThrow()
+            .traits(MethodDescriptor.class)
+            .filter(m -> m.methodName().name().toString().equals("run"))
+            .findFirst().orElseThrow();
+
+        final var body = run.getTrait(MethodBodyDescriptor.class).orElseThrow().body();
+        final var decl = (LocalVariableDeclaration) body.statements().findFirst().orElseThrow();
+        final var newObject = (NewObject) decl.initializer().orElseThrow();
+
+        final var location = newObject.getTrait(SourceLocation.FilePosition.class).orElseThrow();
+        final var expectedStart = source.indexOf("new StringBuilder()");
+        assertThat(location.startPosition()).isEqualTo(expectedStart);
+        assertThat(location.endPosition()).isEqualTo(expectedStart + "new StringBuilder()".length());
     }
 }
