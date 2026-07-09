@@ -22,6 +22,7 @@ package build.codemodel.jdk;
 
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.FormalParameterDescriptor;
+import build.codemodel.foundation.descriptor.ThrowableDescriptor;
 import build.codemodel.foundation.descriptor.Traitable;
 import build.codemodel.foundation.naming.NameProvider;
 import build.codemodel.framework.initialization.Initializer;
@@ -32,15 +33,19 @@ import build.codemodel.jdk.descriptor.InitializerBlockDescriptor;
 import build.codemodel.jdk.descriptor.JDKModuleDescriptor;
 import build.codemodel.jdk.descriptor.JDKTypeDescriptor;
 import build.codemodel.jdk.descriptor.MethodBodyDescriptor;
+import build.codemodel.jdk.descriptor.RecordComponentDescriptor;
 import build.codemodel.jdk.descriptor.SourceLocation;
 import build.codemodel.objectoriented.descriptor.ConstructorDescriptor;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
+import build.codemodel.objectoriented.descriptor.ParameterizedTypeDescriptor;
 import com.sun.source.tree.BlockTree;
 import com.sun.source.tree.ClassTree;
 import com.sun.source.tree.CompilationUnitTree;
+import com.sun.source.tree.ExpressionTree;
 import com.sun.source.tree.MethodTree;
 import com.sun.source.tree.ModuleTree;
 import com.sun.source.tree.Tree;
+import com.sun.source.tree.TypeParameterTree;
 import com.sun.source.tree.VariableTree;
 import com.sun.source.util.DocTrees;
 import com.sun.source.util.JavacTask;
@@ -57,6 +62,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
@@ -367,6 +373,9 @@ public class JdkInitializer
         if (!(typeElement.getEnclosingElement() instanceof TypeElement)) {
             addImports(typeDescriptor, cut);
         }
+        addSuperTypeUsageSourceLocations(typeDescriptor, classPath, cut);
+        addRecordComponentSourceLocations(typeDescriptor, classPath, cut);
+        addTypeParameterBoundSourceLocations(typeDescriptor, ((ClassTree) classPath.getLeaf()).getTypeParameters(), cut);
 
         final List<Runnable> bodyTasks = new ArrayList<>();
         processMembers(typeDescriptor, classPath, bodyTasks);
@@ -397,6 +406,66 @@ public class JdkInitializer
                 typeDescriptor.addTrait(ImportDeclaration.ofOnDemand(name, i));
             } else {
                 typeDescriptor.addTrait(ImportDeclaration.of(name, i));
+            }
+        }
+    }
+
+    private void addSuperTypeUsageSourceLocations(final JDKTypeDescriptor typeDescriptor,
+                                                  final TreePath classPath,
+                                                  final CompilationUnitTree cut) {
+        final var classTree = (ClassTree) classPath.getLeaf();
+
+        final var extendsClause = classTree.getExtendsClause();
+        if (extendsClause != null) {
+            typeDescriptor.parentTypeUsage().ifPresent(usage -> addSourceLocation(cut, extendsClause, usage));
+        }
+
+        final var implementsClause = classTree.getImplementsClause();
+        final var interfaceUsages = typeDescriptor.interfaceTypeUsages().toList();
+        for (int i = 0; i < implementsClause.size() && i < interfaceUsages.size(); i++) {
+            addSourceLocation(cut, implementsClause.get(i), interfaceUsages.get(i));
+        }
+    }
+
+    private void addRecordComponentSourceLocations(final JDKTypeDescriptor typeDescriptor,
+                                                    final TreePath classPath,
+                                                    final CompilationUnitTree cut) {
+        final var classTree = (ClassTree) classPath.getLeaf();
+        final var componentTypeTrees = classTree.getMembers().stream()
+            .filter(VariableTree.class::isInstance)
+            .map(VariableTree.class::cast)
+            .collect(Collectors.toMap(vt -> vt.getName().toString(), VariableTree::getType, (a, _) -> a));
+
+        typeDescriptor.traits(RecordComponentDescriptor.class).forEach(component -> {
+            final var typeTree = componentTypeTrees.get(component.name().toString());
+            if (typeTree != null) {
+                addSourceLocation(cut, typeTree, component.type());
+            }
+        });
+    }
+
+    private void addThrowsSourceLocations(final Traitable traitable,
+                                          final List<? extends ExpressionTree> throwsTrees,
+                                          final CompilationUnitTree cut) {
+        final var throwables = traitable.traits(ThrowableDescriptor.class).toList();
+        for (int i = 0; i < throwsTrees.size() && i < throwables.size(); i++) {
+            addSourceLocation(cut, throwsTrees.get(i), throwables.get(i).throwable());
+        }
+    }
+
+    private void addTypeParameterBoundSourceLocations(final Traitable traitable,
+                                                       final List<? extends TypeParameterTree> typeParamTrees,
+                                                       final CompilationUnitTree cut) {
+        final var descriptor = traitable.getTrait(ParameterizedTypeDescriptor.class);
+        if (descriptor.isEmpty()) {
+            return;
+        }
+        final var typeVariables = descriptor.get().typeVariables().toList();
+        for (int i = 0; i < typeParamTrees.size() && i < typeVariables.size(); i++) {
+            final var bounds = typeParamTrees.get(i).getBounds();
+            if (bounds.size() == 1) {
+                typeVariables.get(i).upperBound()
+                    .ifPresent(upper -> addSourceLocation(cut, bounds.get(0), upper));
             }
         }
     }
@@ -443,6 +512,9 @@ public class JdkInitializer
                               final List<Runnable> bodyTasks) {
         final var fieldDescriptor = resolver.createFieldDescriptor(fieldElement);
         addSourceLocation(cut, varTree, fieldDescriptor);
+        if (varTree.getType() != null) {
+            addSourceLocation(cut, varTree.getType(), fieldDescriptor.type());
+        }
 
         typeDescriptor.addTrait(fieldDescriptor);
 
@@ -463,6 +535,8 @@ public class JdkInitializer
         resolver.modifyConstructor(constructorDescriptor, methodElement);
 
         addSourceLocation(cut, ctorTree, constructorDescriptor);
+        addThrowsSourceLocations(constructorDescriptor, ctorTree.getThrows(), cut);
+        addTypeParameterBoundSourceLocations(constructorDescriptor, ctorTree.getTypeParameters(), cut);
 
         typeDescriptor.addTrait(constructorDescriptor);
 
@@ -489,6 +563,9 @@ public class JdkInitializer
             final var i = index.getAndIncrement();
             if (i < paramTrees.size()) {
                 addSourceLocation(cut, paramTrees.get(i), pd);
+                if (paramTrees.get(i).getType() != null) {
+                    addSourceLocation(cut, paramTrees.get(i).getType(), pd.type());
+                }
             }
         });
     }
@@ -507,6 +584,11 @@ public class JdkInitializer
         resolver.modifyMethod(methodDescriptor, methodElement);
 
         addSourceLocation(cut, methodTree, methodDescriptor);
+        if (methodTree.getReturnType() != null) {
+            addSourceLocation(cut, methodTree.getReturnType(), returnType);
+        }
+        addThrowsSourceLocations(methodDescriptor, methodTree.getThrows(), cut);
+        addTypeParameterBoundSourceLocations(methodDescriptor, methodTree.getTypeParameters(), cut);
 
         typeDescriptor.addTrait(methodDescriptor);
 

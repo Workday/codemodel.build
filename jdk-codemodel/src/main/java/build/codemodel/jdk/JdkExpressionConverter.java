@@ -88,6 +88,7 @@ import com.sun.source.tree.BindingPatternTree;
 import com.sun.source.tree.CompilationUnitTree;
 import com.sun.source.tree.CompoundAssignmentTree;
 import com.sun.source.tree.ConditionalExpressionTree;
+import com.sun.source.tree.DeconstructionPatternTree;
 import com.sun.source.tree.ExpressionTree;
 import com.sun.source.tree.IdentifierTree;
 import com.sun.source.tree.InstanceOfTree;
@@ -507,7 +508,9 @@ public class JdkExpressionConverter
     @Override
     public Expression visitMemberSelect(final MemberSelectTree t, final Void v) {
         if ("class".equals(t.getIdentifier().toString())) {
-            return ClassLiteral.of(codeModel, resolveTypeUsage(t.getExpression()));
+            final var type = resolveTypeUsage(t.getExpression());
+            addSourceLocation(t.getExpression()).ifPresent(type::addTrait);
+            return ClassLiteral.of(codeModel, type);
         }
         final var receiverExpr = t.getExpression();
         final var fieldAccess = FieldAccess.of(
@@ -527,11 +530,17 @@ public class JdkExpressionConverter
         final List<TypeUsage> typeArgs;
         if (t.getIdentifier() instanceof ParameterizedTypeTree pt) {
             type = resolveTypeUsage(pt.getType());
+            addSourceLocation(pt.getType()).ifPresent(type::addTrait);
             typeArgs = pt.getTypeArguments().stream()
-                .map(this::resolveTypeUsage)
+                .map(argTree -> {
+                    final var argType = resolveTypeUsage(argTree);
+                    addSourceLocation(argTree).ifPresent(argType::addTrait);
+                    return argType;
+                })
                 .toList();
         } else {
             type = resolveTypeUsage(t.getIdentifier());
+            addSourceLocation(t.getIdentifier()).ifPresent(type::addTrait);
             typeArgs = List.of();
         }
         final var newObject = NewObject.of(codeModel, type, args.stream(), typeArgs.stream());
@@ -544,7 +553,9 @@ public class JdkExpressionConverter
         final List<Expression> dims = t.getDimensions() == null
             ? List.of()
             : t.getDimensions().stream().map(this::convert).toList();
-        return NewArray.of(codeModel, resolveTypeUsage(t.getType()), dims.stream());
+        final var type = resolveTypeUsage(t.getType());
+        addSourceLocation(t.getType()).ifPresent(type::addTrait);
+        return NewArray.of(codeModel, type, dims.stream());
     }
 
     @Override
@@ -643,20 +654,30 @@ public class JdkExpressionConverter
 
     @Override
     public Expression visitTypeCast(final TypeCastTree t, final Void v) {
-        return Cast.of(resolveTypeUsage(t.getType()), convert(t.getExpression()));
+        final var type = resolveTypeUsage(t.getType());
+        addSourceLocation(t.getType()).ifPresent(type::addTrait);
+        return Cast.of(type, convert(t.getExpression()));
     }
 
     @Override
     public Expression visitInstanceOf(final InstanceOfTree t, final Void v) {
         final Optional<String> bindingVariable;
+        final Tree typeTree;
         if (t.getPattern() instanceof BindingPatternTree bp) {
             bindingVariable = Optional.of(bp.getVariable().getName().toString());
+            typeTree = t.getType();
+        } else if (t.getPattern() instanceof DeconstructionPatternTree dp) {
+            bindingVariable = Optional.empty();
+            typeTree = dp.getDeconstructor();
         } else {
             bindingVariable = Optional.empty();
+            typeTree = t.getType();
         }
+        final var type = resolveTypeUsage(typeTree);
+        addSourceLocation(typeTree).ifPresent(type::addTrait);
         return InstanceOf.of(
             convert(t.getExpression()),
-            resolveTypeUsage(t.getType()),
+            type,
             bindingVariable);
     }
 
