@@ -691,8 +691,9 @@ public class JdkExpressionConverter
         if (stmtConverter == null) {
             return UnknownExpression.of(codeModel);
         }
-        final var cases = t.getCases().stream().map(stmtConverter::convertCase).toList();
-        return SwitchExpression.of(convert(t.getExpression()), cases.stream());
+        final var selector = convert(t.getExpression());
+        final var cases = t.getCases().stream().map(c -> stmtConverter.convertCase(c, selector)).toList();
+        return SwitchExpression.of(selector, cases.stream());
     }
 
     @Override
