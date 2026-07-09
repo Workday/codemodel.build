@@ -80,7 +80,6 @@ import build.codemodel.jdk.expression.UnknownExpression;
 import build.codemodel.jdk.statement.ExpressionStatement;
 import build.codemodel.jdk.statement.LocalVariableDeclaration;
 import build.codemodel.objectoriented.descriptor.ConstructorDescriptor;
-import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
 import com.sun.source.tree.ArrayAccessTree;
 import com.sun.source.tree.AssignmentTree;
@@ -318,27 +317,24 @@ public class JdkExpressionConverter
             case LOCAL_VARIABLE -> Optional.<Symbol>of(new Symbol.LocalVariable(
                 typeUsage, Optional.ofNullable(localVariableDeclarations.get(element))));
             case PARAMETER -> resolveParameter(element).map(Symbol.class::cast);
-            case FIELD, ENUM_CONSTANT -> resolveField(element).map(Symbol.class::cast);
+            case FIELD, ENUM_CONSTANT -> resolveField(element, typeUsage).map(Symbol.class::cast);
             case CLASS, INTERFACE, ENUM, ANNOTATION_TYPE, RECORD ->
                 Optional.<Symbol>of(new Symbol.TypeReference(typeUsage));
             default -> Optional.empty();
         };
     }
 
-    private Optional<Symbol.Field> resolveField(final Element element) {
+    private Optional<Symbol.Field> resolveField(final Element element, final TypeUsage declaredType) {
         if (!(element.getEnclosingElement() instanceof TypeElement typeElement)) {
             return Optional.empty();
         }
         final var typeName = typeNameResolver.apply(typeElement);
-        final var typeDescriptor = codeModel.getTypeDescriptor(typeName).orElse(null);
-        if (typeDescriptor == null) {
+        if (codeModel.getTypeDescriptor(typeName).isEmpty()) {
             return Optional.empty();
         }
         final var simpleName = element.getSimpleName().toString();
-        return typeDescriptor.traits(FieldDescriptor.class)
-            .filter(fd -> fd.fieldName().toString().equals(simpleName))
-            .findFirst()
-            .map(Symbol.Field::new);
+        final var field = new Symbol.Field(declaredType, codeModel, typeName, simpleName);
+        return field.descriptor().isPresent() ? Optional.of(field) : Optional.empty();
     }
 
     private Optional<Symbol.Parameter> resolveParameter(final Element element) {
@@ -418,21 +414,15 @@ public class JdkExpressionConverter
             return Optional.empty();
         }
         final var typeName = typeNameResolver.apply(typeElement);
-        final var typeDescriptor = codeModel.getTypeDescriptor(typeName).orElse(null);
-        if (typeDescriptor == null) {
+        if (codeModel.getTypeDescriptor(typeName).isEmpty()) {
             return Optional.empty();
         }
         final var simpleName = executableElement.getSimpleName().toString();
-        final var arity = executableElement.getParameters().size();
         final var paramTypes = executableElement.getParameters().stream()
             .map(p -> typeResolver.apply(p.asType()))
             .toList();
-        return typeDescriptor.traits(MethodDescriptor.class)
-            .filter(md -> md.methodName().name().toString().equals(simpleName))
-            .filter(md -> md.getFormalParameterCount() == arity)
-            .filter(md -> parametersMatch(md, paramTypes))
-            .findFirst()
-            .map(ResolvedMethod::new);
+        final var resolvedMethod = new ResolvedMethod(codeModel, typeName, simpleName, paramTypes);
+        return resolvedMethod.descriptor().isPresent() ? Optional.of(resolvedMethod) : Optional.empty();
     }
 
     private boolean parametersMatch(final CallableDescriptor cd, final List<TypeUsage> paramTypes) {

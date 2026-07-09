@@ -128,8 +128,9 @@ class MethodReferenceQualifierTypeTests {
 
         assertThat(ref.methodName()).isEqualTo("greet");
         final var resolved = ref.getTrait(ResolvedMethod.class).orElseThrow();
-        assertThat(resolved.descriptor().methodName().name().toString()).isEqualTo("greet");
-        assertThat(resolved.descriptor().typeDescriptor().typeName()).isEqualTo(typeName);
+        final var resolvedDescriptor = resolved.descriptor().orElseThrow();
+        assertThat(resolvedDescriptor.methodName().name().toString()).isEqualTo("greet");
+        assertThat(resolvedDescriptor.typeDescriptor().typeName()).isEqualTo(typeName);
 
         assertThat(ref.getTrait(SourceLocation.FilePosition.class)).isPresent();
         final var location = ref.getTrait(SourceLocation.FilePosition.class).orElseThrow();

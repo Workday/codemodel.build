@@ -22,14 +22,17 @@ package build.codemodel.jdk.expression;
 
 import build.base.foundation.iterator.Iterators;
 import build.base.mereology.Composite;
+import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.FormalParameterDescriptor;
 import build.codemodel.foundation.descriptor.Singular;
 import build.codemodel.foundation.descriptor.Trait;
+import build.codemodel.foundation.naming.TypeName;
 import build.codemodel.foundation.usage.TypeUsage;
 import build.codemodel.jdk.statement.LocalVariableDeclaration;
 import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 
 import java.util.Iterator;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -96,12 +99,39 @@ public sealed interface Symbol extends Trait, Composite
     /**
      * A field reference, e.g. {@code field} in {@code this.field} or a bare {@code field}.
      *
-     * @param descriptor the resolved {@link FieldDescriptor} declaring this field
+     * <p>{@link #descriptor()} looks the {@link FieldDescriptor} up live against
+     * {@link #codeModel()} on every call, the same way a {@link build.codemodel.foundation.usage.NamedTypeUsage}
+     * resolves its {@link TypeName} live, rather than pinning to whatever {@link FieldDescriptor}
+     * object existed at parse time. This keeps the resolution tracking the declaring type across a
+     * {@link build.codemodel.jdk.JDKCodeModel#rescan} of that type instead of going stale when the
+     * type is evicted and re-created.
+     *
+     * @param declaredType  the declared type of the field, resolved independently of {@link #descriptor()}
+     * @param codeModel     the {@link CodeModel} to resolve {@link #descriptor()} against
+     * @param declaringType the {@link TypeName} of the type declaring the resolved field
+     * @param fieldName     the simple name of the resolved field
      */
-    record Field(FieldDescriptor descriptor) implements Symbol {
-        @Override
-        public TypeUsage declaredType() {
-            return descriptor.type();
+    record Field(TypeUsage declaredType, CodeModel codeModel, TypeName declaringType,
+                String fieldName) implements Symbol {
+
+        public Field {
+            Objects.requireNonNull(declaredType, "declaredType must not be null");
+            Objects.requireNonNull(codeModel, "codeModel must not be null");
+            Objects.requireNonNull(declaringType, "declaringType must not be null");
+            Objects.requireNonNull(fieldName, "fieldName must not be null");
+        }
+
+        /**
+         * Resolves the {@link FieldDescriptor} this reference currently refers to.
+         *
+         * @return the resolved {@link FieldDescriptor}, or {@link Optional#empty()} if the
+         *     declaring type or the matching field is no longer present in {@link #codeModel()}
+         */
+        public Optional<FieldDescriptor> descriptor() {
+            return codeModel.getTypeDescriptor(declaringType)
+                .flatMap(typeDescriptor -> typeDescriptor.traits(FieldDescriptor.class)
+                    .filter(fd -> fd.fieldName().toString().equals(fieldName))
+                    .findFirst());
         }
     }
 

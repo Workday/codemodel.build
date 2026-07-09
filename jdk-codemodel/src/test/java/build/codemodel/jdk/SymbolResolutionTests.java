@@ -202,7 +202,7 @@ class SymbolResolutionTests {
         assertThat(symbol).isInstanceOf(Symbol.Field.class);
         final var field = (Symbol.Field) symbol;
         assertThat(field.declaredType().toString()).contains("String");
-        assertThat(field.descriptor().fieldName().toString()).isEqualTo("value");
+        assertThat(field.descriptor().orElseThrow().fieldName().toString()).isEqualTo("value");
     }
 
     @Test
