@@ -9,9 +9,9 @@ package build.codemodel.expression;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -57,7 +57,7 @@ public class Literal<T>
     /**
      * Constructs a {@link Literal}.
      *
-     * @param codeModel the {@link CodeModel}
+     * @param codeModel  the {@link CodeModel}
      * @param value      the {@code null}able value
      * @param valueClass the {@code null}able {@link Class} of value
      */
@@ -75,8 +75,8 @@ public class Literal<T>
      * Constructs a {@link Literal}.
      *
      * @param codeModel the {@link CodeModel}
-     * @param value      the {@code null}able value
-     * @param type       the {@link TypeUsage}
+     * @param value     the {@code null}able value
+     * @param type      the {@link TypeUsage}
      */
     protected Literal(final CodeModel codeModel,
                       final T value,
@@ -92,7 +92,7 @@ public class Literal<T>
      * Constructs a {@link Literal}.
      *
      * @param codeModel the {@link CodeModel}
-     * @param value      the {@code null}able value
+     * @param value     the {@code null}able value
      */
     @SuppressWarnings("unchecked")
     protected Literal(final CodeModel codeModel,
@@ -163,7 +163,7 @@ public class Literal<T>
      * Creates a {@link Literal}.
      *
      * @param <T>        the type of value
-     * @param codeModel the {@link CodeModel}
+     * @param codeModel  the {@link CodeModel}
      * @param value      the {@code null}able value
      * @param valueClass the {@code null}able {@link Class}
      */
@@ -177,10 +177,10 @@ public class Literal<T>
     /**
      * Creates a {@link Literal}.
      *
-     * @param <T>        the type of value
+     * @param <T>       the type of value
      * @param codeModel the {@link CodeModel}
-     * @param value      the {@code null}able value
-     * @param type       the {@link TypeUsage}
+     * @param value     the {@code null}able value
+     * @param type      the {@link TypeUsage}
      */
     public static <T> Literal<T> of(final CodeModel codeModel,
                                     final T value,
@@ -192,9 +192,9 @@ public class Literal<T>
     /**
      * Creates a {@link Literal}.
      *
-     * @param <T>        the type of value
+     * @param <T>       the type of value
      * @param codeModel the {@link CodeModel}
-     * @param value      the {@code null}able value
+     * @param value     the {@code null}able value
      */
     public static <T> Literal<T> of(final CodeModel codeModel,
                                     final T value) {

@@ -9,9 +9,9 @@ package build.codemodel.foundation;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -104,7 +104,8 @@ public interface CodeModel
      */
     default <T extends TypeDescriptor> T createTypeDescriptor(final TypeName typeName,
                                                               final BiFunction<? super CodeModel, ? super TypeName, T> supplier) {
-        return createTypeDescriptor(typeName, supplier, t -> {});
+        return createTypeDescriptor(typeName, supplier, t -> {
+        });
     }
 
     /**
@@ -234,7 +235,8 @@ public interface CodeModel
      */
     default <M extends ModuleDescriptor> M createModuleDescriptor(final ModuleName moduleName,
                                                                   final BiFunction<? super CodeModel, ? super ModuleName, M> supplier) {
-        return createModuleDescriptor(moduleName, supplier, m -> {});
+        return createModuleDescriptor(moduleName, supplier, m -> {
+        });
     }
 
     /**
@@ -321,7 +323,8 @@ public interface CodeModel
      */
     default <N extends NamespaceDescriptor> N createNamespaceDescriptor(final Namespace namespace,
                                                                         final BiFunction<? super CodeModel, ? super Namespace, N> supplier) {
-        return createNamespaceDescriptor(namespace, supplier, n -> {});
+        return createNamespaceDescriptor(namespace, supplier, n -> {
+        });
     }
 
     /**
@@ -360,7 +363,8 @@ public interface CodeModel
      * @return the new {@link Traitable} for the {@link Object} in the {@link CodeModel}
      */
     default Traitable createTraitable(final Traitable object) {
-        return createTraitable(object, t -> {});
+        return createTraitable(object, t -> {
+        });
     }
 
     /**

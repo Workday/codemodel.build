@@ -329,7 +329,7 @@ public class JdkStatementConverter
      * (see the TODO on {@code Symbol} resolution gaps).
      */
     private Optional<Expression> convertPatternLabel(final PatternTree pattern,
-                                                      final Expression selector) {
+                                                     final Expression selector) {
         if (pattern instanceof BindingPatternTree binding) {
             final var type = exprConverter.resolveTypeUsage(binding.getVariable().getType());
             exprConverter.addSourceLocation(binding.getVariable().getType()).ifPresent(type::addTrait);

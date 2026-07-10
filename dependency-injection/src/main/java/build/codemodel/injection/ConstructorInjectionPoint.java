@@ -9,9 +9,9 @@ package build.codemodel.injection;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -108,12 +108,10 @@ public class ConstructorInjectionPoint
         if (constructor.trySetAccessible()) {
             try {
                 return (T) constructor.newInstance(actualParameters);
-            }
-            catch (final InstantiationException | IllegalAccessException | InvocationTargetException e) {
+            } catch (final InstantiationException | IllegalAccessException | InvocationTargetException e) {
                 throw new InjectionFailedException(this, e);
             }
-        }
-        else {
+        } else {
             throw new InjectionFailedException(this, "Can't inject into " + constructor + " as it's inaccessible");
         }
     }

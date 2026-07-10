@@ -96,6 +96,6 @@ public class CyclicDependencyException
             + (this.detectedInDependency == this.causedByDependency
             ? "dependency on itself."
             : "(transitive) dependency on " + this.causedByDependency + ", which defines a dependency on "
-            + this.detectedInDependency);
+              + this.detectedInDependency);
     }
 }

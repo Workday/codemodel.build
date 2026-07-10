@@ -163,8 +163,15 @@ class BindingGraphTests
         contributor.contributeBinding(engineNode);
 
         final Dependency unregistered = new Dependency() {
-            @Override public TypeUsage typeUsage() { return null; }
-            @Override public String signature() { return "com.example.Unregistered"; }
+            @Override
+            public TypeUsage typeUsage() {
+                return null;
+            }
+
+            @Override
+            public String signature() {
+                return "com.example.Unregistered";
+            }
         };
         contributor.contributeDependency(engineNode, null, new DependencyEdge(null, unregistered));
 

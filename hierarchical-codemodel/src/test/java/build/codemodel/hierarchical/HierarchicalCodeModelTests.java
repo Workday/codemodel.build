@@ -373,7 +373,7 @@ class HierarchicalCodeModelTests {
      * Obtains the {@link HierarchicalTypeDescriptor}s for the specified encoded {@link TypeName}s from
      * the {@link HierarchicalCodeModel}.
      *
-     * @param codeModel       the {@link HierarchicalCodeModel}
+     * @param codeModel        the {@link HierarchicalCodeModel}
      * @param encodedTypeNames the encoded {@link TypeName}s
      * @return a {@link Stream}
      */
@@ -392,7 +392,7 @@ class HierarchicalCodeModelTests {
      * Determines the assignable encoded {@link TypeName}s of the specified encoded {@link TypeName}s from a
      * {@link HierarchicalCodeModel}.
      *
-     * @param codeModel       the {@link HierarchicalCodeModel}
+     * @param codeModel        the {@link HierarchicalCodeModel}
      * @param encodedTypeNames the encoded {@link TypeName}s
      * @return the {@link Stream} of assignable encoded {@link TypeName}s
      * @see HierarchicalCodeModel#getAssignableTypeDescriptors(Stream)
@@ -409,7 +409,7 @@ class HierarchicalCodeModelTests {
     /**
      * Asserts that the specified encoded {@link TypeName} in the {@link HierarchicalCodeModel} has no <i>children</i>.
      *
-     * @param codeModel      the {@link HierarchicalCodeModel}
+     * @param codeModel       the {@link HierarchicalCodeModel}
      * @param encodedTypeName the encoded {@link TypeName}
      */
     private void assertHasNoChildren(final HierarchicalCodeModel codeModel,
@@ -428,7 +428,7 @@ class HierarchicalCodeModelTests {
      * Asserts that the specified encoded {@link TypeName} in the {@link HierarchicalCodeModel} has <i>children</i>
      * with the provided encoded {@link TypeName}s.
      *
-     * @param codeModel      the {@link HierarchicalCodeModel}
+     * @param codeModel       the {@link HierarchicalCodeModel}
      * @param encodedTypeName the encoded {@link TypeName}
      * @param childTypeNames  the encoded <i>child</i> {@link TypeName}s
      */
@@ -452,7 +452,7 @@ class HierarchicalCodeModelTests {
      * Asserts that the specified encoded {@link TypeName} in the {@link HierarchicalCodeModel} has no
      * <i>descendants</i>.
      *
-     * @param codeModel      the {@link HierarchicalCodeModel}
+     * @param codeModel       the {@link HierarchicalCodeModel}
      * @param encodedTypeName the encoded {@link TypeName}
      */
     private void assertHasNoDescendants(final HierarchicalCodeModel codeModel,
@@ -471,7 +471,7 @@ class HierarchicalCodeModelTests {
      * Asserts that the specified encoded {@link TypeName} in the {@link HierarchicalCodeModel} has <i>descendants</i>
      * with the provided encoded {@link TypeName}s.
      *
-     * @param codeModel      the {@link HierarchicalCodeModel}
+     * @param codeModel       the {@link HierarchicalCodeModel}
      * @param encodedTypeName the encoded {@link TypeName}
      * @param childTypeNames  the encoded <i>child</i> {@link TypeName}s
      */
@@ -495,7 +495,7 @@ class HierarchicalCodeModelTests {
      * Asserts that the specified encoded {@link TypeName} in the {@link HierarchicalCodeModel} has <i>parents</i>
      * with the provided encoded {@link TypeName}s.
      *
-     * @param codeModel      the {@link HierarchicalCodeModel}
+     * @param codeModel       the {@link HierarchicalCodeModel}
      * @param encodedTypeName the encoded {@link TypeName}
      * @param parentTypeNames the encoded <i>parent</i> {@link TypeName}s
      */
@@ -518,7 +518,7 @@ class HierarchicalCodeModelTests {
     /**
      * Asserts that the specified encoded {@link TypeName} in the {@link HierarchicalCodeModel} has no <i>parents</i>.
      *
-     * @param codeModel      the {@link HierarchicalCodeModel}
+     * @param codeModel       the {@link HierarchicalCodeModel}
      * @param encodedTypeName the encoded {@link TypeName}
      */
     private void assertHasNoParents(final HierarchicalCodeModel codeModel,
@@ -537,7 +537,7 @@ class HierarchicalCodeModelTests {
      * Asserts that the specified encoded {@link TypeName} in the {@link HierarchicalCodeModel} has <i>ancestors</i>
      * with the provided encoded {@link TypeName}s.
      *
-     * @param codeModel        the {@link HierarchicalCodeModel}
+     * @param codeModel         the {@link HierarchicalCodeModel}
      * @param encodedTypeName   the encoded {@link TypeName}
      * @param ancestorTypeNames the encoded <i>ancestor</i> {@link TypeName}s
      */
@@ -560,7 +560,7 @@ class HierarchicalCodeModelTests {
     /**
      * Asserts that the specified encoded {@link TypeName} in the {@link HierarchicalCodeModel} has no <i>ancestors</i>.
      *
-     * @param codeModel      the {@link HierarchicalCodeModel}
+     * @param codeModel       the {@link HierarchicalCodeModel}
      * @param encodedTypeName the encoded {@link TypeName}
      */
     private void assertHasNoAncestors(final HierarchicalCodeModel codeModel,
@@ -579,7 +579,7 @@ class HierarchicalCodeModelTests {
      * Asserts that the encoded {@link TypeName} in the provided {@link HierarchicalCodeModel} is at the specified
      * {@link HierarchicalTypeDescriptor#level()}.
      *
-     * @param codeModel      the {@link HierarchicalCodeModel}
+     * @param codeModel       the {@link HierarchicalCodeModel}
      * @param encodedTypeName the encoded {@link TypeName}
      * @param level           the level
      */
@@ -600,7 +600,7 @@ class HierarchicalCodeModelTests {
      * Asserts that the encoded {@link TypeName} in the provided {@link HierarchicalCodeModel} possibly
      * forms a <i>Diamond Pattern</i>
      *
-     * @param codeModel          the {@link HierarchicalCodeModel}
+     * @param codeModel           the {@link HierarchicalCodeModel}
      * @param encodedTypeName     the encoded {@link TypeName}
      * @param formsDiamondPattern {@code true} if must form <i>Diamond Pattern</i>, {@code false} otherwise
      */
@@ -621,7 +621,7 @@ class HierarchicalCodeModelTests {
      * Asserts that the encoded {@link TypeName} is <strong>only</strong> assignable to each of the specified encoded
      * {@link TypeName}s within the context of the specified {@link HierarchicalCodeModel}.
      *
-     * @param codeModel          the {@link HierarchicalCodeModel}
+     * @param codeModel           the {@link HierarchicalCodeModel}
      * @param fromEncodedTypeName the encoded from {@link TypeName}
      * @param toEncodedTypeNames  the encoded to {@link TypeName}
      */

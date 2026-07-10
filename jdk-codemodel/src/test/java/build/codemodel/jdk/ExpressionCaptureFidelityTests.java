@@ -20,6 +20,7 @@ package build.codemodel.jdk;
  * #L%
  */
 
+import build.base.compile.testing.JavaFileObjects;
 import build.codemodel.expression.Cast;
 import build.codemodel.foundation.usage.NamedTypeUsage;
 import build.codemodel.imperative.Return;
@@ -38,7 +39,6 @@ import build.codemodel.jdk.expression.PrefixUnary;
 import build.codemodel.jdk.statement.ExpressionStatement;
 import build.codemodel.jdk.statement.LocalVariableDeclaration;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
-import build.base.compile.testing.JavaFileObjects;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -290,7 +290,7 @@ class ExpressionCaptureFidelityTests {
             .filter(m -> m.methodName().name().toString().equals("stringClass"))
             .findFirst().orElseThrow()
             .getTrait(MethodBodyDescriptor.class).orElseThrow().body();
-        final var returnExpr = ((build.codemodel.imperative.Return) body.statements().findFirst().orElseThrow())
+        final var returnExpr = ((Return) body.statements().findFirst().orElseThrow())
             .expression().orElseThrow();
 
         assertThat(returnExpr).isInstanceOf(build.codemodel.jdk.expression.ClassLiteral.class);
@@ -320,7 +320,7 @@ class ExpressionCaptureFidelityTests {
             .filter(m -> m.methodName().name().toString().equals("intClass"))
             .findFirst().orElseThrow()
             .getTrait(MethodBodyDescriptor.class).orElseThrow().body();
-        final var intReturn = ((build.codemodel.imperative.Return) intClassBody.statements().findFirst().orElseThrow())
+        final var intReturn = ((Return) intClassBody.statements().findFirst().orElseThrow())
             .expression().orElseThrow();
 
         assertThat(intReturn)
@@ -331,7 +331,7 @@ class ExpressionCaptureFidelityTests {
             .filter(m -> m.methodName().name().toString().equals("voidClass"))
             .findFirst().orElseThrow()
             .getTrait(MethodBodyDescriptor.class).orElseThrow().body();
-        final var voidReturn = ((build.codemodel.imperative.Return) voidClassBody.statements().findFirst().orElseThrow())
+        final var voidReturn = ((Return) voidClassBody.statements().findFirst().orElseThrow())
             .expression().orElseThrow();
 
         assertThat(voidReturn)

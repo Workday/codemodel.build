@@ -52,10 +52,10 @@ import java.util.Optional;
  * ({@link Singular}). If the declaring type is not present in the
  * {@link build.codemodel.foundation.CodeModel}, no trait is attached.
  *
- * @param codeModel       the {@link CodeModel} to resolve {@link #descriptor()} against
- * @param declaringType   the {@link TypeName} of the type declaring the resolved method
- * @param methodName      the simple name of the resolved method
- * @param parameterTypes  the resolved method's formal parameter types, in declaration order
+ * @param codeModel      the {@link CodeModel} to resolve {@link #descriptor()} against
+ * @param declaringType  the {@link TypeName} of the type declaring the resolved method
+ * @param methodName     the simple name of the resolved method
+ * @param parameterTypes the resolved method's formal parameter types, in declaration order
  * @author reed.vonredwitz
  * @since Apr-2026
  */
@@ -76,7 +76,7 @@ public record ResolvedMethod(CodeModel codeModel,
      * Resolves the {@link MethodDescriptor} this invocation currently refers to.
      *
      * @return the resolved {@link MethodDescriptor}, or {@link Optional#empty()} if the declaring
-     *     type or the matching method is no longer present in {@link #codeModel()}
+     * type or the matching method is no longer present in {@link #codeModel()}
      */
     public Optional<MethodDescriptor> descriptor() {
         return codeModel.getTypeDescriptor(declaringType)

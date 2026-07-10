@@ -9,9 +9,9 @@ package build.codemodel.foundation.usage;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -60,7 +60,7 @@ public class UnionTypeUsage
      * Constructs a {@link UnionTypeUsage}.
      *
      * @param codeModel the {@link CodeModel}
-     * @param types      the {@link Lazy} {@link TypeUsage} in the {@link UnionTypeUsage}
+     * @param types     the {@link Lazy} {@link TypeUsage} in the {@link UnionTypeUsage}
      */
     private UnionTypeUsage(final CodeModel codeModel,
                            final Stream<Lazy<TypeUsage>> types) {
@@ -75,7 +75,7 @@ public class UnionTypeUsage
     /**
      * {@link Unmarshal} an {@link UnionTypeUsage}.
      *
-     * @param codeModel the {@link CodeModel}
+     * @param codeModel  the {@link CodeModel}
      * @param marshaller the {@link Marshaller} for unmarshalling the {@link Marshalled} {@link Trait}s
      * @param traits     the {@link Marshalled} {@link Trait}s
      * @param types      the {@link TypeUsage}s
@@ -151,7 +151,7 @@ public class UnionTypeUsage
      * Creates a {@link UnionTypeUsage}.
      *
      * @param codeModel the {@link CodeModel}
-     * @param types      the {@link Lazy} {@link TypeUsage} in the {@link UnionTypeUsage}
+     * @param types     the {@link Lazy} {@link TypeUsage} in the {@link UnionTypeUsage}
      * @return a new {@link UnionTypeUsage}
      */
     public static UnionTypeUsage of(final CodeModel codeModel,
@@ -164,7 +164,7 @@ public class UnionTypeUsage
      * Creates a {@link UnionTypeUsage} with the specified parameters.
      *
      * @param codeModel the {@link CodeModel}
-     * @param types      the {@link TypeUsage}s
+     * @param types     the {@link TypeUsage}s
      * @return a new {@link GenericTypeUsage}
      */
     public static UnionTypeUsage of(final CodeModel codeModel,

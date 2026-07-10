@@ -1,5 +1,6 @@
 package build.codemodel.jdk;
 
+import build.base.compile.testing.JavaFileObjects;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.naming.NonCachingNameProvider;
 import build.codemodel.foundation.usage.AnnotationTypeUsage;
@@ -16,7 +17,6 @@ import build.codemodel.objectoriented.descriptor.Classification;
 import build.codemodel.objectoriented.descriptor.ConstructorDescriptor;
 import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
-import build.base.compile.testing.JavaFileObjects;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
@@ -225,7 +225,7 @@ class JdkInitializerTests {
             "com.example.Helper",
             "package com.example; public class Helper {}");
         final var compiler = ToolProvider.getSystemJavaCompiler();
-        try (final var fm = compiler.getStandardFileManager(null, null, null)) {
+        try (var fm = compiler.getStandardFileManager(null, null, null)) {
             compiler.getTask(null, fm, diagnostic -> {
                 },
                 List.of("-d", classpathDir.toString()), null, List.of(helperSource)).call();
@@ -417,11 +417,20 @@ class JdkInitializerTests {
         final var personFactoryName = nameProvider.getTypeName(Optional.empty(),
             "build.codemodel.jdk.example.PersonFactory");
         final var personFactoryTd = codeModel.getTypeDescriptor(personFactoryName).orElseThrow();
-        final var parts = personFactoryTd.parts().toList();
-        final var composition = personFactoryTd.composition().toList();
-        final var typeUsages = personFactoryTd.parts(TypeUsage.class).toList();
-        final var allTypeUsages = personFactoryTd.composition(TypeUsage.class).toList();
-        System.out.println();
+
+        // the static factory method is directly reachable as a part of its declaring type
+        final var ofMethod = personFactoryTd.parts(MethodDescriptor.class)
+            .filter(m -> m.methodName().name().toString().equals("of"))
+            .findFirst()
+            .orElseThrow();
+
+        assertThat(ofMethod.getFormalParameterCount()).isZero();
+        assertThat(ofMethod.returnType()).isInstanceOf(SpecificTypeUsage.class);
+        assertThat(((SpecificTypeUsage) ofMethod.returnType()).typeName().name().toString())
+            .isEqualTo("AbstractPerson");
+
+        // traversing the method's own parts reaches its return type as a TypeUsage
+        assertThat(ofMethod.parts().toList()).contains(ofMethod.returnType());
     }
 
     @Test

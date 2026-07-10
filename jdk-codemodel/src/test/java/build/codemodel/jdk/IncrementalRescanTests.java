@@ -359,7 +359,7 @@ class IncrementalRescanTests {
     /**
      * When the rescanned file references a type that lives on the classpath (not among the
      * source files), the rescan must pass that classpath through to the new {@link JdkInitializer}.
-     * Without it the type degrades to {@link build.codemodel.foundation.usage.UnknownTypeUsage}.
+     * Without it the type degrades to {@link UnknownTypeUsage}.
      */
     @Test
     void rescanPreservesClasspathResolution() throws Exception {
@@ -370,7 +370,7 @@ class IncrementalRescanTests {
             "com.example.Helper",
             "package com.example; public class Helper {}");
         final var compiler = javax.tools.ToolProvider.getSystemJavaCompiler();
-        try (final var fm = compiler.getStandardFileManager(null, null, null)) {
+        try (var fm = compiler.getStandardFileManager(null, null, null)) {
             compiler.getTask(null, fm, _ -> {
                 }, List.of("-d", classpathDir.toString()),
                 null, List.of(helperSource)).call();
@@ -392,7 +392,7 @@ class IncrementalRescanTests {
             .traits(FieldDescriptor.class).findFirst().orElseThrow();
         assertThat(depField.type())
             .as("Helper must resolve on initial populate")
-            .isNotInstanceOf(build.codemodel.foundation.usage.UnknownTypeUsage.class);
+            .isNotInstanceOf(UnknownTypeUsage.class);
 
         // Rescan Foo with the classpath so Helper still resolves
         final var fooV2 = JavaFileObjects.forSourceString("com.example.Foo", """
@@ -410,12 +410,12 @@ class IncrementalRescanTests {
             .findFirst().orElseThrow();
         assertThat(depFieldAfter.type())
             .as("Helper must still resolve after rescan when classpath is forwarded")
-            .isNotInstanceOf(build.codemodel.foundation.usage.UnknownTypeUsage.class);
+            .isNotInstanceOf(UnknownTypeUsage.class);
     }
 
     /**
      * Without forwarding the classpath, a rescan of a file that references a classpath-only type
-     * degrades that field to {@link build.codemodel.foundation.usage.UnknownTypeUsage}.
+     * degrades that field to {@link UnknownTypeUsage}.
      * This test documents the failure mode so callers know they must use the overload that
      * accepts classpath/modulePath.
      */
@@ -544,7 +544,7 @@ class IncrementalRescanTests {
     /**
      * Regression: when a method's return type is a generic whose type argument is defined in a
      * required module, rescanning the method's file without its {@code module-info.java} degrades
-     * the return type to {@link build.codemodel.foundation.usage.UnknownTypeUsage} because javac
+     * the return type to {@link UnknownTypeUsage} because javac
      * sees the cross-module type as an {@code ErrorType} when there are no {@code requires}
      * declarations in scope.
      *
@@ -574,7 +574,7 @@ class IncrementalRescanTests {
             public class Result<T> {}
             """);
         final var compiler = javax.tools.ToolProvider.getSystemJavaCompiler();
-        try (final var fm = compiler.getStandardFileManager(null, null, null)) {
+        try (var fm = compiler.getStandardFileManager(null, null, null)) {
             compiler.getTask(null, fm, _ -> {
                 },
                 List.of("-d", resultModuleDir.toString()),
@@ -609,7 +609,7 @@ class IncrementalRescanTests {
             .findFirst().orElseThrow();
         assertThat(initialItems.returnType())
             .as("items() return type must resolve on initial populate")
-            .isNotInstanceOf(build.codemodel.foundation.usage.UnknownTypeUsage.class);
+            .isNotInstanceOf(UnknownTypeUsage.class);
 
         // Add then remove an extra method, passing module-info as context so javac keeps module resolution.
         final var fooV2 = JavaFileObjects.forSourceString("com.example.consumer.Foo", """
@@ -641,7 +641,7 @@ class IncrementalRescanTests {
 
         assertThat(itemsAfterRescan.returnType())
             .as("items() return type must not degrade to UnknownTypeUsage after add-then-remove rescan")
-            .isNotInstanceOf(build.codemodel.foundation.usage.UnknownTypeUsage.class);
+            .isNotInstanceOf(UnknownTypeUsage.class);
         assertThat(itemsAfterRescan.returnType().canonicalName())
             .as("items() return type canonical name must not be null")
             .isNotNull();
@@ -655,7 +655,7 @@ class IncrementalRescanTests {
             "com.example.Helper",
             "package com.example; public class Helper {}");
         final var compiler = javax.tools.ToolProvider.getSystemJavaCompiler();
-        try (final var fm = compiler.getStandardFileManager(null, null, null)) {
+        try (var fm = compiler.getStandardFileManager(null, null, null)) {
             compiler.getTask(null, fm, _ -> {
                 }, List.of("-d", classpathDir.toString()),
                 null, List.of(helperSource)).call();
@@ -689,12 +689,12 @@ class IncrementalRescanTests {
             .findFirst().orElseThrow();
         assertThat(depFieldAfter.type())
             .as("Helper degrades to UnknownTypeUsage when classpath is not forwarded")
-            .isInstanceOf(build.codemodel.foundation.usage.UnknownTypeUsage.class);
+            .isInstanceOf(UnknownTypeUsage.class);
     }
 
     /**
      * Regression: types defined in sibling source files of the same module degrade to
-     * {@link build.codemodel.foundation.usage.UnknownTypeUsage} after a rescan, because those
+     * {@link UnknownTypeUsage} after a rescan, because those
      * sibling files are neither on the classpath/module-path nor included in the rescan's
      * compilation unit.
      *
@@ -894,18 +894,18 @@ class IncrementalRescanTests {
     void callersCachedFieldSymbolGoesStaleAfterDeclaringTypeIsRescanned() {
         final var baseSource = JavaFileObjects.forSourceString("com.example.Base", """
             package com.example;
-
+            
             public class Base {
-
+            
                 protected int value;
             }
             """);
 
         final var subSource = JavaFileObjects.forSourceString("com.example.Sub", """
             package com.example;
-
+            
             public class Sub extends Base {
-
+            
                 public int read() {
                     return value;
                 }
@@ -938,13 +938,13 @@ class IncrementalRescanTests {
         // Simulate an editor save of Base.java: same field name, but padded so its offset moves.
         final var baseV2 = JavaFileObjects.forSourceString("com.example.Base", """
             package com.example;
-
+            
             public class Base {
-
+            
                 // several new lines added above, shifting every subsequent offset
                 // several new lines added above, shifting every subsequent offset
                 // several new lines added above, shifting every subsequent offset
-
+            
                 protected int value;
             }
             """);

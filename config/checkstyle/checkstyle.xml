@@ -8,6 +8,10 @@
     </module>
     <module name="FileTabCharacter"/>
     <module name="SuppressWarningsFilter"/>
+    <module name="SuppressionFilter">
+        <property name="file" value="${suppressions.file}"/>
+        <property name="optional" value="false"/>
+    </module>
     <module name="TreeWalker">
         <module name="AvoidStarImport"/>
         <module name="CustomImportOrder">

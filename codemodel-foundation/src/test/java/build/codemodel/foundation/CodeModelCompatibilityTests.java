@@ -658,7 +658,7 @@ public interface CodeModelCompatibilityTests
          * Constructs a {@link ColorableTypeDescriptor}.
          *
          * @param codeModel the {@link CodeModel}
-         * @param typeName   the {@link TypeName}
+         * @param typeName  the {@link TypeName}
          */
         public ColorableTypeDescriptor(final CodeModel codeModel,
                                        final TypeName typeName) {

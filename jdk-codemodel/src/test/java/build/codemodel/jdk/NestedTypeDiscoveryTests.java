@@ -20,9 +20,9 @@ package build.codemodel.jdk;
  * #L%
  */
 
+import build.base.compile.testing.JavaFileObjects;
 import build.codemodel.jdk.descriptor.EnclosingTypeDescriptor;
 import build.codemodel.jdk.descriptor.MemberTypeDescriptor;
-import build.base.compile.testing.JavaFileObjects;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

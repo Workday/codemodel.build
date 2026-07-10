@@ -203,7 +203,8 @@ public class JDKCodeModel
     public void rescan(final JavaFileObject updatedFile,
                        final List<Path> classpath,
                        final List<Path> modulePath) {
-        rescan(updatedFile, List.of(), classpath, modulePath, d -> { });
+        rescan(updatedFile, List.of(), classpath, modulePath, d -> {
+        });
     }
 
     /**
@@ -240,7 +241,7 @@ public class JDKCodeModel
                 .map(fp -> fp.uri().equals(uri))
                 .orElse(false))
             .forEach(this::removeModuleDescriptor);
-        final var allFiles = new java.util.ArrayList<JavaFileObject>(contextFiles.size() + 1);
+        final var allFiles = new ArrayList<JavaFileObject>(contextFiles.size() + 1);
         allFiles.add(updatedFile);
         contextFiles.stream().filter(f -> !f.toUri().equals(uri)).forEach(allFiles::add);
         new JdkInitializer(List.of(), List.of(), allFiles, classpath, modulePath)
@@ -338,8 +339,8 @@ public class JDKCodeModel
 
             typeUsage = TypeVariableUsage.of(this, typeName, Optional.empty(), upperBound);
         } else if (type instanceof WildcardType wildcardType) {
-            final java.lang.reflect.Type[] lowers = wildcardType.getLowerBounds();
-            final java.lang.reflect.Type[] uppers = wildcardType.getUpperBounds();
+            final Type[] lowers = wildcardType.getLowerBounds();
+            final Type[] uppers = wildcardType.getUpperBounds();
 
             final Optional<Lazy<TypeUsage>> optLower = lowers.length > 0
                 ? Optional.of(Lazy.of(getTypeUsage(lowers[0])))
@@ -785,7 +786,7 @@ public class JDKCodeModel
         return element == null
             ? Stream.empty()
             : Streams.of(element.getDeclaredAnnotations())
-              .map(this::getAnnotation);
+            .map(this::getAnnotation);
     }
 
     /**

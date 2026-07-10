@@ -9,9 +9,9 @@ package build.codemodel.framework.builder;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -121,7 +121,7 @@ class InternalFramework
         this.plugins = plugins == null
             ? new ArrayList<>()
             : Streams.sortByRequires(plugins.filter(Objects::nonNull), Streams.SortOrder.FIRST)
-                .collect(Collectors.toCollection(ArrayList::new));
+            .collect(Collectors.toCollection(ArrayList::new));
 
         // arrange plugins according to their type and interface types
         this.pluginsByClass = new LinkedHashMap<>();
@@ -297,7 +297,7 @@ class InternalFramework
     @Override
     @SuppressWarnings("unchecked")
     public <T extends CodeModel> Optional<T> typeCheck(final T codeModel,
-                                                        final TelemetryRecorder telemetryRecorder) {
+                                                       final TelemetryRecorder telemetryRecorder) {
 
         final var observableRecorder = ObservableTelemetryRecorder.of(telemetryRecorder);
 

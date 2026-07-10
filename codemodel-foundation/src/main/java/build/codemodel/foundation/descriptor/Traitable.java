@@ -9,9 +9,9 @@ package build.codemodel.foundation.descriptor;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -187,7 +187,7 @@ public interface Traitable
         return requiredClass == null || extractor == null || predicate == null || !hasTraits()
             ? Stream.empty()
             : traits(requiredClass)
-                .filter(trait -> predicate.test(extractor.apply(trait)));
+            .filter(trait -> predicate.test(extractor.apply(trait)));
     }
 
     /**
@@ -207,8 +207,8 @@ public interface Traitable
         return requiredClass == null || extractor == null || !hasTraits()
             ? Stream.empty()
             : traits(requiredClass)
-                .filter(trait -> (value == null && extractor.apply(trait) == null)
-                    || (value != null && Objects.equals(value, extractor.apply(trait))));
+            .filter(trait -> (value == null && extractor.apply(trait) == null)
+                             || (value != null && Objects.equals(value, extractor.apply(trait))));
     }
 
     /**

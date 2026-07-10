@@ -27,8 +27,12 @@ package build.codemodel.jdk.expression;
  * @since Apr-2026
  */
 public enum PostfixOperator {
-    /** Post-increment: {@code x++} */
+    /**
+     * Post-increment: {@code x++}
+     */
     INCREMENT,
-    /** Post-decrement: {@code x--} */
+    /**
+     * Post-decrement: {@code x--}
+     */
     DECREMENT
 }

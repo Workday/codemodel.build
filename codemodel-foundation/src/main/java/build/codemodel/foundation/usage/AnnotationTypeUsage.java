@@ -9,9 +9,9 @@ package build.codemodel.foundation.usage;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -60,8 +60,8 @@ public class AnnotationTypeUsage
      * Constructs an {@link AnnotationTypeUsage}.
      *
      * @param codeModel the {@link CodeModel}
-     * @param typeName   the {@link TypeName}
-     * @param values     the {@link AnnotationValue}s
+     * @param typeName  the {@link TypeName}
+     * @param values    the {@link AnnotationValue}s
      */
     private AnnotationTypeUsage(final CodeModel codeModel,
                                 final TypeName typeName,
@@ -77,7 +77,7 @@ public class AnnotationTypeUsage
     /**
      * {@link Unmarshal} an {@link AnnotationTypeUsage}.
      *
-     * @param codeModel the {@link CodeModel}
+     * @param codeModel  the {@link CodeModel}
      * @param marshaller the {@link Marshaller} for unmarshalling the {@link Marshalled} {@link Trait}s
      * @param typeName   the {@link TypeName}
      * @param values     the {@link Marshalled} {@link AnnotationValue}s
@@ -157,8 +157,8 @@ public class AnnotationTypeUsage
      * Creates an {@link AnnotationTypeUsage}.
      *
      * @param codeModel the {@link CodeModel}
-     * @param typeName   the {@link TypeName}
-     * @param values     the {@link AnnotationValue}s
+     * @param typeName  the {@link TypeName}
+     * @param values    the {@link AnnotationValue}s
      * @return a new {@link AnnotationTypeUsage}
      */
     public static AnnotationTypeUsage of(final CodeModel codeModel,
@@ -172,8 +172,8 @@ public class AnnotationTypeUsage
      * Creates an {@link AnnotationTypeUsage}.
      *
      * @param codeModel the {@link CodeModel}
-     * @param typeName   the {@link TypeName}
-     * @param values     the {@link AnnotationValue}s
+     * @param typeName  the {@link TypeName}
+     * @param values    the {@link AnnotationValue}s
      * @return a new {@link AnnotationTypeUsage}
      */
     public static AnnotationTypeUsage of(final CodeModel codeModel,

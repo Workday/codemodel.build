@@ -9,9 +9,9 @@ package build.codemodel.expression.naming;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -63,10 +63,10 @@ public final class FunctionName
         super(moduleName, namespace, typeName, irreducibleName);
     }
 
-     /**
+    /**
      * Un{@link Marshal} an {@link FunctionName}.
      *
-     * @param codeModel      the {@link CodeModel}
+     * @param codeModel       the {@link CodeModel}
      * @param marshaller      the {@link Marshaller}
      * @param moduleName      the {@link Optional} {@link ModuleName}
      * @param namespace       the {@link Optional} {@link Namespace}
@@ -98,11 +98,11 @@ public final class FunctionName
      */
     @Marshal
     public void destructor(final Marshaller marshaller,
-                              final Out<Optional<ModuleName>> moduleName,
-                              final Out<Optional<Namespace>> namespace,
-                              final Out<Optional<TypeName>> typeName,
-                              final Out<IrreducibleName> irreducibleName,
-                              final Out<String> string) {
+                           final Out<Optional<ModuleName>> moduleName,
+                           final Out<Optional<Namespace>> namespace,
+                           final Out<Optional<TypeName>> typeName,
+                           final Out<IrreducibleName> irreducibleName,
+                           final Out<String> string) {
 
         super.destructor(marshaller, moduleName, namespace, typeName, irreducibleName, string);
     }
@@ -131,10 +131,10 @@ public final class FunctionName
      * @return a {@link FunctionName}
      */
     public static FunctionName of(final IrreducibleName irreducibleName) {
-        return FunctionName.of(Optional.empty(),
-                Optional.empty(),
-                Optional.empty(),
-                irreducibleName);
+        return of(Optional.empty(),
+            Optional.empty(),
+            Optional.empty(),
+            irreducibleName);
     }
 
     static {

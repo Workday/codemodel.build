@@ -80,7 +80,7 @@ class MarshallingTests {
                 IrreducibleName.of("Object"))));
     }
 
-    private <T> void marshallAndTransportAndUnMarshalAndAssert(T original)
+    private <T> void marshallAndTransportAndUnMarshalAndAssert(final T original)
         throws IOException {
         final var marshaller = Marshalling.newMarshaller();
         final var marshalled = marshaller.marshal(original);

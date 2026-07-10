@@ -9,9 +9,9 @@ package build.codemodel.expression.naming;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -94,19 +94,19 @@ public abstract class AbstractCallableName
                 .map(name -> name + ".")
                 .orElse("")
                 : this.moduleName
-                    .map(name -> name.toString() + "/")
-                    .orElse("")
-                    + this.namespace()
-                    .map(Namespace::toString)
-                    .map(name -> name + ".")
-                    .orElse(""))
+                .map(name -> name.toString() + "/")
+                .orElse("")
+                  + this.namespace()
+                .map(Namespace::toString)
+                .map(name -> name + ".")
+                .orElse(""))
                 + this.irreducibleName;
     }
 
-     /**
+    /**
      * Un{@link Marshal} an {@link AbstractCallableName}.
      *
-     * @param codeModel      the {@link CodeModel}
+     * @param codeModel       the {@link CodeModel}
      * @param marshaller      the {@link Marshaller}
      * @param moduleName      the {@link Optional} {@link ModuleName}
      * @param namespace       the {@link Optional} {@link Namespace}
@@ -125,7 +125,7 @@ public abstract class AbstractCallableName
         this.moduleName = moduleName;
         this.namespace = namespace;
         this.typeName = typeName;
-        this.irreducibleName = irreducibleName; 
+        this.irreducibleName = irreducibleName;
         this.string = string;
     }
 
@@ -145,7 +145,7 @@ public abstract class AbstractCallableName
                               final Out<Optional<TypeName>> typeName,
                               final Out<IrreducibleName> irreducibleName,
                               final Out<String> string) {
-        
+
         moduleName.set(this.moduleName);
         namespace.set(this.namespace);
         typeName.set(this.typeName);

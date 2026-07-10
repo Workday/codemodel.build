@@ -27,28 +27,52 @@ package build.codemodel.jdk.expression;
  * @since Apr-2026
  */
 public enum AssignmentOperator {
-    /** Simple assignment: {@code x = y} */
+    /**
+     * Simple assignment: {@code x = y}
+     */
     ASSIGN,
-    /** Addition assignment: {@code x += y} */
+    /**
+     * Addition assignment: {@code x += y}
+     */
     PLUS,
-    /** Subtraction assignment: {@code x -= y} */
+    /**
+     * Subtraction assignment: {@code x -= y}
+     */
     MINUS,
-    /** Multiplication assignment: {@code x *= y} */
+    /**
+     * Multiplication assignment: {@code x *= y}
+     */
     MULTIPLY,
-    /** Division assignment: {@code x /= y} */
+    /**
+     * Division assignment: {@code x /= y}
+     */
     DIVIDE,
-    /** Remainder assignment: {@code x %= y} */
+    /**
+     * Remainder assignment: {@code x %= y}
+     */
     REMAINDER,
-    /** Bitwise AND assignment: {@code x &= y} */
+    /**
+     * Bitwise AND assignment: {@code x &= y}
+     */
     AND,
-    /** Bitwise OR assignment: {@code x |= y} */
+    /**
+     * Bitwise OR assignment: {@code x |= y}
+     */
     OR,
-    /** Bitwise XOR assignment: {@code x ^= y} */
+    /**
+     * Bitwise XOR assignment: {@code x ^= y}
+     */
     XOR,
-    /** Left shift assignment: {@code x <<= y} */
+    /**
+     * Left shift assignment: {@code x <<= y}
+     */
     LEFT_SHIFT,
-    /** Signed right shift assignment: {@code x >>= y} */
+    /**
+     * Signed right shift assignment: {@code x >>= y}
+     */
     RIGHT_SHIFT,
-    /** Unsigned right shift assignment: {@code x >>>= y} */
+    /**
+     * Unsigned right shift assignment: {@code x >>>= y}
+     */
     UNSIGNED_RIGHT_SHIFT
 }

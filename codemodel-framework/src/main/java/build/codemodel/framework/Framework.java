@@ -9,9 +9,9 @@ package build.codemodel.framework;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -94,7 +94,7 @@ public interface Framework {
      * Enriches the provided {@link CodeModel} using the {@link Enricher}s known to the {@link Framework},
      * reporting any issues with the specified {@link TelemetryRecorder}.
      *
-     * @param codeModel        the {@link CodeModel} to enrich
+     * @param codeModel         the {@link CodeModel} to enrich
      * @param telemetryRecorder the {@link TelemetryRecorder}
      * @return the {@link CodeModel} to permit fluent-style method invocation
      */
@@ -105,20 +105,20 @@ public interface Framework {
      * {@link Framework}, reporting any issues with the specified {@link TelemetryRecorder}, returning
      * the {@link CodeModel} if successful.
      *
-     * @param codeModel        the {@link CodeModel} to type-check
+     * @param codeModel         the {@link CodeModel} to type-check
      * @param telemetryRecorder the {@link TelemetryRecorder}
      * @return the {@link Optional} {@link CodeModel} if type-checking was successful, otherwise {@link Optional#empty()}
      */
 
     <T extends CodeModel> Optional<T> typeCheck(T codeModel,
-                                                 TelemetryRecorder telemetryRecorder);
+                                                TelemetryRecorder telemetryRecorder);
 
     /**
      * Attempts to compile the specified {@link CodeModel} using the {@link Compiler}s known to the {@link Framework},
      * returning the {@link Optional} {@link Compilation} when successful, otherwise returning an {@link Optional#empty()},
      * with errors, warnings and other compilation information recorded in the provided {@link TelemetryRecorder}.
      *
-     * @param codeModel        the {@link CodeModel}
+     * @param codeModel         the {@link CodeModel}
      * @param telemetryRecorder the {@link TelemetryRecorder}
      * @return the {@link Optional} {@link Compilation} when compilation was successful, otherwise {@link Optional#empty()}
      */

@@ -1,5 +1,6 @@
 package build.codemodel.jdk;
 
+import build.base.compile.testing.JavaFileObjects;
 import build.codemodel.foundation.usage.GenericTypeUsage;
 import build.codemodel.foundation.usage.IntersectionTypeUsage;
 import build.codemodel.foundation.usage.NamedTypeUsage;
@@ -8,7 +9,6 @@ import build.codemodel.foundation.usage.WildcardTypeUsage;
 import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
 import build.codemodel.objectoriented.descriptor.ParameterizedTypeDescriptor;
-import build.base.compile.testing.JavaFileObjects;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

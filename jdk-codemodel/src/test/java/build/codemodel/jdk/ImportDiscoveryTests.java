@@ -20,8 +20,8 @@ package build.codemodel.jdk;
  * #L%
  */
 
-import build.codemodel.jdk.descriptor.ImportDeclaration;
 import build.base.compile.testing.JavaFileObjects;
+import build.codemodel.jdk.descriptor.ImportDeclaration;
 import org.junit.jupiter.api.Test;
 
 import java.util.Comparator;

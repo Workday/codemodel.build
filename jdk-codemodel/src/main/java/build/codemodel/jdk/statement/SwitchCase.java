@@ -9,9 +9,9 @@ package build.codemodel.jdk.statement;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -159,7 +159,7 @@ public final class SwitchCase
      * Creates a {@link SwitchCase}.
      * Pass {@code null} or an empty stream for {@code labels} to create the {@code default} case.
      *
-     * @param codeModel the {@link CodeModel}
+     * @param codeModel  the {@link CodeModel}
      * @param labels     the case label {@link Expression}s, or {@code null} for the {@code default} case
      * @param statements the body {@link Statement}s
      * @return a new {@link SwitchCase}
@@ -168,7 +168,7 @@ public final class SwitchCase
                                 final Stream<Expression> labels,
                                 final Stream<Statement> statements) {
         return new SwitchCase(Objects.requireNonNull(codeModel, "codeModel must not be null"),
-                              labels, statements, Optional.empty());
+            labels, statements, Optional.empty());
     }
 
     /**
@@ -186,7 +186,7 @@ public final class SwitchCase
                                 final Stream<Statement> statements,
                                 final Optional<Expression> guard) {
         return new SwitchCase(Objects.requireNonNull(codeModel, "codeModel must not be null"),
-                              labels, statements, guard);
+            labels, statements, guard);
     }
 
     static {

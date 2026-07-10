@@ -58,7 +58,8 @@ public final class BindingGraphTrait
      * @param from the binding that requires the dependency
      * @param edge the edge, carrying the unresolved {@link Dependency}
      */
-    public record UnsatisfiedDependency(BindingNode from, DependencyEdge edge) {}
+    public record UnsatisfiedDependency(BindingNode from, DependencyEdge edge) {
+    }
 
     /**
      * The underlying weighted binding graph. Vertices are {@link BindingNode}s; edge weights are

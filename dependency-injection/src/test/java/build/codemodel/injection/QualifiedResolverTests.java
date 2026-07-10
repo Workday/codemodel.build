@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  * @author spencer.firestone
  * @since Jan-2020
  */
-class QualifiedResolverTest
+class QualifiedResolverTests
     implements ContextualTesting {
 
     /**
@@ -177,7 +177,7 @@ class QualifiedResolverTest
     @Documented
     @Inherited
     @Retention(RetentionPolicy.RUNTIME)
-    @Target({ METHOD, CONSTRUCTOR, FIELD })
+    @Target({METHOD, CONSTRUCTOR, FIELD})
     @Qualifier
     private @interface FooQualifier {
 
@@ -189,7 +189,7 @@ class QualifiedResolverTest
     @Documented
     @Inherited
     @Retention(RetentionPolicy.RUNTIME)
-    @Target({ METHOD, CONSTRUCTOR, FIELD })
+    @Target({METHOD, CONSTRUCTOR, FIELD})
     @Qualifier
     private @interface StringQualifier {
 

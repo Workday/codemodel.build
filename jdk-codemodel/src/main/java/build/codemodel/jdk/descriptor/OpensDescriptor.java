@@ -42,8 +42,8 @@ import java.util.stream.Stream;
  */
 @NonSingular
 public record OpensDescriptor(Namespace packageName,
-                               List<ModuleName> targetModuleNames,
-                               Optional<PackageDirectiveModifier> modifier)
+                              List<ModuleName> targetModuleNames,
+                              Optional<PackageDirectiveModifier> modifier)
     implements Trait {
 
     public OpensDescriptor {

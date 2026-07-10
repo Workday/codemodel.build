@@ -139,7 +139,7 @@ public final class Lambda
      * Creates a {@link Lambda} expression with no parameters.
      *
      * @param codeModel the {@link CodeModel}
-     * @param body       the body {@link Statement}
+     * @param body      the body {@link Statement}
      * @return a new {@link Lambda}
      */
     public static Lambda of(final CodeModel codeModel, final Statement body) {

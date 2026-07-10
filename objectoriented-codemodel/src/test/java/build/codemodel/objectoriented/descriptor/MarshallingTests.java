@@ -306,7 +306,7 @@ class MarshallingTests {
     void shouldMarshallAndTransportAndUnmarshallImplementsTypeDescriptor()
         throws IOException {
 
-        var namedTypeUsage = GenericTypeUsage.of(codeModel, TypeName.of(
+        final var namedTypeUsage = GenericTypeUsage.of(codeModel, TypeName.of(
             ModuleName.of("com.example", this.nameProvider),
             Optional.empty(),
             Optional.empty(),
@@ -324,7 +324,7 @@ class MarshallingTests {
     void shouldMarshallAndTransportAndUnmarshallExtendsTypeDescriptor()
         throws IOException {
 
-        var namedTypeUsage = GenericTypeUsage.of(codeModel, TypeName.of(
+        final var namedTypeUsage = GenericTypeUsage.of(codeModel, TypeName.of(
             ModuleName.of("com.example", this.nameProvider),
             Optional.empty(),
             Optional.empty(),
@@ -333,7 +333,7 @@ class MarshallingTests {
         marshallAndTransportAndUnMarshalAndAssert(ExtendsTypeDescriptor.of(namedTypeUsage));
     }
 
-    private <T> void marshallAndTransportAndUnMarshalAndAssert(T original)
+    private <T> void marshallAndTransportAndUnMarshalAndAssert(final T original)
         throws IOException {
 
         final var unmarshalled = marshallAndTransportAndUnMarshal(original);
@@ -348,7 +348,7 @@ class MarshallingTests {
         }
     }
 
-    private <T> T marshallAndTransportAndUnMarshal(T original)
+    private <T> T marshallAndTransportAndUnMarshal(final T original)
         throws IOException {
 
         final var marshaller = Marshalling.newMarshaller();

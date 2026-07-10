@@ -1221,7 +1221,7 @@ class InjectionContext
         Set<T> buildSet() {
             return this.suppliers.stream()
                 .map(Supplier::get)
-                .collect(Collectors.toCollection(java.util.LinkedHashSet::new));
+                .collect(Collectors.toCollection(LinkedHashSet::new));
         }
     }
 }

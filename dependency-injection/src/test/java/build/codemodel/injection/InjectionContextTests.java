@@ -406,7 +406,8 @@ class InjectionContextTests
     /**
      * A leaf dependency that is never bound, causing a resolution failure when a service chain requests it.
      */
-    interface MissingLeafService {}
+    interface MissingLeafService {
+    }
 
     /**
      * A singleton mid-chain service that requires the unbound {@link MissingLeafService}.
@@ -414,7 +415,8 @@ class InjectionContextTests
     @Singleton
     static class ChainMiddleService {
         @Inject
-        ChainMiddleService(final MissingLeafService leaf) {}
+        ChainMiddleService(final MissingLeafService leaf) {
+        }
     }
 
     /**
@@ -422,7 +424,8 @@ class InjectionContextTests
      */
     static class ChainRootService {
         @Inject
-        ChainRootService(final ChainMiddleService middle) {}
+        ChainRootService(final ChainMiddleService middle) {
+        }
     }
 
     /**

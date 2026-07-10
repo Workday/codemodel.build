@@ -20,10 +20,10 @@ package build.codemodel.jdk;
  * #L%
  */
 
+import build.base.compile.testing.JavaFileObjects;
 import build.codemodel.jdk.descriptor.SourceLocation;
 import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
-import build.base.compile.testing.JavaFileObjects;
 import org.junit.jupiter.api.Test;
 
 import java.util.Comparator;

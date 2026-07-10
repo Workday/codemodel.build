@@ -1,21 +1,19 @@
 package build.codemodel.jdk;
 
+import build.base.compile.testing.JavaFileObjects;
 import build.codemodel.expression.NumericLiteral;
 import build.codemodel.expression.StringLiteral;
 import build.codemodel.foundation.usage.NamedTypeUsage;
-import build.codemodel.imperative.Block;
 import build.codemodel.imperative.Return;
 import build.codemodel.jdk.descriptor.FieldInitializerDescriptor;
 import build.codemodel.jdk.descriptor.MethodBodyDescriptor;
 import build.codemodel.jdk.expression.Lambda;
-import build.codemodel.jdk.statement.CatchClause;
 import build.codemodel.jdk.statement.ExpressionStatement;
 import build.codemodel.jdk.statement.LocalVariableDeclaration;
 import build.codemodel.jdk.statement.Try;
 import build.codemodel.objectoriented.descriptor.ConstructorDescriptor;
 import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
-import build.base.compile.testing.JavaFileObjects;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

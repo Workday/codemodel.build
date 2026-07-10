@@ -9,9 +9,9 @@ package build.codemodel.hierarchical;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -53,7 +53,7 @@ public class ClassTypeDescriptor
      * Constructs an {@link ClassTypeDescriptor}.
      *
      * @param codeModel the {@link CodeModel}
-     * @param typeName   the {@link TypeName}
+     * @param typeName  the {@link TypeName}
      */
     protected ClassTypeDescriptor(final CodeModel codeModel,
                                   final TypeName typeName) {
@@ -64,7 +64,7 @@ public class ClassTypeDescriptor
     /**
      * {@link Unmarshal} a {@link ClassTypeDescriptor}.
      *
-     * @param codeModel the {@link CodeModel}
+     * @param codeModel  the {@link CodeModel}
      * @param marshaller the {@link Marshaller} for unmarshalling the {@link Marshalled} {@link Trait}s
      * @param traits     the {@link Marshalled} {@link Trait}s
      */
@@ -96,7 +96,7 @@ public class ClassTypeDescriptor
      * Creates an {@link ClassTypeDescriptor}.
      *
      * @param codeModel the {@link CodeModel}
-     * @param typeName   the {@link TypeName}
+     * @param typeName  the {@link TypeName}
      * @return a new {@link ClassTypeDescriptor}
      */
     public static ClassTypeDescriptor of(final CodeModel codeModel,

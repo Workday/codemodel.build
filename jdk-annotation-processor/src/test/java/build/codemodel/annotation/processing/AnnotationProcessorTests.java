@@ -1,8 +1,8 @@
 package build.codemodel.annotation.processing;
 
-import  build.base.compile.testing.Compilation;
-import  build.base.compile.testing.Compiler;
-import  build.base.compile.testing.JavaFileObjects;
+import build.base.compile.testing.Compilation;
+import build.base.compile.testing.Compiler;
+import build.base.compile.testing.JavaFileObjects;
 
 import java.io.File;
 import java.nio.file.FileSystems;

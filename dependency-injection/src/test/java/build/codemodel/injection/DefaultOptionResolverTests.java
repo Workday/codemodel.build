@@ -93,8 +93,15 @@ class DefaultOptionResolverTests
         final var context = framework.newContext(
             DefaultOptionResolver.of(framework),
             dep -> Optional.of(new ValueBinding<Object>() {
-                @Override public Object value() { return "fallback"; }
-                @Override public Dependency dependency() { return dep; }
+                @Override
+                public Object value() {
+                    return "fallback";
+                }
+
+                @Override
+                public Dependency dependency() {
+                    return dep;
+                }
             }));
 
         context.bind(ServiceWithString.class).to(ServiceWithString.class);
@@ -143,7 +150,7 @@ class DefaultOptionResolverTests
         extends AbstractValueOption<String> {
 
         @Default
-        public OptionWithConstructorDefault() {
+        OptionWithConstructorDefault() {
             super("constructor-default");
         }
     }
@@ -162,7 +169,7 @@ class DefaultOptionResolverTests
     public static class OptionWithNoDefault
         extends AbstractValueOption<String> {
 
-        public OptionWithNoDefault(final String value) {
+        OptionWithNoDefault(final String value) {
             super(value);
         }
     }

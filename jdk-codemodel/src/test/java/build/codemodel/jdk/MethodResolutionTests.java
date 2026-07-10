@@ -1,11 +1,10 @@
 package build.codemodel.jdk;
 
+import build.base.compile.testing.JavaFileObjects;
 import build.codemodel.imperative.Return;
 import build.codemodel.jdk.expression.MethodInvocation;
 import build.codemodel.jdk.expression.ResolvedMethod;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
-import build.codemodel.jdk.JdkInitializer;
-import build.base.compile.testing.JavaFileObjects;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -148,7 +147,7 @@ class MethodResolutionTests {
         final var typeName = cm.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
         final var method = cm.getTypeDescriptor(typeName).orElseThrow()
             .traits(MethodDescriptor.class).findFirst().orElseThrow();
-        final var trait = new ResolvedMethod(cm, typeName, "hello", java.util.List.of());
+        final var trait = new ResolvedMethod(cm, typeName, "hello", List.of());
         assertThat(trait.parts().toList()).containsExactly(method);
     }
 }

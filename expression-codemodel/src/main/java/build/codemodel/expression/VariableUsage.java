@@ -9,9 +9,9 @@ package build.codemodel.expression;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -61,8 +61,8 @@ public class VariableUsage
      * Constructs a {@link VariableUsage}.
      *
      * @param codeModel the {@link CodeModel}
-     * @param name       the {@link VariableName}
-     * @param type       the {@link Optional} {@link TypeUsage} for the variable
+     * @param name      the {@link VariableName}
+     * @param type      the {@link Optional} {@link TypeUsage} for the variable
      */
     private VariableUsage(final CodeModel codeModel,
                           final VariableName name,
@@ -77,7 +77,7 @@ public class VariableUsage
     /**
      * Un{@link Marshal} a {@link VariableUsage}.
      *
-     * @param codeModel the {@link CodeModel}
+     * @param codeModel  the {@link CodeModel}
      * @param marshaller the {@link Marshaller}
      * @param traits     the {@link Marshalled} {@link Trait}s
      * @param name       the {@link VariableName}
@@ -153,8 +153,8 @@ public class VariableUsage
      * Creates a {@link VariableUsage}.
      *
      * @param codeModel the {@link CodeModel}
-     * @param name       the {@link VariableName}
-     * @param type       the {@link Optional} {@link TypeUsage} for the variable
+     * @param name      the {@link VariableName}
+     * @param type      the {@link Optional} {@link TypeUsage} for the variable
      */
     public static VariableUsage of(final CodeModel codeModel,
                                    final VariableName name,
@@ -167,8 +167,8 @@ public class VariableUsage
      * Creates a {@link VariableUsage}.
      *
      * @param codeModel the {@link CodeModel}
-     * @param name       the {@link VariableName}
-     * @param type       the {{@link TypeUsage} for the variable
+     * @param name      the {@link VariableName}
+     * @param type      the {{@link TypeUsage} for the variable
      */
     public static VariableUsage of(final CodeModel codeModel,
                                    final VariableName name,
@@ -181,7 +181,7 @@ public class VariableUsage
      * Create a {@link VariableUsage}.
      *
      * @param codeModel the {@link CodeModel}
-     * @param name       the {@link VariableName}
+     * @param name      the {@link VariableName}
      */
     public static VariableUsage of(final CodeModel codeModel,
                                    final VariableName name) {

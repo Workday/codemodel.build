@@ -1,13 +1,13 @@
 package build.codemodel.jdk;
 
+import build.base.compile.testing.JavaFileObjects;
 import build.codemodel.foundation.descriptor.RequiresModuleDescriptor;
-import build.codemodel.jdk.descriptor.RequiresModifier;
 import build.codemodel.jdk.descriptor.ExportsDescriptor;
 import build.codemodel.jdk.descriptor.OpenModule;
 import build.codemodel.jdk.descriptor.OpensDescriptor;
 import build.codemodel.jdk.descriptor.ProvidesDescriptor;
+import build.codemodel.jdk.descriptor.RequiresModifier;
 import build.codemodel.jdk.descriptor.UsesDescriptor;
-import build.base.compile.testing.JavaFileObjects;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

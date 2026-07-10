@@ -9,9 +9,9 @@ package build.codemodel.jdk.statement;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -92,7 +92,7 @@ public final class Break
      * Creates a {@link Break} statement.
      *
      * @param codeModel the {@link CodeModel}
-     * @param label      the optional target label name
+     * @param label     the optional target label name
      * @return a new {@link Break}
      */
     public static Break of(final CodeModel codeModel, final Optional<String> label) {

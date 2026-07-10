@@ -9,9 +9,9 @@ package build.codemodel.expression;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -73,8 +73,7 @@ public class Expressions {
         // attempt to use an appropriate representation of the Value
         if (value instanceof Literal<?> literal) {
             return (Literal<T>) literal;
-        }
-        else if (value instanceof Boolean booleanValue) {
+        } else if (value instanceof Boolean booleanValue) {
             return (Literal<T>) valueOf(booleanValue);
         }
 
@@ -357,7 +356,7 @@ public class Expressions {
     /**
      * Creates a {@link Cast} {@link Expression} for a defined {@link TypeUsage}.
      *
-     * @param targetType  the {@link TypeUsage} specifying the target <i>Type</i>
+     * @param targetType the {@link TypeUsage} specifying the target <i>Type</i>
      * @param expression the {@link Expression} to cast
      * @return a new {@link VariableUsage}
      */

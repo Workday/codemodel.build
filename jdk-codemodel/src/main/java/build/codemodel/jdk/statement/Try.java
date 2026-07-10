@@ -9,9 +9,9 @@ package build.codemodel.jdk.statement;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -179,7 +179,7 @@ public final class Try
     /**
      * Creates a {@link Try} statement.
      *
-     * @param codeModel   the {@link CodeModel}
+     * @param codeModel    the {@link CodeModel}
      * @param resources    the try-with-resources {@link Statement}s
      * @param body         the try body {@link Block}
      * @param catches      the {@link CatchClause}s
@@ -197,7 +197,7 @@ public final class Try
     /**
      * Creates a {@link Try} statement with no resources.
      *
-     * @param codeModel   the {@link CodeModel}
+     * @param codeModel    the {@link CodeModel}
      * @param body         the try body {@link Block}
      * @param catches      the {@link CatchClause}s
      * @param finallyBlock the optional {@code finally} {@link Block}

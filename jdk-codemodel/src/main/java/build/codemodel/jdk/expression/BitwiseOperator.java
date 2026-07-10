@@ -27,16 +27,28 @@ package build.codemodel.jdk.expression;
  * @since Apr-2026
  */
 public enum BitwiseOperator {
-    /** Bitwise AND: {@code a & b} */
+    /**
+     * Bitwise AND: {@code a & b}
+     */
     AND,
-    /** Bitwise OR: {@code a | b} */
+    /**
+     * Bitwise OR: {@code a | b}
+     */
     OR,
-    /** Bitwise XOR: {@code a ^ b} */
+    /**
+     * Bitwise XOR: {@code a ^ b}
+     */
     XOR,
-    /** Left shift: {@code a << b} */
+    /**
+     * Left shift: {@code a << b}
+     */
     LEFT_SHIFT,
-    /** Signed right shift: {@code a >> b} */
+    /**
+     * Signed right shift: {@code a >> b}
+     */
     RIGHT_SHIFT,
-    /** Unsigned right shift: {@code a >>> b} */
+    /**
+     * Unsigned right shift: {@code a >>> b}
+     */
     UNSIGNED_RIGHT_SHIFT
 }
