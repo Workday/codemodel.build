@@ -43,8 +43,8 @@ class TypeVariableUsageTests {
     @Test
     void toStringShouldUseExtendsForUpperBound() {
         // T extends Number: upper bound uses "extends"
-        final var tName = naming.getTypeName(Optional.empty(), "T");
-        final var numberName = naming.getTypeName(Optional.empty(), "java.lang.Number");
+        final var tName = naming.getEmptyModuleTypeName("T");
+        final var numberName = naming.getEmptyModuleTypeName("java.lang.Number");
         final var numberUsage = SpecificTypeUsage.of(codeModel, numberName);
         final var usage = TypeVariableUsage.of(codeModel, tName, Optional.empty(),
             Optional.of(Lazy.of(numberUsage)));
@@ -55,8 +55,8 @@ class TypeVariableUsageTests {
     @Test
     void toStringShouldUseSuperForLowerBound() {
         // T super Integer: lower bound uses "super"
-        final var tName = naming.getTypeName(Optional.empty(), "T");
-        final var integerName = naming.getTypeName(Optional.empty(), "java.lang.Integer");
+        final var tName = naming.getEmptyModuleTypeName("T");
+        final var integerName = naming.getEmptyModuleTypeName("java.lang.Integer");
         final var integerUsage = SpecificTypeUsage.of(codeModel, integerName);
         final var usage = TypeVariableUsage.of(codeModel, tName, Optional.of(Lazy.of(integerUsage)),
             Optional.empty());
@@ -66,7 +66,7 @@ class TypeVariableUsageTests {
 
     @Test
     void toStringShouldShowJustNameWhenUnbounded() {
-        final var tName = naming.getTypeName(Optional.empty(), "T");
+        final var tName = naming.getEmptyModuleTypeName("T");
         final var usage = TypeVariableUsage.of(codeModel, tName, Optional.empty(), Optional.empty());
 
         assertThat(usage.toString()).isEqualTo("T");
@@ -76,8 +76,8 @@ class TypeVariableUsageTests {
     void equalsShouldNotStackOverflowOnMutuallyRecursiveBounds() {
         // Comparable<T extends Comparable<T>> — upper bound references a GenericTypeUsage
         // whose parameter is the same TypeVariableUsage, creating a cycle in equals().
-        final var tName = naming.getTypeName(Optional.empty(), "T");
-        final var comparableName = naming.getTypeName(Optional.empty(), "java.lang.Comparable");
+        final var tName = naming.getEmptyModuleTypeName("T");
+        final var comparableName = naming.getEmptyModuleTypeName("java.lang.Comparable");
 
         final var tUsage = TypeVariableUsage.of(codeModel, tName, Optional.empty(), Optional.empty());
         final var genericBound = GenericTypeUsage.of(codeModel, comparableName, tUsage);

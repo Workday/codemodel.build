@@ -26,7 +26,6 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -52,7 +51,7 @@ class ImportDiscoveryTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
 
         final var imports = descriptor.traits(ImportDeclaration.class)
@@ -76,7 +75,7 @@ class ImportDiscoveryTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
 
         final var staticImports = descriptor.traits(ImportDeclaration.class)
@@ -100,7 +99,7 @@ class ImportDiscoveryTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
 
         final var onDemand = descriptor.traits(ImportDeclaration.class)

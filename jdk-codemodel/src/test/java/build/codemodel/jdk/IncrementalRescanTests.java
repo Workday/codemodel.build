@@ -40,7 +40,6 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -85,7 +84,7 @@ class IncrementalRescanTests {
             """);
         final var codeModel = populate(v1);
 
-        final var fooName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var fooName = codeModel.getEmptyModuleTypeName("com.example.Foo");
         assertThat(codeModel.getTypeDescriptor(fooName)).isPresent();
         assertThat(codeModel.getTypeDescriptor(fooName).orElseThrow().traits(FieldDescriptor.class)
             .map(f -> f.fieldName().toString())
@@ -127,7 +126,7 @@ class IncrementalRescanTests {
             """);
         codeModel.rescan(v2);
 
-        final var fooName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var fooName = codeModel.getEmptyModuleTypeName("com.example.Foo");
         final var fieldNames = codeModel.getTypeDescriptor(fooName).orElseThrow()
             .traits(FieldDescriptor.class)
             .map(f -> f.fieldName().toString())
@@ -164,7 +163,7 @@ class IncrementalRescanTests {
             """);
         codeModel.rescan(v2);
 
-        final var fooName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var fooName = codeModel.getEmptyModuleTypeName("com.example.Foo");
         assertThat(codeModel.getTypeDescriptor(fooName).orElseThrow()
             .traits(MethodDescriptor.class)
             .map(m -> m.methodName().name().toString())
@@ -196,7 +195,7 @@ class IncrementalRescanTests {
             """);
         codeModel.rescan(v2);
 
-        final var fooName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var fooName = codeModel.getEmptyModuleTypeName("com.example.Foo");
         final var descriptor = codeModel.getTypeDescriptor(fooName).orElseThrow();
 
         assertThat(descriptor.getTrait(SourceLocation.FilePosition.class))
@@ -230,7 +229,7 @@ class IncrementalRescanTests {
             """);
         final var codeModel = populate(fooSource, barSource);
 
-        final var barName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Bar");
+        final var barName = codeModel.getEmptyModuleTypeName("com.example.Bar");
         assertThat(codeModel.getTypeDescriptor(barName)).isPresent();
 
         final var fooV2 = JavaFileObjects.forSourceString("com.example.Foo", """
@@ -272,7 +271,7 @@ class IncrementalRescanTests {
         final var codeModel = populate(v1);
 
         final var naming = codeModel.getNameProvider();
-        final var innerName = naming.getTypeName(Optional.empty(), "com.example.Foo$Inner");
+        final var innerName = naming.getEmptyModuleTypeName("com.example.Foo$Inner");
         assertThat(codeModel.getTypeDescriptor(innerName))
             .as("Foo.Inner must be present in the initial model")
             .isPresent();
@@ -288,7 +287,7 @@ class IncrementalRescanTests {
         assertThat(codeModel.getTypeDescriptor(innerName))
             .as("Foo.Inner must be absent after rescanning without it")
             .isEmpty();
-        assertThat(codeModel.getTypeDescriptor(naming.getTypeName(Optional.empty(), "com.example.Foo")))
+        assertThat(codeModel.getTypeDescriptor(naming.getEmptyModuleTypeName("com.example.Foo")))
             .as("Foo itself must still be present")
             .isPresent();
     }
@@ -319,8 +318,8 @@ class IncrementalRescanTests {
         final var codeModel = populate(fooSource, barSource);
 
         final var naming = codeModel.getNameProvider();
-        final var fooName = naming.getTypeName(Optional.empty(), "com.example.Foo");
-        final var barName = naming.getTypeName(Optional.empty(), "com.example.Bar");
+        final var fooName = naming.getEmptyModuleTypeName("com.example.Foo");
+        final var barName = naming.getEmptyModuleTypeName("com.example.Bar");
 
         final var fooV2 = JavaFileObjects.forSourceString("com.example.Foo", """
             package com.example;
@@ -387,7 +386,7 @@ class IncrementalRescanTests {
         new JdkInitializer(List.of(), List.of(), List.of(fooV1), List.of(classpathDir), List.of())
             .initialize(codeModel);
 
-        final var fooName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var fooName = codeModel.getEmptyModuleTypeName("com.example.Foo");
         final var depField = codeModel.getTypeDescriptor(fooName).orElseThrow()
             .traits(FieldDescriptor.class).findFirst().orElseThrow();
         assertThat(depField.type())
@@ -682,7 +681,7 @@ class IncrementalRescanTests {
         codeModel.rescan(fooV2);  // no classpath forwarded
 
         final var depFieldAfter = codeModel.getTypeDescriptor(
-                codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo"))
+                codeModel.getEmptyModuleTypeName("com.example.Foo"))
             .orElseThrow()
             .traits(FieldDescriptor.class)
             .filter(f -> f.fieldName().toString().equals("dep"))
@@ -835,7 +834,7 @@ class IncrementalRescanTests {
         // Sanity check: before any rescan, Caller's call resolves correctly into Callee.java.
         final var resolvedBeforeRescan = invocation.trait(ResolvedMethod.class).descriptor().orElseThrow();
         assertThat(resolvedBeforeRescan.typeDescriptor().typeName())
-            .isEqualTo(nameProvider.getTypeName(Optional.empty(), "com.example.Callee"));
+            .isEqualTo(nameProvider.getEmptyModuleTypeName("com.example.Callee"));
 
         // Simulate an editor save of Callee.java (WorkspaceModel.rescan()'s onDidSave path):
         // same package/class/method name, but padded so target()'s offset moves.

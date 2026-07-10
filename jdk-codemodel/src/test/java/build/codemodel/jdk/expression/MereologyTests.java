@@ -292,7 +292,7 @@ class MereologyTests {
     @Test
     void symbolField_partsContainsDeclaredType() {
         final var type = stringType();
-        final var declaringType = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var declaringType = codeModel.getEmptyModuleTypeName("com.example.Foo");
         assertThat(new Symbol.Field(type, codeModel, declaringType, "value").parts().toList())
             .containsExactly(type);
     }

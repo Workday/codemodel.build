@@ -764,7 +764,7 @@ public final class JDKModuleDescriptor
             final var clazz = Class.forName(fullyQualifiedName, false, JDKModuleDescriptor.class.getClassLoader());
             return nameProvider.getTypeName(clazz);
         } catch (final ClassNotFoundException | LinkageError e) {
-            return nameProvider.getTypeName(Optional.empty(), fullyQualifiedName);
+            return nameProvider.getEmptyModuleTypeName(fullyQualifiedName);
         }
     }
 

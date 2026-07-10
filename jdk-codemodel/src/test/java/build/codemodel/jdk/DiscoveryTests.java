@@ -9,7 +9,6 @@ import build.codemodel.objectoriented.descriptor.MethodDescriptor;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -32,7 +31,7 @@ public class DiscoveryTests {
 
         assertThat(codeModel.typeDescriptors().count()).isGreaterThan(0L);
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "Discover");
+        final var typeName = codeModel.getEmptyModuleTypeName("Discover");
         final var typeDescriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
 
         assertThat(typeDescriptor).isInstanceOf(JDKTypeDescriptor.class);
@@ -54,9 +53,9 @@ public class DiscoveryTests {
         final var codeModel = JdkInitializerTests.runInternal(initializer);
 
         final var naming = codeModel.getNameProvider();
-        final var childName = naming.getTypeName(Optional.empty(), "Child");
+        final var childName = naming.getEmptyModuleTypeName("Child");
         final var childDescriptor = codeModel.getTypeDescriptor(childName).orElseThrow();
-        final var baseName = naming.getTypeName(Optional.empty(), "Base");
+        final var baseName = naming.getEmptyModuleTypeName("Base");
 
         assertThat(childDescriptor.traits(ExtendsTypeDescriptor.class)).hasSize(1);
         assertThat(childDescriptor.traits(ExtendsTypeDescriptor.class)
@@ -78,7 +77,7 @@ public class DiscoveryTests {
         final var initializer = new JdkInitializer(List.of(), List.of(), List.of(source));
         final var codeModel = JdkInitializerTests.runInternal(initializer);
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "Discover");
+        final var typeName = codeModel.getEmptyModuleTypeName("Discover");
         final var typeDescriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
 
         // java.lang.Object is the implicit superclass — no ExtendsTypeDescriptor should be emitted

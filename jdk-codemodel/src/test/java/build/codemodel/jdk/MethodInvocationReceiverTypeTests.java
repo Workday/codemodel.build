@@ -10,7 +10,6 @@ import build.codemodel.objectoriented.descriptor.MethodDescriptor;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -37,8 +36,7 @@ class MethodInvocationReceiverTypeTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider()
-            .getTypeName(Optional.empty(), "build.codemodel.jdk.example.Caller");
+        final var typeName = codeModel.getEmptyModuleTypeName("build.codemodel.jdk.example.Caller");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
 
         final var run = descriptor.traits(MethodDescriptor.class)
@@ -71,8 +69,7 @@ class MethodInvocationReceiverTypeTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider()
-            .getTypeName(Optional.empty(), "build.codemodel.jdk.example.Caller");
+        final var typeName = codeModel.getEmptyModuleTypeName("build.codemodel.jdk.example.Caller");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
 
         final var run = descriptor.traits(MethodDescriptor.class)
@@ -107,8 +104,7 @@ class MethodInvocationReceiverTypeTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider()
-            .getTypeName(Optional.empty(), "build.codemodel.jdk.example.Caller");
+        final var typeName = codeModel.getEmptyModuleTypeName("build.codemodel.jdk.example.Caller");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
 
         final var run = descriptor.traits(MethodDescriptor.class)
@@ -144,8 +140,7 @@ class MethodInvocationReceiverTypeTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var outerTypeName = codeModel.getNameProvider()
-            .getTypeName(Optional.empty(), "build.codemodel.jdk.example.Outer");
+        final var outerTypeName = codeModel.getEmptyModuleTypeName("build.codemodel.jdk.example.Outer");
         final var outerDescriptor = codeModel.getTypeDescriptor(outerTypeName).orElseThrow();
         final var innerTypeName = outerDescriptor.traits(MemberTypeDescriptor.class)
             .map(MemberTypeDescriptor::memberTypeName)

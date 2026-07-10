@@ -50,8 +50,7 @@ public class FieldDiscoveryTests
 
         final var naming = codeModel.getNameProvider();
 
-        final var typeName = naming
-            .getTypeName(Optional.empty(), "Discover");
+        final var typeName = naming.getEmptyModuleTypeName("Discover");
 
         final var typeDescriptor = codeModel.getTypeDescriptor(typeName)
             .orElseThrow();

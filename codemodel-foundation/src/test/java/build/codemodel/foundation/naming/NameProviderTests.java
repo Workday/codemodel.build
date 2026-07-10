@@ -302,7 +302,7 @@ interface NameProviderTests {
     @Test
     default void getTypeNameFromFqnShouldParseNamespaceAndSimpleName() {
         final var nameProvider = getNameProvider();
-        final var typeName = nameProvider.getTypeName(Optional.empty(), "com.example.Foo");
+        final var typeName = nameProvider.getEmptyModuleTypeName("com.example.Foo");
 
         assertThat(typeName.namespace()).isPresent().map(Object::toString).contains("com.example");
         assertThat(typeName.name().toString()).isEqualTo("Foo");
@@ -358,7 +358,7 @@ interface NameProviderTests {
     @Test
     default void getTypeNameFromFqnWithNoPackageShouldHaveEmptyNamespace() {
         final var nameProvider = getNameProvider();
-        final var typeName = nameProvider.getTypeName(Optional.empty(), "Foo");
+        final var typeName = nameProvider.getEmptyModuleTypeName("Foo");
 
         assertThat(typeName.name().toString()).isEqualTo("Foo");
         assertThat(typeName.namespace()).isEmpty();

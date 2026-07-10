@@ -7,8 +7,6 @@ import build.codemodel.objectoriented.descriptor.ConstructorDescriptor;
 import build.codemodel.objectoriented.descriptor.ParameterizedTypeDescriptor;
 import org.junit.jupiter.api.Test;
 
-import java.util.Optional;
-
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -34,7 +32,7 @@ public class ConstructorDiscoveryTests extends AnnotationProcessorTests {
         compile(processor, "Discover", source);
 
         final var codeModel = processor.getCodeModel().orElseThrow();
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "Discover");
+        final var typeName = codeModel.getEmptyModuleTypeName("Discover");
         final var typeDescriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
 
         assertThat(typeDescriptor.traits(ConstructorDescriptor.class)).hasSize(2);
@@ -66,7 +64,7 @@ public class ConstructorDiscoveryTests extends AnnotationProcessorTests {
         compile(processor, "Discover", source);
 
         final var codeModel = processor.getCodeModel().orElseThrow();
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "Discover");
+        final var typeName = codeModel.getEmptyModuleTypeName("Discover");
         final var typeDescriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
 
         final var ctor = typeDescriptor.getTrait(ConstructorDescriptor.class).orElseThrow();
@@ -103,7 +101,7 @@ public class ConstructorDiscoveryTests extends AnnotationProcessorTests {
         final var naming = codeModel.getNameProvider();
 
         // Helper was referenced only by the constructor parameter, so discovery must have queued it
-        assertThat(codeModel.getTypeDescriptor(naming.getTypeName(Optional.empty(), "Helper")))
+        assertThat(codeModel.getTypeDescriptor(naming.getEmptyModuleTypeName("Helper")))
             .as("Helper was transitively discovered via constructor parameter").isPresent();
     }
 }

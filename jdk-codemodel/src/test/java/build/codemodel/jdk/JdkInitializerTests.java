@@ -147,7 +147,7 @@ class JdkInitializerTests {
             "com.example.Foo",
             "package com.example; public class Foo { public void bar(final int x, int y) {} }");
         final var codeModel = runInternal(new JdkInitializer(List.of(), List.of(), List.of(source)));
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
         final var method = descriptor.traits(MethodDescriptor.class)
             .filter(m -> m.methodName().name().toString().equals("bar"))
@@ -185,7 +185,7 @@ class JdkInitializerTests {
             .isEmpty();
 
         // analysis still completed — Foo was discovered and the unresolvable field type degraded gracefully
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
         final var field = descriptor.traits(FieldDescriptor.class)
             .filter(f -> f.fieldName().toString().equals("dependency"))
@@ -243,7 +243,7 @@ class JdkInitializerTests {
         final var codeModel = runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(consumer), List.of(classpathDir), List.of()));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Consumer");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Consumer");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
         final var field = descriptor.traits(FieldDescriptor.class)
             .filter(f -> f.fieldName().toString().equals("helper"))
@@ -266,7 +266,7 @@ class JdkInitializerTests {
                 }
                 """);
         final var codeModel = runInternal(new JdkInitializer(List.of(), List.of(), List.of(source)));
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
         final var method = descriptor.traits(MethodDescriptor.class)
             .filter(m -> m.methodName().name().toString().equals("bar"))
@@ -311,7 +311,7 @@ class JdkInitializerTests {
             "com.example.Box",
             "package com.example; public class Box { public String label; }");
         final var codeModel = runInternal(new JdkInitializer(List.of(), List.of(), List.of(source)));
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Box");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Box");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
 
         final var field = descriptor.traits(FieldDescriptor.class)
@@ -330,7 +330,7 @@ class JdkInitializerTests {
             "com.example.Wrapper",
             "package com.example; import java.util.List; public class Wrapper { public List<String> items; }");
         final var codeModel = runInternal(new JdkInitializer(List.of(), List.of(), List.of(source)));
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Wrapper");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Wrapper");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
 
         final var field = descriptor.traits(FieldDescriptor.class)
@@ -350,7 +350,7 @@ class JdkInitializerTests {
             "com.example.Pair",
             "package com.example; import java.util.List; public class Pair { public String first; public List<Integer> second; }");
         final var codeModel = runInternal(new JdkInitializer(List.of(), List.of(), List.of(source)));
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Pair");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Pair");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
 
         final var allTypeUsages = descriptor.composition(TypeUsage.class).toList();
@@ -491,7 +491,7 @@ class JdkInitializerTests {
             """);
         final var codeModel = runInternal(new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Plain");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Plain");
         assertThat(codeModel.getTypeDescriptor(typeName)).isPresent();
     }
 
@@ -572,7 +572,7 @@ class JdkInitializerTests {
             public class Annotated {}
             """);
         final var codeModel = runInternal(new JdkInitializer(List.of(), List.of(), List.of(source)));
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Annotated");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Annotated");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
 
         // The type should have @Tags as its top-level annotation

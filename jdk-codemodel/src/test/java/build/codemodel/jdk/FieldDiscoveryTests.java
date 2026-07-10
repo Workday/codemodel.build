@@ -34,7 +34,7 @@ public class FieldDiscoveryTests {
         final var codeModel = JdkInitializerTests.runInternal(initializer);
 
         final var naming = codeModel.getNameProvider();
-        final var typeName = naming.getTypeName(Optional.empty(), "Discover");
+        final var typeName = naming.getEmptyModuleTypeName("Discover");
         final var typeDescriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
 
         assertThat(typeDescriptor.traits(MethodDescriptor.class)).isEmpty();

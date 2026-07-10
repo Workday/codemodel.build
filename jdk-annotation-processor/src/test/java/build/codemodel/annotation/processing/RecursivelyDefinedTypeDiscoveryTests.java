@@ -4,8 +4,6 @@ import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
 import org.junit.jupiter.api.Test;
 
-import java.util.Optional;
-
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -41,8 +39,7 @@ public class RecursivelyDefinedTypeDiscoveryTests
         assertThat(codeModel.typeDescriptors().count())
             .isGreaterThan(0L);
 
-        final var typeName = codeModel.getNameProvider()
-            .getTypeName(Optional.empty(), "Discover");
+        final var typeName = codeModel.getEmptyModuleTypeName("Discover");
 
         final var typeDescriptor = codeModel.getTypeDescriptor(typeName)
             .orElseThrow();

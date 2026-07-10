@@ -8,7 +8,6 @@ import build.codemodel.jdk.descriptor.RecordType;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -31,8 +30,7 @@ class TypeKindDiscoveryTests {
         final var codeModel = new JDKCodeModel(new NonCachingNameProvider());
         new JdkInitializer(List.of(), List.of(), List.of(source))
             .initialize(codeModel);
-        final var typeName = codeModel.getNameProvider()
-            .getTypeName(Optional.empty(), "com.example.Color");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Color");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
         assertThat(descriptor.hasTrait(EnumType.class)).isTrue();
     }
@@ -48,8 +46,7 @@ class TypeKindDiscoveryTests {
         final var codeModel = new JDKCodeModel(new NonCachingNameProvider());
         new JdkInitializer(List.of(), List.of(), List.of(source))
             .initialize(codeModel);
-        final var typeName = codeModel.getNameProvider()
-            .getTypeName(Optional.empty(), "com.example.Point");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Point");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
         assertThat(descriptor.hasTrait(RecordType.class)).isTrue();
     }
@@ -65,8 +62,7 @@ class TypeKindDiscoveryTests {
         final var codeModel = new JDKCodeModel(new NonCachingNameProvider());
         new JdkInitializer(List.of(), List.of(), List.of(source))
             .initialize(codeModel);
-        final var typeName = codeModel.getNameProvider()
-            .getTypeName(Optional.empty(), "com.example.Marker");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Marker");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
         assertThat(descriptor.hasTrait(AnnotationType.class)).isTrue();
     }
@@ -82,8 +78,7 @@ class TypeKindDiscoveryTests {
         final var codeModel = new JDKCodeModel(new NonCachingNameProvider());
         new JdkInitializer(List.of(), List.of(), List.of(source))
             .initialize(codeModel);
-        final var typeName = codeModel.getNameProvider()
-            .getTypeName(Optional.empty(), "com.example.Color");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Color");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
         final var constants = descriptor.traits(build.codemodel.jdk.descriptor.EnumConstantDescriptor.class)
             .map(c -> c.name().toString())
@@ -102,8 +97,7 @@ class TypeKindDiscoveryTests {
         final var codeModel = new JDKCodeModel(new NonCachingNameProvider());
         new JdkInitializer(List.of(), List.of(), List.of(source))
             .initialize(codeModel);
-        final var typeName = codeModel.getNameProvider()
-            .getTypeName(Optional.empty(), "com.example.Point");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Point");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
         final var components = descriptor.traits(build.codemodel.jdk.descriptor.RecordComponentDescriptor.class)
             .toList();
@@ -126,8 +120,7 @@ class TypeKindDiscoveryTests {
         final var codeModel = new JDKCodeModel(new NonCachingNameProvider());
         new JdkInitializer(List.of(), List.of(), List.of(source))
             .initialize(codeModel);
-        final var typeName = codeModel.getNameProvider()
-            .getTypeName(Optional.empty(), "com.example.Marker");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Marker");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
 
         final var valueMethod = descriptor.traits(build.codemodel.objectoriented.descriptor.MethodDescriptor.class)
@@ -161,8 +154,7 @@ class TypeKindDiscoveryTests {
         new JdkInitializer(List.of(), List.of(), List.of(source))
             .initialize(codeModel);
 
-        final var outerName = codeModel.getNameProvider()
-            .getTypeName(Optional.empty(), "com.example.Outer");
+        final var outerName = codeModel.getEmptyModuleTypeName("com.example.Outer");
         final var outerDescriptor = codeModel.getTypeDescriptor(outerName).orElseThrow();
         final var innerName = outerDescriptor.traits(build.codemodel.jdk.descriptor.MemberTypeDescriptor.class)
             .map(build.codemodel.jdk.descriptor.MemberTypeDescriptor::memberTypeName)
@@ -190,8 +182,7 @@ class TypeKindDiscoveryTests {
         final var codeModel = new JDKCodeModel(new NonCachingNameProvider());
         new JdkInitializer(List.of(), List.of(), List.of(source))
             .initialize(codeModel);
-        final var typeName = codeModel.getNameProvider()
-            .getTypeName(Optional.empty(), "com.example.Planet");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Planet");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
         final var constants = descriptor.traits(build.codemodel.jdk.descriptor.EnumConstantDescriptor.class)
             .sorted(java.util.Comparator.comparingInt(build.codemodel.jdk.descriptor.EnumConstantDescriptor::order))

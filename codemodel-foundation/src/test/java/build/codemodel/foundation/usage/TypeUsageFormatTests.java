@@ -50,7 +50,7 @@ class TypeUsageFormatTests {
 
     @Test
     void namedTypeUsage_formatAndToString_areIdentical_whenNoModule() {
-        final var name = naming.getTypeName(Optional.empty(), "java.lang.String");
+        final var name = naming.getEmptyModuleTypeName("java.lang.String");
         final var usage = SpecificTypeUsage.of(codeModel, name);
 
         assertThat(usage.toString()).isEqualTo("java.lang.String");
@@ -83,7 +83,7 @@ class TypeUsageFormatTests {
 
     @Test
     void typeVariableUsage_formatAndToString_areIdentical_whenUnbounded() {
-        final var tName = naming.getTypeName(Optional.empty(), "T");
+        final var tName = naming.getEmptyModuleTypeName("T");
         final var usage = TypeVariableUsage.of(codeModel, tName, Optional.empty(), Optional.empty());
 
         assertThat(usage.toString()).isEqualTo("T");
@@ -93,8 +93,8 @@ class TypeUsageFormatTests {
     @Test
     void typeVariableUsage_format_includesBounds_withModuleStripped() {
         // T extends Number — format() keeps the bound but strips modules (none here, same result)
-        final var tName = naming.getTypeName(Optional.empty(), "T");
-        final var numberUsage = SpecificTypeUsage.of(codeModel, naming.getTypeName(Optional.empty(), "java.lang.Number"));
+        final var tName = naming.getEmptyModuleTypeName("T");
+        final var numberUsage = SpecificTypeUsage.of(codeModel, naming.getEmptyModuleTypeName("java.lang.Number"));
         final var usage = TypeVariableUsage.of(codeModel, tName, Optional.empty(), Optional.of(Lazy.of(numberUsage)));
 
         assertThat(usage.toString()).isEqualTo("T extends java.lang.Number");
@@ -104,7 +104,7 @@ class TypeUsageFormatTests {
     @Test
     void typeVariableUsage_format_stripsModuleFromBound() {
         // T extends Number — format() keeps the bound but strips the module from it
-        final var tName = naming.getTypeName(Optional.empty(), "T");
+        final var tName = naming.getEmptyModuleTypeName("T");
         final var numberUsage = SpecificTypeUsage.of(codeModel, naming.getTypeName(javaBase, "java.lang.Number"));
         final var usage = TypeVariableUsage.of(codeModel, tName, Optional.empty(), Optional.of(Lazy.of(numberUsage)));
 
@@ -168,7 +168,7 @@ class TypeUsageFormatTests {
 
     @Test
     void annotationTypeUsage_noValues_noModule() {
-        final var name = naming.getTypeName(Optional.empty(), "com.example.Qualifier");
+        final var name = naming.getEmptyModuleTypeName("com.example.Qualifier");
         final var usage = AnnotationTypeUsage.of(codeModel, name);
 
         assertThat(usage.toString()).isEqualTo("@com.example.Qualifier()");
@@ -186,7 +186,7 @@ class TypeUsageFormatTests {
 
     @Test
     void annotationTypeUsage_withValues() {
-        final var name = naming.getTypeName(Optional.empty(), "com.example.Named");
+        final var name = naming.getEmptyModuleTypeName("com.example.Named");
         final var usage = AnnotationTypeUsage.of(codeModel, name,
             AnnotationValue.of(codeModel, "value", "foo"));
 
@@ -198,7 +198,7 @@ class TypeUsageFormatTests {
 
     @Test
     void arrayTypeUsage_formatAndToString_areIdentical_whenNoModule() {
-        final var stringUsage = SpecificTypeUsage.of(codeModel, naming.getTypeName(Optional.empty(), "java.lang.String"));
+        final var stringUsage = SpecificTypeUsage.of(codeModel, naming.getEmptyModuleTypeName("java.lang.String"));
         final var usage = ArrayTypeUsage.of(codeModel, Lazy.of(stringUsage));
 
         assertThat(usage.toString()).isEqualTo("java.lang.String[]");

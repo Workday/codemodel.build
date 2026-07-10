@@ -75,12 +75,12 @@ class MethodDescriptorSignatureTests {
         naming = new NonCachingNameProvider();
         codeModel = new ObjectOrientedCodeModel(naming);
         declaringType = ClassTypeDescriptor.of(codeModel,
-            naming.getTypeName(Optional.empty(), "com.example.MyService"));
+            naming.getEmptyModuleTypeName("com.example.MyService"));
         classNamespace = Namespace.of(IrreducibleName.of("com.example.MyService"));
     }
 
     private TypeUsage specific(final String qualifiedName) {
-        return SpecificTypeUsage.of(codeModel, naming.getTypeName(Optional.empty(), qualifiedName));
+        return SpecificTypeUsage.of(codeModel, naming.getEmptyModuleTypeName(qualifiedName));
     }
 
     private TypeUsage specificWithModule(final String module, final String qualifiedName) {
@@ -150,7 +150,7 @@ class MethodDescriptorSignatureTests {
 
     @Test
     void genericReturnType_includesTypeParameters() {
-        final var listName = naming.getTypeName(Optional.empty(), "java.util.List");
+        final var listName = naming.getEmptyModuleTypeName("java.util.List");
         final var stringUsage = specific("java.lang.String");
         final var listOfString = GenericTypeUsage.of(codeModel, listName, (TypeUsage) stringUsage);
 
@@ -201,7 +201,7 @@ class MethodDescriptorSignatureTests {
     @Test
     void annotationReturnType_noValues_noModule() {
         final var annotation = AnnotationTypeUsage.of(codeModel,
-            naming.getTypeName(Optional.empty(), "com.example.Qualifier"));
+            naming.getEmptyModuleTypeName("com.example.Qualifier"));
         final var descriptor = withModifier(
             method("getQualifier", annotation, Optional.empty()),
             AccessModifier.PUBLIC);
@@ -223,7 +223,7 @@ class MethodDescriptorSignatureTests {
     @Test
     void annotationReturnType_withValues_valuesAppearInSignature() {
         final var annotation = AnnotationTypeUsage.of(codeModel,
-            naming.getTypeName(Optional.empty(), "com.example.Named"),
+            naming.getEmptyModuleTypeName("com.example.Named"),
             AnnotationValue.of(codeModel, "value", "foo"));
         final var descriptor = withModifier(
             method("getNamed", annotation, Optional.empty()),
@@ -234,7 +234,7 @@ class MethodDescriptorSignatureTests {
 
     @Test
     void typeVariableReturnType_unbounded() {
-        final var tName = naming.getTypeName(Optional.empty(), "T");
+        final var tName = naming.getEmptyModuleTypeName("T");
         final var tUsage = TypeVariableUsage.of(codeModel, tName, Optional.empty(), Optional.empty());
         final var descriptor = withModifier(
             method("getItem", tUsage, Optional.empty()),
@@ -245,7 +245,7 @@ class MethodDescriptorSignatureTests {
 
     @Test
     void typeVariableReturnType_withBound_moduleStrippedFromBound() {
-        final var tName = naming.getTypeName(Optional.empty(), "T");
+        final var tName = naming.getEmptyModuleTypeName("T");
         final var numberUsage = specificWithModule("java.base", "java.lang.Number");
         final var tUsage = TypeVariableUsage.of(codeModel, tName, Optional.empty(),
             Optional.of(Lazy.of(numberUsage)));
@@ -416,9 +416,9 @@ class MethodDescriptorSignatureTests {
         // Override detection only works if super and sub produce the same signature string.
 
         final var superType = ClassTypeDescriptor.of(codeModel,
-            naming.getTypeName(Optional.empty(), "com.example.SuperService"));
+            naming.getEmptyModuleTypeName("com.example.SuperService"));
         final var subType = ClassTypeDescriptor.of(codeModel,
-            naming.getTypeName(Optional.empty(), "com.example.ConcreteService"));
+            naming.getEmptyModuleTypeName("com.example.ConcreteService"));
 
         final var methodName = IrreducibleName.of("setFoo");
         final var fooType = specific("com.example.Foo");
@@ -453,9 +453,9 @@ class MethodDescriptorSignatureTests {
         final var subNamespace = Namespace.of(IrreducibleName.of("com.example.ConcreteService"));
 
         final var superType = ClassTypeDescriptor.of(codeModel,
-            naming.getTypeName(Optional.empty(), "com.example.SuperService"));
+            naming.getEmptyModuleTypeName("com.example.SuperService"));
         final var subType = ClassTypeDescriptor.of(codeModel,
-            naming.getTypeName(Optional.empty(), "com.example.ConcreteService"));
+            naming.getEmptyModuleTypeName("com.example.ConcreteService"));
 
         final var methodName = IrreducibleName.of("injectInternal");
         final var fooType = specific("com.example.Foo");

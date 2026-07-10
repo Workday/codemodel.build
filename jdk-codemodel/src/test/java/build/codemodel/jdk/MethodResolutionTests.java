@@ -8,7 +8,6 @@ import build.codemodel.objectoriented.descriptor.MethodDescriptor;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -36,7 +35,7 @@ class MethodResolutionTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
         final var method = descriptor.traits(MethodDescriptor.class)
             .filter(m -> m.methodName().name().toString().equals("bar"))
@@ -80,8 +79,8 @@ class MethodResolutionTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(base, sub)));
 
-        final var subName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Sub");
-        final var baseName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Base");
+        final var subName = codeModel.getEmptyModuleTypeName("com.example.Sub");
+        final var baseName = codeModel.getEmptyModuleTypeName("com.example.Base");
 
         final var subDescriptor = codeModel.getTypeDescriptor(subName).orElseThrow();
         final var method = subDescriptor.traits(MethodDescriptor.class)
@@ -116,7 +115,7 @@ class MethodResolutionTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
         final var method = descriptor.traits(MethodDescriptor.class)
             .filter(m -> m.methodName().name().toString().equals("bar"))
@@ -144,7 +143,7 @@ class MethodResolutionTests {
                 """);
         final var cm = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
-        final var typeName = cm.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var typeName = cm.getNameProvider().getEmptyModuleTypeName("com.example.Foo");
         final var method = cm.getTypeDescriptor(typeName).orElseThrow()
             .traits(MethodDescriptor.class).findFirst().orElseThrow();
         final var trait = new ResolvedMethod(cm, typeName, "hello", List.of());

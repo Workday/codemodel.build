@@ -12,7 +12,6 @@ import build.codemodel.objectoriented.descriptor.ParameterizedTypeDescriptor;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -41,7 +40,7 @@ public class GenericsDiscoveryTests {
         final var codeModel = JdkInitializerTests.runInternal(initializer);
 
         final var naming = codeModel.getNameProvider();
-        final var typeName = naming.getTypeName(Optional.empty(), "build.codemodel.jdk.example.Container");
+        final var typeName = naming.getEmptyModuleTypeName("build.codemodel.jdk.example.Container");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
 
         // Container<T> has a type parameter, so it must carry a ParameterizedTypeDescriptor trait
@@ -77,7 +76,7 @@ public class GenericsDiscoveryTests {
         final var codeModel = JdkInitializerTests.runInternal(initializer);
 
         final var naming = codeModel.getNameProvider();
-        final var typeName = naming.getTypeName(Optional.empty(), "Discoverable");
+        final var typeName = naming.getEmptyModuleTypeName("Discoverable");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
 
         // upper field: List<? extends Number> → wildcard has upper bound, no lower bound
@@ -120,7 +119,7 @@ public class GenericsDiscoveryTests {
         final var codeModel = JdkInitializerTests.runInternal(initializer);
 
         final var naming = codeModel.getNameProvider();
-        final var typeName = naming.getTypeName(Optional.empty(), "Discoverable");
+        final var typeName = naming.getEmptyModuleTypeName("Discoverable");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
 
         // Class-level: <T extends Number> — upper bound must be present and resolve to Number
@@ -154,7 +153,7 @@ public class GenericsDiscoveryTests {
         final var codeModel = JdkInitializerTests.runInternal(initializer);
 
         final var naming = codeModel.getNameProvider();
-        final var typeName = naming.getTypeName(Optional.empty(), "Discoverable");
+        final var typeName = naming.getEmptyModuleTypeName("Discoverable");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
 
         final var classTypeVar = descriptor.getTrait(ParameterizedTypeDescriptor.class).orElseThrow()
@@ -187,7 +186,7 @@ public class GenericsDiscoveryTests {
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
         final var naming = codeModel.getNameProvider();
-        final var typeName = naming.getTypeName(Optional.empty(), "build.codemodel.jdk.example.Wrapper");
+        final var typeName = naming.getEmptyModuleTypeName("build.codemodel.jdk.example.Wrapper");
         final var field = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(FieldDescriptor.class).findFirst().orElseThrow();
 
@@ -215,7 +214,7 @@ public class GenericsDiscoveryTests {
         final var codeModel = JdkInitializerTests.runInternal(initializer);
 
         final var naming = codeModel.getNameProvider();
-        final var typeName = naming.getTypeName(Optional.empty(), "Discoverable");
+        final var typeName = naming.getEmptyModuleTypeName("Discoverable");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
 
         final var convertMethod = descriptor.traits(MethodDescriptor.class)

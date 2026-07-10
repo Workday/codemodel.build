@@ -10,7 +10,6 @@ import build.codemodel.objectoriented.descriptor.MethodDescriptor;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -38,7 +37,7 @@ public class MethodDiscoveryTests {
         final var codeModel = JdkInitializerTests.runInternal(initializer);
 
         final var naming = codeModel.getNameProvider();
-        final var typeName = naming.getTypeName(Optional.empty(), "Discover");
+        final var typeName = naming.getEmptyModuleTypeName("Discover");
         final var typeDescriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
 
         assertThat(typeDescriptor.traits(FieldDescriptor.class)).isEmpty();
@@ -87,7 +86,7 @@ public class MethodDiscoveryTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Printer");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Printer");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
 
         final var printMethod = descriptor.traits(MethodDescriptor.class)
