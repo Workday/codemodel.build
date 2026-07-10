@@ -28,6 +28,8 @@ import build.codemodel.foundation.descriptor.Singular;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.naming.TypeName;
 import build.codemodel.foundation.usage.TypeUsage;
+import build.codemodel.jdk.statement.CatchClause;
+import build.codemodel.jdk.statement.EnhancedFor;
 import build.codemodel.jdk.statement.LocalVariableDeclaration;
 import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 
@@ -46,7 +48,8 @@ import java.util.Optional;
  */
 @Singular
 public sealed interface Symbol extends Trait, Composite
-    permits Symbol.LocalVariable, Symbol.Parameter, Symbol.Field,
+    permits Symbol.LocalVariable, Symbol.EnhancedForVariable, Symbol.CatchParameter,
+    Symbol.PatternBinding, Symbol.Parameter, Symbol.Field,
     Symbol.TypeReference, Symbol.ThisReference, Symbol.SuperReference {
 
     /**
@@ -82,6 +85,42 @@ public sealed interface Symbol extends Trait, Composite
         public LocalVariable(final TypeUsage declaredType) {
             this(declaredType, Optional.empty());
         }
+    }
+
+    /**
+     * An enhanced-for loop variable reference, e.g. {@code x} in
+     * {@code for (int x : xs) { return x; } }.
+     *
+     * @param declaredType the declared type of the loop variable
+     * @param declaration  the {@link Optional} {@link EnhancedFor} statement that declared this
+     *                     variable, when it could be resolved back to the declaring loop within
+     *                     the same body conversion
+     */
+    record EnhancedForVariable(TypeUsage declaredType, Optional<EnhancedFor> declaration) implements Symbol {
+    }
+
+    /**
+     * A catch-clause exception parameter reference, e.g. {@code e} in
+     * {@code catch (IOException e) { throw e; } }.
+     *
+     * @param declaredType the declared type of the exception parameter
+     * @param declaration  the {@link Optional} {@link CatchClause} that declared this parameter,
+     *                     when it could be resolved back to the declaring clause within the same
+     *                     body conversion
+     */
+    record CatchParameter(TypeUsage declaredType, Optional<CatchClause> declaration) implements Symbol {
+    }
+
+    /**
+     * An {@code instanceof} or switch pattern binding-variable reference, e.g. {@code s} in
+     * {@code if (o instanceof String s) { return s; } }.
+     *
+     * @param declaredType the declared type of the binding variable
+     * @param declaration  the {@link Optional} {@link InstanceOf} pattern test that declared this
+     *                     binding, when it could be resolved back to the declaring test within the
+     *                     same body conversion
+     */
+    record PatternBinding(TypeUsage declaredType, Optional<InstanceOf> declaration) implements Symbol {
     }
 
     /**
