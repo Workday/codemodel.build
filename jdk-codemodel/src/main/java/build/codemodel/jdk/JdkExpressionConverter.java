@@ -103,6 +103,7 @@ import com.sun.source.tree.NewArrayTree;
 import com.sun.source.tree.NewClassTree;
 import com.sun.source.tree.ParameterizedTypeTree;
 import com.sun.source.tree.ParenthesizedTree;
+import com.sun.source.tree.PatternTree;
 import com.sun.source.tree.StatementTree;
 import com.sun.source.tree.SwitchExpressionTree;
 import com.sun.source.tree.Tree;
@@ -736,14 +737,21 @@ public class JdkExpressionConverter
 
     @Override
     public Expression visitInstanceOf(final InstanceOfTree t, final Void v) {
+        if (t.getPattern() instanceof DeconstructionPatternTree dp) {
+            final var type = resolveTypeUsage(dp.getDeconstructor());
+            addSourceLocation(dp.getDeconstructor()).ifPresent(type::addTrait);
+            final var components = dp.getNestedPatterns().stream()
+                .map(this::convertPattern)
+                .toList();
+            final var instanceOf = InstanceOf.ofDeconstruction(convert(t.getExpression()), type, components);
+            dp.getNestedPatterns().forEach(nested -> registerNestedPatternBindings(nested, instanceOf));
+            return instanceOf;
+        }
         final Optional<String> bindingVariable;
         final Tree typeTree;
         if (t.getPattern() instanceof BindingPatternTree bp) {
             bindingVariable = Optional.of(bp.getVariable().getName().toString());
             typeTree = t.getType();
-        } else if (t.getPattern() instanceof DeconstructionPatternTree dp) {
-            bindingVariable = Optional.empty();
-            typeTree = dp.getDeconstructor();
         } else {
             bindingVariable = Optional.empty();
             typeTree = t.getType();
@@ -758,6 +766,44 @@ public class JdkExpressionConverter
             registerPatternBinding(bp.getVariable(), instanceOf);
         }
         return instanceOf;
+    }
+
+    /**
+     * Recursively converts a nested {@link PatternTree} (a component of a record-deconstruction
+     * pattern) to an {@link InstanceOf.Pattern}. A component is either a {@link BindingPatternTree}
+     * (a simple type-pattern variable) or another {@link DeconstructionPatternTree} nested
+     * arbitrarily deep.
+     */
+    InstanceOf.Pattern convertPattern(final PatternTree pattern) {
+        if (pattern instanceof BindingPatternTree binding) {
+            final var type = resolveTypeUsage(binding.getVariable().getType());
+            addSourceLocation(binding.getVariable().getType()).ifPresent(type::addTrait);
+            return new InstanceOf.Pattern.Binding(type, binding.getVariable().getName().toString());
+        }
+        if (pattern instanceof DeconstructionPatternTree deconstruction) {
+            final var type = resolveTypeUsage(deconstruction.getDeconstructor());
+            addSourceLocation(deconstruction.getDeconstructor()).ifPresent(type::addTrait);
+            final var components = deconstruction.getNestedPatterns().stream()
+                .map(this::convertPattern)
+                .toList();
+            return new InstanceOf.Pattern.Record(type, components);
+        }
+        throw new IllegalStateException("Unsupported nested pattern kind: " + pattern.getClass());
+    }
+
+    /**
+     * Recursively registers every {@link BindingPatternTree} nested within a record-deconstruction
+     * pattern against {@code instanceOf}, so that later {@link Symbol.PatternBinding} resolution
+     * can link identifier usages of those component variables back to the pattern test that
+     * declared them.
+     */
+    void registerNestedPatternBindings(final PatternTree pattern, final InstanceOf instanceOf) {
+        if (pattern instanceof BindingPatternTree binding) {
+            registerPatternBinding(binding.getVariable(), instanceOf);
+        } else if (pattern instanceof DeconstructionPatternTree deconstruction) {
+            deconstruction.getNestedPatterns()
+                .forEach(nested -> registerNestedPatternBindings(nested, instanceOf));
+        }
     }
 
     @Override

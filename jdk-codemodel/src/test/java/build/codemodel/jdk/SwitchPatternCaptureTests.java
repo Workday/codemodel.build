@@ -110,6 +110,72 @@ class SwitchPatternCaptureTests {
     }
 
     @Test
+    void shouldConvertDeconstructionPatternLabelWithComponentBindings() {
+        final var sw = switchStatementIn("""
+                    record Point(int x, int y) {}
+                    switch (input) {
+                        case Point(int x, int y) -> {
+                            return "point:" + x + "," + y;
+                        }
+                        default -> {
+                            return "none";
+                        }
+                    }
+            """);
+
+        final var patternCase = sw.cases().findFirst().orElseThrow();
+        final var label = (InstanceOf) patternCase.labels().findFirst().orElseThrow();
+        assertThat(label.checkedType().toString()).contains("Point");
+        assertThat(label.bindingVariable()).isEmpty();
+
+        final var components = label.components();
+        assertThat(components).hasSize(2);
+
+        final var x = (InstanceOf.Pattern.Binding) components.get(0);
+        assertThat(x.name()).isEqualTo("x");
+        assertThat(x.type().toString()).contains("int");
+
+        final var y = (InstanceOf.Pattern.Binding) components.get(1);
+        assertThat(y.name()).isEqualTo("y");
+        assertThat(y.type().toString()).contains("int");
+    }
+
+    @Test
+    void shouldConvertNestedDeconstructionPatternComponents() {
+        final var sw = switchStatementIn("""
+                    record Point(int x, int y) {}
+                    record Line(Point start, Point end) {}
+                    switch (input) {
+                        case Line(Point(int x1, int y1), Point end) -> {
+                            return "line:" + x1 + "," + y1 + "," + end;
+                        }
+                        default -> {
+                            return "none";
+                        }
+                    }
+            """);
+
+        final var patternCase = sw.cases().findFirst().orElseThrow();
+        final var label = (InstanceOf) patternCase.labels().findFirst().orElseThrow();
+        assertThat(label.checkedType().toString()).contains("Line");
+
+        final var components = label.components();
+        assertThat(components).hasSize(2);
+
+        final var start = (InstanceOf.Pattern.Record) components.get(0);
+        assertThat(start.type().toString()).contains("Point");
+        assertThat(start.components()).hasSize(2);
+        final var x1 = (InstanceOf.Pattern.Binding) start.components().get(0);
+        assertThat(x1.name()).isEqualTo("x1");
+        final var y1 = (InstanceOf.Pattern.Binding) start.components().get(1);
+        assertThat(y1.name()).isEqualTo("y1");
+
+        final var end = (InstanceOf.Pattern.Binding) components.get(1);
+        assertThat(end.name()).isEqualTo("end");
+        assertThat(end.type().toString()).contains("Point");
+    }
+
+    @Test
     void shouldNotDropCaseWhenLabelIsAPattern() {
         // Regression test: JCCase#getExpressions() filters to CONSTANTCASELABEL only, so a
         // naive implementation using getExpressions() silently produces an empty labels() for a
