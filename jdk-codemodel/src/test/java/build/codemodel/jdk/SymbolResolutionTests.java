@@ -2,13 +2,19 @@ package build.codemodel.jdk;
 
 import build.base.compile.testing.JavaFileObjects;
 import build.codemodel.foundation.usage.NamedTypeUsage;
+import build.codemodel.imperative.If;
 import build.codemodel.imperative.Return;
 import build.codemodel.jdk.descriptor.MethodBodyDescriptor;
 import build.codemodel.jdk.expression.CompoundAssignment;
 import build.codemodel.jdk.expression.Identifier;
+import build.codemodel.jdk.expression.InstanceOf;
 import build.codemodel.jdk.expression.Symbol;
+import build.codemodel.jdk.statement.EnhancedFor;
 import build.codemodel.jdk.statement.ExpressionStatement;
 import build.codemodel.jdk.statement.LocalVariableDeclaration;
+import build.codemodel.jdk.statement.SwitchStatement;
+import build.codemodel.jdk.statement.Throw;
+import build.codemodel.jdk.statement.Try;
 import build.codemodel.objectoriented.descriptor.ConstructorDescriptor;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
 import org.junit.jupiter.api.Test;
@@ -269,5 +275,177 @@ class SymbolResolutionTests {
         assertThat(receiver.name()).isEqualTo("String");
         final var symbol = receiver.getTrait(Symbol.class).orElseThrow();
         assertThat(symbol).isInstanceOf(Symbol.TypeReference.class);
+    }
+
+    @Test
+    void shouldResolveEnhancedForVariable() {
+        final var source = JavaFileObjects.forSourceString("com.example.Foo", """
+            package com.example;
+            public class Foo {
+                public int bar(java.util.List<Integer> xs) {
+                    for (Integer x : xs) {
+                        return x;
+                    }
+                    return 0;
+                }
+            }
+            """);
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
+        final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
+        final var method = descriptor.traits(MethodDescriptor.class)
+            .filter(m -> m.methodName().name().toString().equals("bar"))
+            .findFirst().orElseThrow();
+        final var body = method.getTrait(MethodBodyDescriptor.class).orElseThrow().body();
+
+        final var enhancedFor = (EnhancedFor) body.statements()
+            .filter(s -> s instanceof EnhancedFor)
+            .findFirst().orElseThrow();
+        final var innerReturn = (Return) ((build.codemodel.imperative.Block) enhancedFor.body()).statements()
+            .filter(s -> s instanceof Return)
+            .findFirst().orElseThrow();
+
+        final var identifier = (Identifier) innerReturn.expression().orElseThrow();
+        assertThat(identifier.name()).isEqualTo("x");
+        final var symbol = identifier.getTrait(Symbol.class).orElseThrow();
+        assertThat(symbol).isInstanceOf(Symbol.EnhancedForVariable.class);
+        final var enhancedForVariable = (Symbol.EnhancedForVariable) symbol;
+        assertThat(enhancedForVariable.declaredType().toString()).contains("Integer");
+        assertThat(enhancedForVariable.declaration()).contains(enhancedFor);
+    }
+
+    @Test
+    void shouldResolveCatchParameter() {
+        final var source = JavaFileObjects.forSourceString("com.example.Foo", """
+            package com.example;
+            public class Foo {
+                public void bar() {
+                    try {
+                        doSomething();
+                    } catch (java.io.IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+                private void doSomething() throws java.io.IOException {
+                }
+            }
+            """);
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
+        final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
+        final var method = descriptor.traits(MethodDescriptor.class)
+            .filter(m -> m.methodName().name().toString().equals("bar"))
+            .findFirst().orElseThrow();
+        final var body = method.getTrait(MethodBodyDescriptor.class).orElseThrow().body();
+
+        final var tryStatement = (Try) body.statements()
+            .filter(s -> s instanceof Try)
+            .findFirst().orElseThrow();
+        final var catchClause = tryStatement.catches().findFirst().orElseThrow();
+        final var throwStatement = (Throw) catchClause.body().statements()
+            .filter(s -> s instanceof Throw)
+            .findFirst().orElseThrow();
+
+        final var newException = (build.codemodel.jdk.expression.NewObject) throwStatement.expression();
+        final var identifier = (Identifier) newException.args().findFirst().orElseThrow();
+        assertThat(identifier.name()).isEqualTo("e");
+        final var symbol = identifier.getTrait(Symbol.class).orElseThrow();
+        assertThat(symbol).isInstanceOf(Symbol.CatchParameter.class);
+        final var catchParameter = (Symbol.CatchParameter) symbol;
+        assertThat(catchParameter.declaredType().toString()).contains("IOException");
+        assertThat(catchParameter.declaration()).contains(catchClause);
+    }
+
+    @Test
+    void shouldResolveInstanceOfPatternBinding() {
+        final var source = JavaFileObjects.forSourceString("com.example.Foo", """
+            package com.example;
+            public class Foo {
+                public int bar(Object o) {
+                    if (o instanceof String s) {
+                        return s.length();
+                    }
+                    return 0;
+                }
+            }
+            """);
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
+        final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
+        final var method = descriptor.traits(MethodDescriptor.class)
+            .filter(m -> m.methodName().name().toString().equals("bar"))
+            .findFirst().orElseThrow();
+        final var body = method.getTrait(MethodBodyDescriptor.class).orElseThrow().body();
+
+        final var ifStatement = (If) body.statements()
+            .filter(s -> s instanceof If)
+            .findFirst().orElseThrow();
+        final var instanceOf = (InstanceOf) ((build.codemodel.jdk.expression.Parenthesized) ifStatement.condition()).inner();
+        final var innerReturn = (Return) ((build.codemodel.imperative.Block) ifStatement.thenStatement()).statements()
+            .filter(s -> s instanceof Return)
+            .findFirst().orElseThrow();
+
+        final var invocation = (build.codemodel.jdk.expression.MethodInvocation) innerReturn.expression().orElseThrow();
+        final var identifier = (Identifier) invocation.target().orElseThrow();
+        assertThat(identifier.name()).isEqualTo("s");
+        final var symbol = identifier.getTrait(Symbol.class).orElseThrow();
+        assertThat(symbol).isInstanceOf(Symbol.PatternBinding.class);
+        final var patternBinding = (Symbol.PatternBinding) symbol;
+        assertThat(patternBinding.declaredType().toString()).contains("String");
+        assertThat(patternBinding.declaration()).contains(instanceOf);
+    }
+
+    @Test
+    void shouldResolveSwitchPatternBinding() {
+        final var source = JavaFileObjects.forSourceString("com.example.Foo", """
+            package com.example;
+            public class Foo {
+                public int bar(Object o) {
+                    switch (o) {
+                        case String s -> {
+                            return s.length();
+                        }
+                        default -> {
+                            return 0;
+                        }
+                    }
+                }
+            }
+            """);
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
+        final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
+        final var method = descriptor.traits(MethodDescriptor.class)
+            .filter(m -> m.methodName().name().toString().equals("bar"))
+            .findFirst().orElseThrow();
+        final var body = method.getTrait(MethodBodyDescriptor.class).orElseThrow().body();
+
+        final var switchStatement = (SwitchStatement) body.statements()
+            .filter(s -> s instanceof SwitchStatement)
+            .findFirst().orElseThrow();
+        final var stringCase = switchStatement.cases()
+            .filter(c -> c.labels().findFirst().orElseThrow() instanceof InstanceOf)
+            .findFirst().orElseThrow();
+        final var instanceOf = (InstanceOf) stringCase.labels().findFirst().orElseThrow();
+        final var innerReturn = (Return) stringCase.statements()
+            .filter(s -> s instanceof Return)
+            .findFirst().orElseThrow();
+
+        final var invocation = (build.codemodel.jdk.expression.MethodInvocation) innerReturn.expression().orElseThrow();
+        final var identifier = (Identifier) invocation.target().orElseThrow();
+        assertThat(identifier.name()).isEqualTo("s");
+        final var symbol = identifier.getTrait(Symbol.class).orElseThrow();
+        assertThat(symbol).isInstanceOf(Symbol.PatternBinding.class);
+        final var patternBinding = (Symbol.PatternBinding) symbol;
+        assertThat(patternBinding.declaredType().toString()).contains("String");
+        assertThat(patternBinding.declaration()).contains(instanceOf);
     }
 }

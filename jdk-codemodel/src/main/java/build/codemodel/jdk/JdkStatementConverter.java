@@ -206,13 +206,14 @@ public class JdkStatementConverter
             && t.getVariable().getModifiers().getFlags().contains(Modifier.FINAL);
         final TypeUsage type = exprConverter.resolveTypeUsage(t.getVariable().getType());
         exprConverter.addSourceLocation(t.getVariable().getType()).ifPresent(type::addTrait);
-        final var enhancedFor = EnhancedFor.of(codeModel,
+        final var enhancedFor = EnhancedFor.ofPending(codeModel,
             isFinal,
             type,
             t.getVariable().getName().toString(),
-            exprConverter.convert(t.getExpression()),
-            convert(t.getStatement()));
+            exprConverter.convert(t.getExpression()));
         exprConverter.addSourceLocation(t.getVariable()).ifPresent(enhancedFor::addTrait);
+        exprConverter.registerEnhancedForVariable(t.getVariable(), enhancedFor);
+        enhancedFor.completeBody(convert(t.getStatement()));
         return enhancedFor;
     }
 
@@ -249,11 +250,12 @@ public class JdkStatementConverter
             exprConverter.addSourceLocation(typeTree).ifPresent(type::addTrait);
             types = List.of(type);
         }
-        final var catchClause = CatchClause.of(codeModel,
+        final var catchClause = CatchClause.ofPending(codeModel,
             types,
-            c.getParameter().getName().toString(),
-            convertBlock(c.getBlock()));
+            c.getParameter().getName().toString());
         exprConverter.addSourceLocation(c.getParameter()).ifPresent(catchClause::addTrait);
+        exprConverter.registerCatchParameter(c.getParameter(), catchClause);
+        catchClause.completeBody(convertBlock(c.getBlock()));
         return catchClause;
     }
 
@@ -324,9 +326,7 @@ public class JdkStatementConverter
 
     /**
      * Converts a type-pattern or deconstruction-pattern case label to an {@link InstanceOf} label
-     * testing the switch {@code selector}. A binding variable's {@code Symbol} resolution is not
-     * wired up here — pattern-bound variables don't yet have a declaration node to resolve back to
-     * (see the TODO on {@code Symbol} resolution gaps).
+     * testing the switch {@code selector}.
      */
     private Optional<Expression> convertPatternLabel(final PatternTree pattern,
                                                      final Expression selector) {
@@ -335,6 +335,7 @@ public class JdkStatementConverter
             exprConverter.addSourceLocation(binding.getVariable().getType()).ifPresent(type::addTrait);
             final var instanceOf = InstanceOf.of(selector, type, Optional.of(binding.getVariable().getName().toString()));
             exprConverter.addSourceLocation(binding.getVariable()).ifPresent(instanceOf::addTrait);
+            exprConverter.registerPatternBinding(binding.getVariable(), instanceOf);
             return Optional.of(instanceOf);
         }
         if (pattern instanceof DeconstructionPatternTree deconstruction) {

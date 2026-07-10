@@ -70,8 +70,15 @@ public final class EnhancedFor
 
     /**
      * The loop body statement.
+     *
+     * <p>Not {@code final}: {@link #ofPending} constructs an {@link EnhancedFor} before its body
+     * is converted, so that the loop variable's {@code Element} can be registered for
+     * {@code Symbol} resolution before body conversion visits identifiers referencing it — the
+     * body transitively references this very node, so it cannot be supplied as a constructor
+     * argument. {@link #completeBody} sets it exactly once; from any external caller's perspective
+     * the node is immutable once returned.
      */
-    private final Statement body;
+    private Statement body;
 
     private EnhancedFor(final CodeModel codeModel,
                         final boolean isFinal,
@@ -84,7 +91,7 @@ public final class EnhancedFor
         this.type = Objects.requireNonNull(type, "type must not be null");
         this.variable = Objects.requireNonNull(variable, "variable must not be null");
         this.iterable = Objects.requireNonNull(iterable, "iterable must not be null");
-        this.body = Objects.requireNonNull(body, "body must not be null");
+        this.body = body;
     }
 
     @Unmarshal
@@ -198,7 +205,43 @@ public final class EnhancedFor
                                  final String variable,
                                  final Expression iterable,
                                  final Statement body) {
-        return new EnhancedFor(codeModel, isFinal, type, variable, iterable, body);
+        return new EnhancedFor(codeModel, isFinal, type, variable, iterable,
+            Objects.requireNonNull(body, "body must not be null"));
+    }
+
+    /**
+     * Creates an {@link EnhancedFor} without its body, for callers that need the node's identity
+     * (e.g. to register the loop variable's declaring construct for {@code Symbol} resolution)
+     * before the body can be converted. {@link #completeBody} must be called exactly once before
+     * any other code observes this node.
+     *
+     * @param codeModel the {@link CodeModel}
+     * @param isFinal   whether the loop variable is {@code final}
+     * @param type      the resolved {@link TypeUsage} of the loop variable
+     * @param variable  the name of the loop variable
+     * @param iterable  the iterable {@link Expression}
+     * @return a new bodyless {@link EnhancedFor}, to be finished with {@link #completeBody}
+     */
+    public static EnhancedFor ofPending(final CodeModel codeModel,
+                                        final boolean isFinal,
+                                        final TypeUsage type,
+                                        final String variable,
+                                        final Expression iterable) {
+        return new EnhancedFor(codeModel, isFinal, type, variable, iterable, null);
+    }
+
+    /**
+     * Sets the loop body of an {@link EnhancedFor} created via {@link #ofPending}. May be called
+     * exactly once.
+     *
+     * @param body the loop body {@link Statement}
+     * @throws IllegalStateException if the body was already set
+     */
+    public void completeBody(final Statement body) {
+        if (this.body != null) {
+            throw new IllegalStateException("EnhancedFor body is already set");
+        }
+        this.body = Objects.requireNonNull(body, "body must not be null");
     }
 
     static {

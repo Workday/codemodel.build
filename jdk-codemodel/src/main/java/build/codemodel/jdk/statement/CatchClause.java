@@ -61,8 +61,15 @@ public final class CatchClause
 
     /**
      * The catch body block.
+     *
+     * <p>Not {@code final}: {@link #ofPending} constructs a {@link CatchClause} before its body is
+     * converted, so that the exception parameter's {@code Element} can be registered for
+     * {@code Symbol} resolution before body conversion visits identifiers referencing it — the
+     * body transitively references this very node, so it cannot be supplied as a constructor
+     * argument. {@link #completeBody} sets it exactly once; from any external caller's perspective
+     * the node is immutable once returned.
      */
-    private final Block body;
+    private Block body;
 
     private CatchClause(final CodeModel codeModel,
                         final List<TypeUsage> exceptionTypes,
@@ -71,7 +78,7 @@ public final class CatchClause
         super(codeModel);
         this.exceptionTypes = Objects.requireNonNull(exceptionTypes, "exceptionTypes must not be null");
         this.paramName = Objects.requireNonNull(paramName, "paramName must not be null");
-        this.body = Objects.requireNonNull(body, "body must not be null");
+        this.body = body;
     }
 
     @Unmarshal
@@ -154,7 +161,39 @@ public final class CatchClause
                                  final List<TypeUsage> exceptionTypes,
                                  final String paramName,
                                  final Block body) {
-        return new CatchClause(codeModel, exceptionTypes, paramName, body);
+        return new CatchClause(codeModel, exceptionTypes, paramName,
+            Objects.requireNonNull(body, "body must not be null"));
+    }
+
+    /**
+     * Creates a {@link CatchClause} without its body, for callers that need the node's identity
+     * (e.g. to register the exception parameter's declaring construct for {@code Symbol}
+     * resolution) before the body can be converted. {@link #completeBody} must be called exactly
+     * once before any other code observes this node.
+     *
+     * @param codeModel      the {@link CodeModel}
+     * @param exceptionTypes the resolved {@link TypeUsage}s of the caught exception(s)
+     * @param paramName      the name of the exception parameter
+     * @return a new bodyless {@link CatchClause}, to be finished with {@link #completeBody}
+     */
+    public static CatchClause ofPending(final CodeModel codeModel,
+                                        final List<TypeUsage> exceptionTypes,
+                                        final String paramName) {
+        return new CatchClause(codeModel, exceptionTypes, paramName, null);
+    }
+
+    /**
+     * Sets the body of a {@link CatchClause} created via {@link #ofPending}. May be called exactly
+     * once.
+     *
+     * @param body the catch body {@link Block}
+     * @throws IllegalStateException if the body was already set
+     */
+    public void completeBody(final Block body) {
+        if (this.body != null) {
+            throw new IllegalStateException("CatchClause body is already set");
+        }
+        this.body = Objects.requireNonNull(body, "body must not be null");
     }
 
     static {

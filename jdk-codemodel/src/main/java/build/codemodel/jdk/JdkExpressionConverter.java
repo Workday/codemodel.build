@@ -77,6 +77,8 @@ import build.codemodel.jdk.expression.SwitchExpression;
 import build.codemodel.jdk.expression.Symbol;
 import build.codemodel.jdk.expression.Ternary;
 import build.codemodel.jdk.expression.UnknownExpression;
+import build.codemodel.jdk.statement.CatchClause;
+import build.codemodel.jdk.statement.EnhancedFor;
 import build.codemodel.jdk.statement.ExpressionStatement;
 import build.codemodel.jdk.statement.LocalVariableDeclaration;
 import build.codemodel.objectoriented.descriptor.ConstructorDescriptor;
@@ -147,6 +149,30 @@ public class JdkExpressionConverter
      * identifier usages within the same body conversion can be linked back to their declaring statement.
      */
     private final Map<Element, LocalVariableDeclaration> localVariableDeclarations = new HashMap<>();
+
+    /**
+     * Maps a resolved javac {@link Element} for an enhanced-for loop variable to the
+     * {@link EnhancedFor} that declared it, populated as {@link JdkStatementConverter} converts
+     * each enhanced-for loop so that later identifier usages within the same body conversion can
+     * be linked back to their declaring loop.
+     */
+    private final Map<Element, EnhancedFor> enhancedForDeclarations = new HashMap<>();
+
+    /**
+     * Maps a resolved javac {@link Element} for a catch-clause exception parameter to the
+     * {@link CatchClause} that declared it, populated as {@link JdkStatementConverter} converts
+     * each catch clause so that later identifier usages within the same body conversion can be
+     * linked back to their declaring clause.
+     */
+    private final Map<Element, CatchClause> catchParameterDeclarations = new HashMap<>();
+
+    /**
+     * Maps a resolved javac {@link Element} for an {@code instanceof}/switch pattern binding
+     * variable to the {@link InstanceOf} that declared it, populated as each pattern test is
+     * converted so that later identifier usages within the same body conversion can be linked
+     * back to their declaring test.
+     */
+    private final Map<Element, InstanceOf> patternBindingDeclarations = new HashMap<>();
 
     /**
      * Creates a {@link JdkExpressionConverter}.
@@ -289,6 +315,50 @@ public class JdkExpressionConverter
         }
     }
 
+    /**
+     * Records that the given enhanced-for {@link VariableTree} declares {@code loop}'s loop
+     * variable, so that later {@link Symbol.EnhancedForVariable} resolution can link an identifier
+     * usage back to it.
+     *
+     * @param tree the {@link VariableTree} declaring the enhanced-for loop variable
+     * @param loop the {@link EnhancedFor} converted from the enclosing loop
+     */
+    void registerEnhancedForVariable(final VariableTree tree, final EnhancedFor loop) {
+        elementOf(tree).ifPresent(element -> enhancedForDeclarations.put(element, loop));
+    }
+
+    /**
+     * Records that the given catch parameter {@link VariableTree} declares {@code catchClause}'s
+     * exception parameter, so that later {@link Symbol.CatchParameter} resolution can link an
+     * identifier usage back to it.
+     *
+     * @param tree        the {@link VariableTree} declaring the catch parameter
+     * @param catchClause the {@link CatchClause} converted from the enclosing catch clause
+     */
+    void registerCatchParameter(final VariableTree tree, final CatchClause catchClause) {
+        elementOf(tree).ifPresent(element -> catchParameterDeclarations.put(element, catchClause));
+    }
+
+    /**
+     * Records that the given pattern-binding {@link VariableTree} declares {@code instanceOf}'s
+     * binding variable, so that later {@link Symbol.PatternBinding} resolution can link an
+     * identifier usage back to it.
+     *
+     * @param tree       the {@link VariableTree} declaring the pattern-binding variable
+     * @param instanceOf the {@link InstanceOf} pattern test that declared this binding
+     */
+    void registerPatternBinding(final VariableTree tree, final InstanceOf instanceOf) {
+        elementOf(tree).ifPresent(element -> patternBindingDeclarations.put(element, instanceOf));
+    }
+
+    private Optional<Element> elementOf(final VariableTree tree) {
+        if (trees == null || compilationUnit == null) {
+            return Optional.empty();
+        }
+        final var path = trees.getPath(compilationUnit, tree);
+        return path == null ? Optional.empty() : Optional.ofNullable(trees.getElement(path));
+    }
+
     private Optional<Symbol> resolveSymbol(final IdentifierTree t) {
         if (trees == null || compilationUnit == null) {
             return Optional.empty();
@@ -315,8 +385,13 @@ public class JdkExpressionConverter
             return Optional.empty();
         }
         return switch (element.getKind()) {
-            case LOCAL_VARIABLE -> Optional.<Symbol>of(new Symbol.LocalVariable(
-                typeUsage, Optional.ofNullable(localVariableDeclarations.get(element))));
+            case LOCAL_VARIABLE -> Optional.<Symbol>of(enhancedForDeclarations.containsKey(element)
+                ? new Symbol.EnhancedForVariable(typeUsage, Optional.of(enhancedForDeclarations.get(element)))
+                : new Symbol.LocalVariable(typeUsage, Optional.ofNullable(localVariableDeclarations.get(element))));
+            case EXCEPTION_PARAMETER -> Optional.<Symbol>of(new Symbol.CatchParameter(
+                typeUsage, Optional.ofNullable(catchParameterDeclarations.get(element))));
+            case BINDING_VARIABLE -> Optional.<Symbol>of(new Symbol.PatternBinding(
+                typeUsage, Optional.ofNullable(patternBindingDeclarations.get(element))));
             case PARAMETER -> resolveParameter(element).map(Symbol.class::cast);
             case FIELD, ENUM_CONSTANT -> resolveField(element, typeUsage).map(Symbol.class::cast);
             case CLASS, INTERFACE, ENUM, ANNOTATION_TYPE, RECORD ->
@@ -675,10 +750,14 @@ public class JdkExpressionConverter
         }
         final var type = resolveTypeUsage(typeTree);
         addSourceLocation(typeTree).ifPresent(type::addTrait);
-        return InstanceOf.of(
+        final var instanceOf = InstanceOf.of(
             convert(t.getExpression()),
             type,
             bindingVariable);
+        if (t.getPattern() instanceof BindingPatternTree bp) {
+            registerPatternBinding(bp.getVariable(), instanceOf);
+        }
+        return instanceOf;
     }
 
     @Override
