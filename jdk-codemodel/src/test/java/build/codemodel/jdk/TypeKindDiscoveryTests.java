@@ -25,9 +25,9 @@ class TypeKindDiscoveryTests {
         final var source = JavaFileObjects.forSourceString(
             "com.example.Color",
             """
-            package com.example;
-            public enum Color { RED, GREEN, BLUE }
-            """);
+                package com.example;
+                public enum Color { RED, GREEN, BLUE }
+                """);
         final var codeModel = new JDKCodeModel(new NonCachingNameProvider());
         new JdkInitializer(List.of(), List.of(), List.of(source))
             .initialize(codeModel);
@@ -42,9 +42,9 @@ class TypeKindDiscoveryTests {
         final var source = JavaFileObjects.forSourceString(
             "com.example.Point",
             """
-            package com.example;
-            public record Point(int x, int y) {}
-            """);
+                package com.example;
+                public record Point(int x, int y) {}
+                """);
         final var codeModel = new JDKCodeModel(new NonCachingNameProvider());
         new JdkInitializer(List.of(), List.of(), List.of(source))
             .initialize(codeModel);
@@ -59,9 +59,9 @@ class TypeKindDiscoveryTests {
         final var source = JavaFileObjects.forSourceString(
             "com.example.Marker",
             """
-            package com.example;
-            public @interface Marker {}
-            """);
+                package com.example;
+                public @interface Marker {}
+                """);
         final var codeModel = new JDKCodeModel(new NonCachingNameProvider());
         new JdkInitializer(List.of(), List.of(), List.of(source))
             .initialize(codeModel);
@@ -76,9 +76,9 @@ class TypeKindDiscoveryTests {
         final var source = JavaFileObjects.forSourceString(
             "com.example.Color",
             """
-            package com.example;
-            public enum Color { RED, GREEN, BLUE }
-            """);
+                package com.example;
+                public enum Color { RED, GREEN, BLUE }
+                """);
         final var codeModel = new JDKCodeModel(new NonCachingNameProvider());
         new JdkInitializer(List.of(), List.of(), List.of(source))
             .initialize(codeModel);
@@ -96,9 +96,9 @@ class TypeKindDiscoveryTests {
         final var source = JavaFileObjects.forSourceString(
             "com.example.Point",
             """
-            package com.example;
-            public record Point(int x, int y) {}
-            """);
+                package com.example;
+                public record Point(int x, int y) {}
+                """);
         final var codeModel = new JDKCodeModel(new NonCachingNameProvider());
         new JdkInitializer(List.of(), List.of(), List.of(source))
             .initialize(codeModel);
@@ -117,12 +117,12 @@ class TypeKindDiscoveryTests {
         final var source = JavaFileObjects.forSourceString(
             "com.example.Marker",
             """
-            package com.example;
-            public @interface Marker {
-                String value() default "hello";
-                int count() default 1;
-            }
-            """);
+                package com.example;
+                public @interface Marker {
+                    String value() default "hello";
+                    int count() default 1;
+                }
+                """);
         final var codeModel = new JDKCodeModel(new NonCachingNameProvider());
         new JdkInitializer(List.of(), List.of(), List.of(source))
             .initialize(codeModel);
@@ -152,11 +152,11 @@ class TypeKindDiscoveryTests {
         final var source = JavaFileObjects.forSourceString(
             "com.example.Outer",
             """
-            package com.example;
-            public class Outer {
-                public static class Inner {}
-            }
-            """);
+                package com.example;
+                public class Outer {
+                    public static class Inner {}
+                }
+                """);
         final var codeModel = new JDKCodeModel(new NonCachingNameProvider());
         new JdkInitializer(List.of(), List.of(), List.of(source))
             .initialize(codeModel);
@@ -184,9 +184,9 @@ class TypeKindDiscoveryTests {
         final var source = JavaFileObjects.forSourceString(
             "com.example.Planet",
             """
-            package com.example;
-            public enum Planet { MERCURY, VENUS, EARTH, MARS, JUPITER, SATURN, URANUS, NEPTUNE }
-            """);
+                package com.example;
+                public enum Planet { MERCURY, VENUS, EARTH, MARS, JUPITER, SATURN, URANUS, NEPTUNE }
+                """);
         final var codeModel = new JDKCodeModel(new NonCachingNameProvider());
         new JdkInitializer(List.of(), List.of(), List.of(source))
             .initialize(codeModel);

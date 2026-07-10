@@ -9,9 +9,9 @@ package build.codemodel.expression;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -56,24 +56,24 @@ public class TemplateExpression
     protected TemplateExpression(final CodeModel codeModel, final List<Expression> expressions) {
 
         super(codeModel);
-        
+
         this.expressions = expressions;
     }
-    
+
     /**
      * Un{@link Marshal} a {@link TemplateExpression}.
      *
      * @param codeModel   the {@link CodeModel}
-     * @param marshaller   the {@link Marshaller}
-     * @param traits       the {@link Stream} of {@link Trait}s
-     * @param expressions  the {@link List} of {@link Expression}s
+     * @param marshaller  the {@link Marshaller}
+     * @param traits      the {@link Stream} of {@link Trait}s
+     * @param expressions the {@link List} of {@link Expression}s
      */
     @Unmarshal
     public TemplateExpression(@Bound final CodeModel codeModel,
                               final Marshaller marshaller,
                               final Stream<Marshalled<Trait>> traits,
                               final Stream<Marshalled<Expression>> expressions) {
-        
+
         super(codeModel, marshaller, traits);
 
         this.expressions = expressions
@@ -92,7 +92,7 @@ public class TemplateExpression
     public void destructor(final Marshaller marshaller,
                            final Out<Stream<Marshalled<Trait>>> traits,
                            final Out<Stream<Marshalled<Expression>>> expressions) {
-        
+
         super.destructor(marshaller, traits);
 
         expressions.set(this.expressions.stream().map(expr -> marshaller.marshal(expr)));
@@ -132,7 +132,7 @@ public class TemplateExpression
     public static TemplateExpression empty(final CodeModel codeModel) {
         return new TemplateExpression(codeModel, new ArrayList<>());
     }
-    
+
     static {
         Marshalling.register(TemplateExpression.class, MethodHandles.lookup());
     }

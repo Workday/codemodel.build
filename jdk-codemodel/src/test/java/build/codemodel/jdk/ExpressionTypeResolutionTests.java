@@ -1,5 +1,6 @@
 package build.codemodel.jdk;
 
+import build.base.compile.testing.JavaFileObjects;
 import build.codemodel.expression.ExpressionType;
 import build.codemodel.expression.StringLiteral;
 import build.codemodel.foundation.usage.NamedTypeUsage;
@@ -12,7 +13,6 @@ import build.codemodel.jdk.expression.NewObject;
 import build.codemodel.jdk.statement.ExpressionStatement;
 import build.codemodel.jdk.statement.LocalVariableDeclaration;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
-import build.base.compile.testing.JavaFileObjects;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

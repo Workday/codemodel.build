@@ -177,7 +177,7 @@ class QualifiedResolverTest
     @Documented
     @Inherited
     @Retention(RetentionPolicy.RUNTIME)
-    @Target({ METHOD, CONSTRUCTOR, FIELD })
+    @Target({METHOD, CONSTRUCTOR, FIELD})
     @Qualifier
     private @interface FooQualifier {
 
@@ -189,7 +189,7 @@ class QualifiedResolverTest
     @Documented
     @Inherited
     @Retention(RetentionPolicy.RUNTIME)
-    @Target({ METHOD, CONSTRUCTOR, FIELD })
+    @Target({METHOD, CONSTRUCTOR, FIELD})
     @Qualifier
     private @interface StringQualifier {
 

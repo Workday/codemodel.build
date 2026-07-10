@@ -9,9 +9,9 @@ package build.codemodel.jdk;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -223,9 +223,9 @@ public class JdkExpressionConverter
             }
             final var typeMirror = trees.getTypeMirror(path);
             if (typeMirror == null
-                    || typeMirror.getKind() == TypeKind.ERROR
-                    || typeMirror.getKind() == TypeKind.NONE
-                    || typeMirror.getKind() == TypeKind.OTHER) {
+                || typeMirror.getKind() == TypeKind.ERROR
+                || typeMirror.getKind() == TypeKind.NONE
+                || typeMirror.getKind() == TypeKind.OTHER) {
                 return;
             }
             expr.addTrait(ExpressionType.of(typeResolver.apply(typeMirror)));
@@ -362,14 +362,14 @@ public class JdkExpressionConverter
         final var arity = paramTypes.size();
         final Optional<? extends CallableDescriptor> callable = executableElement.getKind() == ElementKind.CONSTRUCTOR
             ? typeDescriptor.traits(ConstructorDescriptor.class)
-                .filter(cd -> cd.getFormalParameterCount() == arity)
-                .filter(cd -> parametersMatch(cd, paramTypes))
-                .findFirst()
+            .filter(cd -> cd.getFormalParameterCount() == arity)
+            .filter(cd -> parametersMatch(cd, paramTypes))
+            .findFirst()
             : typeDescriptor.traits(MethodDescriptor.class)
-                .filter(md -> md.methodName().name().toString().equals(executableElement.getSimpleName().toString()))
-                .filter(md -> md.getFormalParameterCount() == arity)
-                .filter(md -> parametersMatch(md, paramTypes))
-                .findFirst();
+            .filter(md -> md.methodName().name().toString().equals(executableElement.getSimpleName().toString()))
+            .filter(md -> md.getFormalParameterCount() == arity)
+            .filter(md -> parametersMatch(md, paramTypes))
+            .findFirst();
         return callable
             .map(c -> c.getFormalParameter(index))
             .map(Symbol.Parameter::new);
@@ -494,9 +494,9 @@ public class JdkExpressionConverter
             }
             final var mirror = trees.getTypeMirror(path);
             if (mirror == null
-                    || mirror.getKind() == TypeKind.ERROR
-                    || mirror.getKind() == TypeKind.NONE
-                    || mirror.getKind() == TypeKind.OTHER) {
+                || mirror.getKind() == TypeKind.ERROR
+                || mirror.getKind() == TypeKind.NONE
+                || mirror.getKind() == TypeKind.OTHER) {
                 return Optional.empty();
             }
             return Optional.of(mirror);

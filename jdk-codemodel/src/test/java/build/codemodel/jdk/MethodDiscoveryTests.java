@@ -1,12 +1,12 @@
 package build.codemodel.jdk;
 
+import build.base.compile.testing.JavaFileObjects;
 import build.codemodel.foundation.usage.VoidTypeUsage;
 import build.codemodel.jdk.descriptor.MethodImplementationDescriptor;
 import build.codemodel.jdk.descriptor.Varargs;
 import build.codemodel.objectoriented.descriptor.Classification;
 import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
-import build.base.compile.testing.JavaFileObjects;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -27,10 +27,10 @@ public class MethodDiscoveryTests {
         final var source = JavaFileObjects.forSourceString("Discover", """
             public interface Discover {
                 void findableVoidMethod();
-
+            
                 default void findableDefaultMethod() {
                 }
-
+            
                 int methodWithParameters(String name, double size);
             }
             """);

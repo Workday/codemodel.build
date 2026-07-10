@@ -9,9 +9,9 @@ package build.codemodel.expression;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -47,7 +47,7 @@ public class Exponent
     /**
      * Constructs a {@link Exponent}.
      *
-     * @param base  the base {@link Expression}
+     * @param base     the base {@link Expression}
      * @param exponent the exponent {@link Expression}
      */
     private Exponent(final Expression base,
@@ -59,7 +59,7 @@ public class Exponent
     /**
      * Un{@link Marshal} an {@link Exponent}.
      *
-     * @param codeModel the {@link CodeModel}
+     * @param codeModel  the {@link CodeModel}
      * @param marshaller the {@link Marshaller}
      * @param traits     the {@link Stream} of {@link Marshalled} {@link Trait}s
      * @param typeUsage  the {@link Optional} {@link Marshalled} {@link TypeUsage}
@@ -73,7 +73,7 @@ public class Exponent
                     final Optional<Marshalled<TypeUsage>> typeUsage,
                     final Marshalled<Expression> base,
                     final Marshalled<Expression> exponent) {
-        
+
         super(codeModel, marshaller, traits, typeUsage, base, exponent);
     }
 
@@ -109,7 +109,7 @@ public class Exponent
     /**
      * Creates a {@link Exponent} of two {@link Expression}s.
      *
-     * @param base  the base {@link Expression}
+     * @param base     the base {@link Expression}
      * @param exponent the exponent {@link Expression}
      * @return a new {@link Exponent}
      */
@@ -118,7 +118,7 @@ public class Exponent
 
         return new Exponent(base, exponent);
     }
-    
+
     static {
         Marshalling.register(Exponent.class, MethodHandles.lookup());
     }

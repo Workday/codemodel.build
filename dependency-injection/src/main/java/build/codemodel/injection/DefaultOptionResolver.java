@@ -9,9 +9,9 @@ package build.codemodel.injection;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -95,8 +95,7 @@ public class DefaultOptionResolver
                     return dependency;
                 }
             });
-        }
-        catch (final ClassNotFoundException e) {
+        } catch (final ClassNotFoundException e) {
             return Optional.empty();
         }
     }
@@ -138,8 +137,7 @@ public class DefaultOptionResolver
             try {
                 defaultConstructor.trySetAccessible();
                 return Optional.of(defaultConstructor.newInstance());
-            }
-            catch (final InstantiationException | IllegalAccessException | InvocationTargetException e) {
+            } catch (final InstantiationException | IllegalAccessException | InvocationTargetException e) {
                 throw new InjectionException("@Default constructor failed for " + optionClass, e);
             }
         }
@@ -160,8 +158,7 @@ public class DefaultOptionResolver
             try {
                 defaultMethod.trySetAccessible();
                 return Optional.of(defaultMethod.invoke(null));
-            }
-            catch (final IllegalAccessException | InvocationTargetException e) {
+            } catch (final IllegalAccessException | InvocationTargetException e) {
                 throw new InjectionException("@Default method " + defaultMethod + " failed", e);
             }
         }
@@ -182,8 +179,7 @@ public class DefaultOptionResolver
             try {
                 defaultField.trySetAccessible();
                 return Optional.of(defaultField.get(null));
-            }
-            catch (final IllegalAccessException e) {
+            } catch (final IllegalAccessException e) {
                 throw new InjectionException("@Default field " + defaultField + " failed", e);
             }
         }

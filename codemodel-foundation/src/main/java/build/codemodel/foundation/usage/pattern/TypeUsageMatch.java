@@ -9,9 +9,9 @@ package build.codemodel.foundation.usage.pattern;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -58,7 +58,7 @@ public interface TypeUsageMatch<T extends TypeUsage> {
         return mapper == null
             ? Optional.empty()
             : typeUsage()
-                .map(mapper);
+            .map(mapper);
     }
 
     /**
@@ -73,7 +73,7 @@ public interface TypeUsageMatch<T extends TypeUsage> {
         return mapper == null
             ? Optional.empty()
             : typeUsage()
-                .flatMap(mapper);
+            .flatMap(mapper);
     }
 
     /**
@@ -86,7 +86,7 @@ public interface TypeUsageMatch<T extends TypeUsage> {
         return filter == null
             ? Optional.empty()
             : typeUsage()
-                .filter(filter);
+            .filter(filter);
     }
 
     /**
@@ -115,8 +115,7 @@ public interface TypeUsageMatch<T extends TypeUsage> {
 
         if (isPresent()) {
             return orElseThrow();
-        }
-        else {
+        } else {
             throw supplier.get();
         }
     }
@@ -169,8 +168,7 @@ public interface TypeUsageMatch<T extends TypeUsage> {
             if (consumer != null) {
                 typeUsage().ifPresent(consumer);
             }
-        }
-        else if (runnable != null) {
+        } else if (runnable != null) {
             runnable.run();
         }
     }

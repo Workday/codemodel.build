@@ -9,9 +9,9 @@ package build.codemodel.foundation.naming;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -53,13 +53,13 @@ public class NonCachingNameProvider
     public NonCachingNameProvider(final Function<? super String, Stream<String>> namespacePartExtractor) {
         this.namespacePartExtractor = namespacePartExtractor == null
             ? (string -> Strings.isEmpty(string)
-            ? Stream.empty()
-            : Arrays.stream(string.split("\\."))
-                .peek(part -> {
-                    if (part.isEmpty()) {
-                        throw new IllegalArgumentException("A Namespace must not contain empty names");
-                    }
-                }))
+                         ? Stream.empty()
+                         : Arrays.stream(string.split("\\."))
+            .peek(part -> {
+                if (part.isEmpty()) {
+                    throw new IllegalArgumentException("A Namespace must not contain empty names");
+                }
+            }))
             : namespacePartExtractor;
     }
 

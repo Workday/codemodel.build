@@ -9,9 +9,9 @@ package build.codemodel.objectoriented.descriptor;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -102,7 +102,7 @@ public final class MethodDescriptor
     /**
      * {@link Unmarshal} a {@link MethodDescriptor}.
      *
-     * @param codeModel       the {@link CodeModel}
+     * @param codeModel        the {@link CodeModel}
      * @param typeDescriptor   the {@link TypeDescriptor}
      * @param marshaller       the {@link Marshaller} for unmarshalling the {@link Marshalled} {@link Trait}s
      * @param methodName       the {@link MethodName}
@@ -127,8 +127,8 @@ public final class MethodDescriptor
         this.formalParameters = formalParameters == null
             ? new ArrayList<>()
             : formalParameters
-                .map(marshaller::unmarshal)
-                .collect(Collectors.toCollection(ArrayList::new));
+            .map(marshaller::unmarshal)
+            .collect(Collectors.toCollection(ArrayList::new));
     }
 
     /**

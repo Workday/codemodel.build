@@ -9,9 +9,9 @@ package build.codemodel.foundation.usage;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -67,7 +67,7 @@ public class WildcardTypeUsage
     /**
      * Constructs a bounded {@link WildcardTypeUsage}.
      *
-     * @param codeModel the {@link CodeModel}
+     * @param codeModel  the {@link CodeModel}
      * @param lowerBound the {@link Optional} {@link Lazy} lower-bound {@link TypeUsage} (from {@code ? super T})
      * @param upperBound the {@link Optional} {@link Lazy} upper-bound {@link TypeUsage} (from {@code ? extends T})
      */
@@ -88,7 +88,7 @@ public class WildcardTypeUsage
     /**
      * {@link Unmarshal} a {@link WildcardTypeUsage}.
      *
-     * @param codeModel the {@link CodeModel}
+     * @param codeModel  the {@link CodeModel}
      * @param marshaller the {@link Marshaller} for unmarshalling the {@link Marshalled} {@link Trait}s
      * @param typeName   the {@link TypeName}
      * @param traits     the {@link Marshalled} {@link Trait}s
@@ -152,7 +152,7 @@ public class WildcardTypeUsage
     /**
      * Creates a bounded {@link WildcardTypeUsage}.
      *
-     * @param codeModel the {@link CodeModel}
+     * @param codeModel  the {@link CodeModel}
      * @param lowerBound the {@link Optional} {@link Lazy} lower-bound {@link TypeUsage} (from {@code ? super T})
      * @param upperBound the {@link Optional} {@link Lazy} upper-bound {@link TypeUsage} (from {@code ? extends T})
      * @return a {@link WildcardTypeUsage}

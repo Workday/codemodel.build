@@ -9,9 +9,9 @@ package build.codemodel.expression;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -59,7 +59,7 @@ public class Modulo
     /**
      * Un{@link Marshal} a {@link Modulo}.
      *
-     * @param codeModel the {@link CodeModel}
+     * @param codeModel  the {@link CodeModel}
      * @param marshaller the {@link Marshaller}
      * @param traits     the {@link Stream} of {@link Marshalled} {@link Trait}s
      * @param typeUsage  the {@link Optional} {@link Marshalled} {@link TypeUsage}
@@ -73,7 +73,7 @@ public class Modulo
                   final Optional<Marshalled<TypeUsage>> typeUsage,
                   final Marshalled<Expression> left,
                   final Marshalled<Expression> right) {
-        
+
         super(codeModel, marshaller, traits, typeUsage, left, right);
     }
 
@@ -118,7 +118,7 @@ public class Modulo
 
         return new Modulo(left, right);
     }
-    
+
     static {
         Marshalling.register(Modulo.class, MethodHandles.lookup());
     }

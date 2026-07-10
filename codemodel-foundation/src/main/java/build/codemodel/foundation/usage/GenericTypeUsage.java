@@ -9,9 +9,9 @@ package build.codemodel.foundation.usage;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -59,7 +59,7 @@ public class GenericTypeUsage
     /**
      * Constructs a {@link GenericTypeUsage}.
      *
-     * @param codeModel the {@link CodeModel}
+     * @param codeModel  the {@link CodeModel}
      * @param typeName   the {@link TypeName}
      * @param parameters the {@link Lazy} {@link TypeUsage}s
      */
@@ -78,7 +78,7 @@ public class GenericTypeUsage
     /**
      * {@link Unmarshal} an {@link AbstractNamedTypeUsage}.
      *
-     * @param codeModel the {@link CodeModel}
+     * @param codeModel  the {@link CodeModel}
      * @param marshaller the {@link Marshaller} for unmarshalling the {@link Marshalled} {@link Trait}s
      * @param typeName   the {@link TypeName}
      * @param traits     the {@link Marshalled} {@link Trait}s
@@ -143,8 +143,7 @@ public class GenericTypeUsage
     public boolean equals(final Object object) {
         if (this == object) {
             return true;
-        }
-        else if (object instanceof GenericTypeUsage other) {
+        } else if (object instanceof GenericTypeUsage other) {
             return Objects.equals(typeName(), other.typeName())
                 && super.equals(other)
                 && Streams.equals(parameters(), other.parameters());
@@ -168,7 +167,7 @@ public class GenericTypeUsage
      * that the specified {@link TypeName} is defined as a generic type.
      *
      * @param codeModel the {@link CodeModel}
-     * @param typeName   the {@link TypeName}
+     * @param typeName  the {@link TypeName}
      * @return a new {@link GenericTypeUsage}
      */
     public static GenericTypeUsage of(final CodeModel codeModel,
@@ -180,7 +179,7 @@ public class GenericTypeUsage
     /**
      * Creates a {@link GenericTypeUsage} with the specified parameters.
      *
-     * @param codeModel the {@link CodeModel}
+     * @param codeModel  the {@link CodeModel}
      * @param typeName   the {@link TypeName}
      * @param parameters the {@link Lazy} {@link TypeUsage} parameters
      * @return a new {@link GenericTypeUsage}
@@ -195,7 +194,7 @@ public class GenericTypeUsage
     /**
      * Creates a {@link GenericTypeUsage} with the specified parameters.
      *
-     * @param codeModel the {@link CodeModel}
+     * @param codeModel  the {@link CodeModel}
      * @param typeName   the {@link TypeName}
      * @param parameters the {@link TypeUsage}s
      * @return a new {@link GenericTypeUsage}

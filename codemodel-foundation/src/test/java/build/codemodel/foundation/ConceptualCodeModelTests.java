@@ -215,12 +215,18 @@ class ConceptualCodeModelTests
         codeModel.createTypeDescriptor(
             typeName,
             PolymorphicTypeDescriptor::of,
-            Streamable.of(_ -> { counter.incrementAndGet(); return Color.RED; }));
+            Streamable.of(_ -> {
+                counter.incrementAndGet();
+                return Color.RED;
+            }));
 
         codeModel.createTypeDescriptor(
             typeName,
             PolymorphicTypeDescriptor::of,
-            Streamable.of(_ -> { counter.incrementAndGet(); return Color.RED; }));
+            Streamable.of(_ -> {
+                counter.incrementAndGet();
+                return Color.RED;
+            }));
 
         assertThat(counter.get()).isEqualTo(1);
     }
@@ -251,12 +257,18 @@ class ConceptualCodeModelTests
         codeModel.createModuleDescriptor(
             moduleName,
             PolymorphicModuleDescriptor::of,
-            Streamable.of(_ -> { counter.incrementAndGet(); return Color.RED; }));
+            Streamable.of(_ -> {
+                counter.incrementAndGet();
+                return Color.RED;
+            }));
 
         codeModel.createModuleDescriptor(
             moduleName,
             PolymorphicModuleDescriptor::of,
-            Streamable.of(_ -> { counter.incrementAndGet(); return Color.RED; }));
+            Streamable.of(_ -> {
+                counter.incrementAndGet();
+                return Color.RED;
+            }));
 
         assertThat(counter.get()).isEqualTo(1);
     }
@@ -287,12 +299,18 @@ class ConceptualCodeModelTests
         codeModel.createNamespaceDescriptor(
             namespace,
             PolymorphicNamespaceDescriptor::of,
-            Streamable.of(_ -> { counter.incrementAndGet(); return Color.RED; }));
+            Streamable.of(_ -> {
+                counter.incrementAndGet();
+                return Color.RED;
+            }));
 
         codeModel.createNamespaceDescriptor(
             namespace,
             PolymorphicNamespaceDescriptor::of,
-            Streamable.of(_ -> { counter.incrementAndGet(); return Color.RED; }));
+            Streamable.of(_ -> {
+                counter.incrementAndGet();
+                return Color.RED;
+            }));
 
         assertThat(counter.get()).isEqualTo(1);
     }

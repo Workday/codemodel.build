@@ -303,20 +303,20 @@ public class AnnotationProcessor
                             + typeDescriptor.typeName()
                             + (typeDescriptor.traits(ExtendsTypeDescriptor.class).findFirst().isPresent()
                             ? " extends " + typeDescriptor.traits(ExtendsTypeDescriptor.class)
-                                            .map(ExtendsTypeDescriptor::parentTypeUsage)
-                                            .map(Objects::toString)
-                                            .collect(Collectors.joining(", "))
+                            .map(ExtendsTypeDescriptor::parentTypeUsage)
+                            .map(Objects::toString)
+                            .collect(Collectors.joining(", "))
                             : "")
                             + (typeDescriptor.traits(ImplementsTypeDescriptor.class).findFirst().isPresent()
                             ? " implements " + typeDescriptor.traits(ImplementsTypeDescriptor.class)
-                                               .map(ImplementsTypeDescriptor::parentTypeUsage)
-                                               .map(Objects::toString)
-                                               .collect(Collectors.joining(", "))
+                            .map(ImplementsTypeDescriptor::parentTypeUsage)
+                            .map(Objects::toString)
+                            .collect(Collectors.joining(", "))
                             : "")
                             + (typeDescriptor.traits().findFirst().isPresent()
                             ? " Traits["
                               + typeDescriptor.traits().map(Object::getClass).map(Class::getSimpleName)
-                                .collect(Collectors.joining(", ")) + "]"
+                            .collect(Collectors.joining(", ")) + "]"
                             : "")));
 
                     // --------
@@ -467,9 +467,9 @@ public class AnnotationProcessor
      * @return a {@link ConstructorDescriptor}
      */
     private ConstructorDescriptor createConstructorDescriptor(final CodeModel codeModel,
-                                                               final JDKTypeDescriptor typeDescriptor,
-                                                               final ExecutableElement constructorElement,
-                                                               final LinkedHashMap<TypeName, TypeElement> pending) {
+                                                              final JDKTypeDescriptor typeDescriptor,
+                                                              final ExecutableElement constructorElement,
+                                                              final LinkedHashMap<TypeName, TypeElement> pending) {
         final var formalParameters = resolver().getFormalParameters(constructorElement,
             (variable, pd) -> pd.addTrait(SourceLocation.elementRef(variable)));
 

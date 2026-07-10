@@ -9,9 +9,9 @@ package build.codemodel.foundation;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -94,7 +94,7 @@ public abstract class AbstractCodeModel
      *
      * @param nameProvider the {@link NameProvider}
      */
-    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @SuppressWarnings({"unchecked", "rawtypes"})
     protected AbstractCodeModel(final NameProvider nameProvider) {
 
         this.nameProvider = Objects.requireNonNull(nameProvider, "The NameProvider must not be null");
@@ -126,11 +126,11 @@ public abstract class AbstractCodeModel
      * @param namespaceDescriptors the {@link Stream} of {@link Marshalled} {@link NamespaceDescriptor}s
      */
     protected AbstractCodeModel(final NameProvider nameProvider,
-                                 final Marshaller marshaller,
-                                 final Stream<Marshalled<Trait>> traits,
-                                 final Stream<Marshalled<TypeDescriptor>> typeDescriptors,
-                                 final Stream<Marshalled<ModuleDescriptor>> moduleDescriptors,
-                                 final Stream<Marshalled<NamespaceDescriptor>> namespaceDescriptors) {
+                                final Marshaller marshaller,
+                                final Stream<Marshalled<Trait>> traits,
+                                final Stream<Marshalled<TypeDescriptor>> typeDescriptors,
+                                final Stream<Marshalled<ModuleDescriptor>> moduleDescriptors,
+                                final Stream<Marshalled<NamespaceDescriptor>> namespaceDescriptors) {
 
         this(nameProvider);
 
@@ -245,20 +245,15 @@ public abstract class AbstractCodeModel
                 this.moduleDescriptors.values().iterator(),
                 this.namespaceDescriptors.values().iterator(),
                 this.traitable.iterator(type));
-        }
-        else if (CodeModel.class.isAssignableFrom(type)) {
+        } else if (CodeModel.class.isAssignableFrom(type)) {
             return (Iterator<T>) Iterators.of(this);
-        }
-        else if (TypeDescriptor.class.isAssignableFrom(type)) {
+        } else if (TypeDescriptor.class.isAssignableFrom(type)) {
             return (Iterator<T>) this.typeDescriptors.values().iterator();
-        }
-        else if (ModuleDescriptor.class.isAssignableFrom(type)) {
+        } else if (ModuleDescriptor.class.isAssignableFrom(type)) {
             return (Iterator<T>) this.moduleDescriptors.values().iterator();
-        }
-        else if (NamespaceDescriptor.class.isAssignableFrom(type)) {
+        } else if (NamespaceDescriptor.class.isAssignableFrom(type)) {
             return (Iterator<T>) this.namespaceDescriptors.values().iterator();
-        }
-        else {
+        } else {
             return this.traitable.iterator(type);
         }
     }

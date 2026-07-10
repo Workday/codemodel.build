@@ -9,9 +9,9 @@ package build.codemodel.foundation.descriptor;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -59,7 +59,7 @@ public class RequiresModuleDescriptor
      * {@link ModuleName}.
      *
      * @param codeModel the {@link CodeModel}
-     * @param requires   the required {@link ModuleName}
+     * @param requires  the required {@link ModuleName}
      */
     private RequiresModuleDescriptor(final CodeModel codeModel,
                                      final ModuleName requires) {
@@ -71,7 +71,7 @@ public class RequiresModuleDescriptor
     /**
      * {@link Unmarshal} a {@link RequiresModuleDescriptor}.
      *
-     * @param codeModel the {@link CodeModel}
+     * @param codeModel  the {@link CodeModel}
      * @param marshaller the {@link Marshaller} for unmarshalling the {@link Marshalled} {@link Trait}s
      * @param traits     the {@link Marshalled} {@link Trait}s
      * @param requires   the required {@link ModuleName}
@@ -141,7 +141,7 @@ public class RequiresModuleDescriptor
      * Creates a {@link RequiresModuleDescriptor}.
      *
      * @param codeModel the {@link CodeModel}
-     * @param requires   the required {@link ModuleName}
+     * @param requires  the required {@link ModuleName}
      * @return a new {@link RequiresModuleDescriptor}
      */
     public static RequiresModuleDescriptor of(final CodeModel codeModel,

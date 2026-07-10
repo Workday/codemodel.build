@@ -428,8 +428,8 @@ public class JdkInitializer
     }
 
     private void addRecordComponentSourceLocations(final JDKTypeDescriptor typeDescriptor,
-                                                    final TreePath classPath,
-                                                    final CompilationUnitTree cut) {
+                                                   final TreePath classPath,
+                                                   final CompilationUnitTree cut) {
         final var classTree = (ClassTree) classPath.getLeaf();
         final var componentTypeTrees = classTree.getMembers().stream()
             .filter(VariableTree.class::isInstance)
@@ -454,8 +454,8 @@ public class JdkInitializer
     }
 
     private void addTypeParameterBoundSourceLocations(final Traitable traitable,
-                                                       final List<? extends TypeParameterTree> typeParamTrees,
-                                                       final CompilationUnitTree cut) {
+                                                      final List<? extends TypeParameterTree> typeParamTrees,
+                                                      final CompilationUnitTree cut) {
         final var descriptor = traitable.getTrait(ParameterizedTypeDescriptor.class);
         if (descriptor.isEmpty()) {
             return;

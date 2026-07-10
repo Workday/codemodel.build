@@ -93,8 +93,15 @@ class DefaultOptionResolverTests
         final var context = framework.newContext(
             DefaultOptionResolver.of(framework),
             dep -> Optional.of(new ValueBinding<Object>() {
-                @Override public Object value() { return "fallback"; }
-                @Override public Dependency dependency() { return dep; }
+                @Override
+                public Object value() {
+                    return "fallback";
+                }
+
+                @Override
+                public Dependency dependency() {
+                    return dep;
+                }
             }));
 
         context.bind(ServiceWithString.class).to(ServiceWithString.class);

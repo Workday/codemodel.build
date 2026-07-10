@@ -27,12 +27,20 @@ package build.codemodel.jdk.expression;
  * @since Apr-2026
  */
 public enum PrefixOperator {
-    /** Pre-increment: {@code ++x} */
+    /**
+     * Pre-increment: {@code ++x}
+     */
     INCREMENT,
-    /** Pre-decrement: {@code --x} */
+    /**
+     * Pre-decrement: {@code --x}
+     */
     DECREMENT,
-    /** Bitwise complement: {@code ~x} */
+    /**
+     * Bitwise complement: {@code ~x}
+     */
     BITWISE_COMPLEMENT,
-    /** Unary plus: {@code +x} */
+    /**
+     * Unary plus: {@code +x}
+     */
     UNARY_PLUS
 }

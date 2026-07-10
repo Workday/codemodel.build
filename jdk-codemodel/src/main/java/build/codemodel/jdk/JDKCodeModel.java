@@ -203,7 +203,8 @@ public class JDKCodeModel
     public void rescan(final JavaFileObject updatedFile,
                        final List<Path> classpath,
                        final List<Path> modulePath) {
-        rescan(updatedFile, List.of(), classpath, modulePath, d -> { });
+        rescan(updatedFile, List.of(), classpath, modulePath, d -> {
+        });
     }
 
     /**
@@ -785,7 +786,7 @@ public class JDKCodeModel
         return element == null
             ? Stream.empty()
             : Streams.of(element.getDeclaredAnnotations())
-              .map(this::getAnnotation);
+            .map(this::getAnnotation);
     }
 
     /**

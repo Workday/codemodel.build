@@ -1,5 +1,6 @@
 package build.codemodel.jdk;
 
+import build.base.compile.testing.JavaFileObjects;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.naming.NonCachingNameProvider;
 import build.codemodel.foundation.usage.AnnotationTypeUsage;
@@ -16,7 +17,6 @@ import build.codemodel.objectoriented.descriptor.Classification;
 import build.codemodel.objectoriented.descriptor.ConstructorDescriptor;
 import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
-import build.base.compile.testing.JavaFileObjects;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;

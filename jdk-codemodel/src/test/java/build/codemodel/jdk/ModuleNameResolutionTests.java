@@ -21,17 +21,16 @@ package build.codemodel.jdk;
  */
 
 
+import build.base.compile.testing.JavaFileObjects;
 import build.codemodel.foundation.naming.ModuleName;
 import build.codemodel.jdk.descriptor.MemberTypeDescriptor;
-import build.base.compile.testing.JavaFileObjects;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.List;
 import java.util.Optional;
-
 import javax.tools.JavaFileObject;
 
 import static org.assertj.core.api.Assertions.assertThat;

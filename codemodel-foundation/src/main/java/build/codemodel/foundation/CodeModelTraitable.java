@@ -9,9 +9,9 @@ package build.codemodel.foundation;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -89,10 +89,10 @@ class CodeModelTraitable
      * Constructs a {@link CodeModelTraitable} for the specified {@link Object}.
      *
      * @param codeModel the {@link AbstractCodeModel} that established the {@link Traitable}
-     * @param object     the {@link Traitable} {@link Object}
+     * @param object    the {@link Traitable} {@link Object}
      */
     CodeModelTraitable(final AbstractCodeModel codeModel,
-                        final Traitable object) {
+                       final Traitable object) {
 
         this.codeModel = Objects.requireNonNull(codeModel, "The CodeModel must not be null");
         this.object = Objects.requireNonNull(object, "The object must not be null");
@@ -165,8 +165,7 @@ class CodeModelTraitable
                 this.codeModel.index().index(trait);
                 return trait;
             });
-        }
-        else {
+        } else {
             this.traitsByClass.compute(registrationClass, (_, existing) -> {
                 final var list = existing == null ? ConcurrentHashMap.<Trait>newKeySet() : existing;
 
@@ -216,13 +215,11 @@ class CodeModelTraitable
 
                     removed.set(true);
                     return null;
-                }
-                else {
+                } else {
                     return existing;
                 }
             });
-        }
-        else {
+        } else {
             this.traitsByClass.compute(registrationClass, (_, existing) -> {
                 if (existing == null) {
                     removed.set(false);
@@ -236,8 +233,7 @@ class CodeModelTraitable
                         traitAware.onRemovedTrait(trait);
                     }
                     removed.set(true);
-                }
-                else {
+                } else {
                     removed.set(false);
                 }
 
@@ -278,15 +274,13 @@ class CodeModelTraitable
 
                     this.codeModel.index().index(newTrait);
                     return newTrait;
-                }
-                else {
+                } else {
                     lazyTrait.set((T) existing);
 
                     return existing;
                 }
             });
-        }
-        else {
+        } else {
             this.traitsByClass.compute(registrationClass, (_, existing) -> {
                 if (existing == null || existing.isEmpty()) {
                     final var trait = function.apply(traitable);
@@ -363,8 +357,7 @@ class CodeModelTraitable
 
                 return newTrait;
             });
-        }
-        else {
+        } else {
             this.traitsByClass.compute(registrationClass, (_, existing) -> {
                 if (existing == null || existing.isEmpty()) {
                     return existing;
@@ -499,8 +492,7 @@ class CodeModelTraitable
 
             final var first = (T) traits.iterator().next();
             return requiredClass.isInstance(first) ? first : null;
-        }
-        else {
+        } else {
             // exhaustively search :(
             return this.singularTraitsByClass.values().stream()
                 .filter(requiredClass::isInstance)
@@ -581,9 +573,9 @@ class CodeModelTraitable
         return this.traitsByClass.isEmpty()
             ? ""
             : this.traitsByClass.values().stream()
-                .flatMap(Set::stream)
-                .map(Object::toString)
-                .collect(Collectors.joining(",", " [", "]"));
+            .flatMap(Set::stream)
+            .map(Object::toString)
+            .collect(Collectors.joining(",", " [", "]"));
     }
 
     /**
@@ -596,16 +588,14 @@ class CodeModelTraitable
     public static boolean isSingular(final Class<? extends Trait> registrationClass) {
         if (singularTraitClasses.contains(registrationClass)) {
             return true;
-        }
-        else if (nonSingularTraitClasses.contains(registrationClass)) {
+        } else if (nonSingularTraitClasses.contains(registrationClass)) {
             return false;
         }
 
         final var singular = registrationClass.getAnnotation(Singular.class);
         if (singular == null) {
             nonSingularTraitClasses.add(registrationClass);
-        }
-        else {
+        } else {
             singularTraitClasses.add(registrationClass);
         }
 
@@ -686,8 +676,7 @@ class CodeModelTraitable
                     for (final Class<?> interfaceClass : registrationClass.getInterfaces()) {
                         hierarchy.push(interfaceClass);
                     }
-                }
-                else {
+                } else {
                     // ensure that the registration class is a Trait
                     if (Trait.class.isAssignableFrom(registrationClass)) {
 
@@ -704,8 +693,7 @@ class CodeModelTraitable
                         }
 
                         return (Class<? extends Trait>) registrationClass;
-                    }
-                    else {
+                    } else {
                         // we ignore classes that use @Singular or @NonSingular which are not Traits
                     }
                 }

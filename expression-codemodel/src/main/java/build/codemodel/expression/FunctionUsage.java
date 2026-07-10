@@ -62,7 +62,7 @@ public class FunctionUsage
     /**
      * Constructs a {@link FunctionUsage}.
      *
-     * @param codeModel   the {@link CodeModel}
+     * @param codeModel    the {@link CodeModel}
      * @param functionName the {@link FunctionName} for the function
      * @param arguments    the arguments for the function
      */
@@ -80,7 +80,7 @@ public class FunctionUsage
     /**
      * Un{@link Marshal} a {@link FunctionUsage}.
      *
-     * @param codeModel   the {@link CodeModel}
+     * @param codeModel    the {@link CodeModel}
      * @param marshaller   the {@link Marshaller}
      * @param traits       the {@link Stream} of {@link Trait}s
      * @param functionName the {@link FunctionName}
@@ -153,14 +153,15 @@ public class FunctionUsage
             return true;
         }
         return object instanceof FunctionUsage other
-                && Objects.equals(this.functionName, other.functionName)
-                && this.arguments.equals(other.arguments)
-                && super.equals(object);
+            && Objects.equals(this.functionName, other.functionName)
+            && this.arguments.equals(other.arguments)
+            && super.equals(object);
     }
+
     /**
      * Creates a {@link FunctionUsage}.
      *
-     * @param codeModel   the {@link CodeModel}
+     * @param codeModel    the {@link CodeModel}
      * @param functionName the {@link FunctionName} for the function
      * @param arguments    the arguments for the function
      */
@@ -174,7 +175,7 @@ public class FunctionUsage
     /**
      * Creates a {@link FunctionUsage}.
      *
-     * @param codeModel   the {@link CodeModel}
+     * @param codeModel    the {@link CodeModel}
      * @param functionName the {@link FunctionName} for the function
      * @param arguments    the arguments for the function
      */

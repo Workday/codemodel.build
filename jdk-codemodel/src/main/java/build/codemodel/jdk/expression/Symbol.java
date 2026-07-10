@@ -112,7 +112,7 @@ public sealed interface Symbol extends Trait, Composite
      * @param fieldName     the simple name of the resolved field
      */
     record Field(TypeUsage declaredType, CodeModel codeModel, TypeName declaringType,
-                String fieldName) implements Symbol {
+                 String fieldName) implements Symbol {
 
         public Field {
             Objects.requireNonNull(declaredType, "declaredType must not be null");
@@ -125,7 +125,7 @@ public sealed interface Symbol extends Trait, Composite
          * Resolves the {@link FieldDescriptor} this reference currently refers to.
          *
          * @return the resolved {@link FieldDescriptor}, or {@link Optional#empty()} if the
-         *     declaring type or the matching field is no longer present in {@link #codeModel()}
+         * declaring type or the matching field is no longer present in {@link #codeModel()}
          */
         public Optional<FieldDescriptor> descriptor() {
             return codeModel.getTypeDescriptor(declaringType)

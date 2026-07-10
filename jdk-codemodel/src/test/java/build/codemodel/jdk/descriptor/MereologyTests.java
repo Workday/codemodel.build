@@ -23,7 +23,6 @@ package build.codemodel.jdk.descriptor;
 import build.codemodel.expression.NumericLiteral;
 import build.codemodel.foundation.naming.IrreducibleName;
 import build.codemodel.foundation.naming.NonCachingNameProvider;
-import build.codemodel.foundation.usage.TypeUsage;
 import build.codemodel.imperative.Block;
 import build.codemodel.jdk.JDKCodeModel;
 import build.codemodel.jdk.expression.ClassLiteral;

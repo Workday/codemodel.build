@@ -1,11 +1,10 @@
 package build.codemodel.jdk;
 
+import build.base.compile.testing.JavaFileObjects;
 import build.codemodel.imperative.Return;
 import build.codemodel.jdk.expression.MethodInvocation;
 import build.codemodel.jdk.expression.ResolvedMethod;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
-import build.codemodel.jdk.JdkInitializer;
-import build.base.compile.testing.JavaFileObjects;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

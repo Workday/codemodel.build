@@ -894,18 +894,18 @@ class IncrementalRescanTests {
     void callersCachedFieldSymbolGoesStaleAfterDeclaringTypeIsRescanned() {
         final var baseSource = JavaFileObjects.forSourceString("com.example.Base", """
             package com.example;
-
+            
             public class Base {
-
+            
                 protected int value;
             }
             """);
 
         final var subSource = JavaFileObjects.forSourceString("com.example.Sub", """
             package com.example;
-
+            
             public class Sub extends Base {
-
+            
                 public int read() {
                     return value;
                 }
@@ -938,13 +938,13 @@ class IncrementalRescanTests {
         // Simulate an editor save of Base.java: same field name, but padded so its offset moves.
         final var baseV2 = JavaFileObjects.forSourceString("com.example.Base", """
             package com.example;
-
+            
             public class Base {
-
+            
                 // several new lines added above, shifting every subsequent offset
                 // several new lines added above, shifting every subsequent offset
                 // several new lines added above, shifting every subsequent offset
-
+            
                 protected int value;
             }
             """);

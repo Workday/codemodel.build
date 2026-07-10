@@ -9,9 +9,9 @@ package build.codemodel.foundation.usage;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -47,7 +47,7 @@ public class SpecificTypeUsage
      * Constructs a {@link SpecificTypeUsage}.
      *
      * @param codeModel the {@link CodeModel}
-     * @param typeName   the {@link TypeName}
+     * @param typeName  the {@link TypeName}
      */
     private SpecificTypeUsage(final CodeModel codeModel,
                               final TypeName typeName) {
@@ -58,7 +58,7 @@ public class SpecificTypeUsage
     /**
      * {@link Unmarshal} a {@link SpecificTypeUsage}.
      *
-     * @param codeModel the {@link CodeModel}
+     * @param codeModel  the {@link CodeModel}
      * @param marshaller the {@link Marshaller} for unmarshalling the {@link Marshalled} {@link Trait}s
      * @param typeName   the {@link TypeName}
      * @param traits     the {@link Marshalled} {@link Trait}s
@@ -100,7 +100,7 @@ public class SpecificTypeUsage
      * Creates a {@link SpecificTypeUsage}.
      *
      * @param codeModel the {@link CodeModel}
-     * @param typeName   the {@link TypeName}
+     * @param typeName  the {@link TypeName}
      * @return a {@link SpecificTypeUsage}
      */
     public static SpecificTypeUsage of(final CodeModel codeModel,

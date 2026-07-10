@@ -116,7 +116,7 @@ public final class JDKModuleDescriptor
      * Populates this descriptor's traits from a javac {@link ModuleTree}.
      * Called by {@link build.codemodel.jdk.JdkInitializer} after creating the descriptor.
      *
-     * @param moduleTree             the {@link ModuleTree} produced by javac
+     * @param moduleTree                 the {@link ModuleTree} produced by javac
      * @param annotationTypeNameResolver resolves an annotation's {@link AnnotationTree} to the
      *                                   module-qualified {@link TypeName} of its declaring type,
      *                                   matching how that type's descriptor was registered

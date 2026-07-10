@@ -9,9 +9,9 @@ package build.codemodel.foundation.usage;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -56,7 +56,7 @@ public class ArrayTypeUsage
      * Constructs an {@link ArrayTypeUsage} for the specified component {@link TypeUsage}.
      *
      * @param codeModel the {@link CodeModel}
-     * @param component  the {@link TypeUsage}
+     * @param component the {@link TypeUsage}
      */
     private ArrayTypeUsage(final CodeModel codeModel,
                            final Lazy<TypeUsage> component) {
@@ -67,7 +67,7 @@ public class ArrayTypeUsage
     /**
      * {@link Unmarshal} an {@link ArrayTypeUsage}.
      *
-     * @param codeModel the {@link CodeModel}
+     * @param codeModel  the {@link CodeModel}
      * @param marshaller the {@link Marshaller} for unmarshalling the {@link Marshalled} {@link Trait}s
      * @param traits     the {@link Marshalled} {@link Trait}s
      * @param component  the {@link Marshalled} {@link TypeUsage} for the array component type

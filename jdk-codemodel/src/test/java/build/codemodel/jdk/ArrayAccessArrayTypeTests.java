@@ -1,10 +1,10 @@
 package build.codemodel.jdk;
 
+import build.base.compile.testing.JavaFileObjects;
 import build.codemodel.jdk.descriptor.MethodBodyDescriptor;
 import build.codemodel.jdk.expression.ArrayAccess;
 import build.codemodel.jdk.statement.LocalVariableDeclaration;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
-import build.base.compile.testing.JavaFileObjects;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
