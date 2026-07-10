@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  * @author spencer.firestone
  * @since Jan-2020
  */
-class QualifiedResolverTest
+class QualifiedResolverTests
     implements ContextualTesting {
 
     /**

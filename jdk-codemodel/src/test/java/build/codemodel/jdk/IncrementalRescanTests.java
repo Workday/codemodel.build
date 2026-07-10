@@ -370,7 +370,7 @@ class IncrementalRescanTests {
             "com.example.Helper",
             "package com.example; public class Helper {}");
         final var compiler = javax.tools.ToolProvider.getSystemJavaCompiler();
-        try (final var fm = compiler.getStandardFileManager(null, null, null)) {
+        try (var fm = compiler.getStandardFileManager(null, null, null)) {
             compiler.getTask(null, fm, _ -> {
                 }, List.of("-d", classpathDir.toString()),
                 null, List.of(helperSource)).call();
@@ -574,7 +574,7 @@ class IncrementalRescanTests {
             public class Result<T> {}
             """);
         final var compiler = javax.tools.ToolProvider.getSystemJavaCompiler();
-        try (final var fm = compiler.getStandardFileManager(null, null, null)) {
+        try (var fm = compiler.getStandardFileManager(null, null, null)) {
             compiler.getTask(null, fm, _ -> {
                 },
                 List.of("-d", resultModuleDir.toString()),
@@ -655,7 +655,7 @@ class IncrementalRescanTests {
             "com.example.Helper",
             "package com.example; public class Helper {}");
         final var compiler = javax.tools.ToolProvider.getSystemJavaCompiler();
-        try (final var fm = compiler.getStandardFileManager(null, null, null)) {
+        try (var fm = compiler.getStandardFileManager(null, null, null)) {
             compiler.getTask(null, fm, _ -> {
                 }, List.of("-d", classpathDir.toString()),
                 null, List.of(helperSource)).call();

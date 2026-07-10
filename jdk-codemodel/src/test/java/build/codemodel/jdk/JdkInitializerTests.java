@@ -225,7 +225,7 @@ class JdkInitializerTests {
             "com.example.Helper",
             "package com.example; public class Helper {}");
         final var compiler = ToolProvider.getSystemJavaCompiler();
-        try (final var fm = compiler.getStandardFileManager(null, null, null)) {
+        try (var fm = compiler.getStandardFileManager(null, null, null)) {
             compiler.getTask(null, fm, diagnostic -> {
                 },
                 List.of("-d", classpathDir.toString()), null, List.of(helperSource)).call();

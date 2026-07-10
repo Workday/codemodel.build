@@ -363,6 +363,8 @@
                     <consoleOutput>true</consoleOutput>
                     <failsOnError>true</failsOnError>
                     <linkXRef>false</linkXRef>
+                    <includeTestSourceDirectory>true</includeTestSourceDirectory>
+                    <propertyExpansion>suppressions.file=${maven.multiModuleProjectDirectory}/config/checkstyle/suppressions.xml</propertyExpansion>
                 </configuration>
                 <executions>
                     <execution>

@@ -343,7 +343,7 @@ class ConceptualCodeModelTests
         extends AbstractTraitable
         implements Trait {
 
-        public Wheel(final TypeDescriptor typeDescriptor) {
+        Wheel(final TypeDescriptor typeDescriptor) {
             super(typeDescriptor);
         }
 

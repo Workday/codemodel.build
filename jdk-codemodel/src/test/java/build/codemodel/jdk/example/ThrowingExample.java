@@ -29,7 +29,7 @@ import java.io.IOException;
  */
 public class ThrowingExample {
 
-    public ThrowingExample(String path) throws IOException {
+    public ThrowingExample(final String path) throws IOException {
     }
 
     public void read() throws IOException {

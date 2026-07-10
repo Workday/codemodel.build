@@ -109,7 +109,7 @@ public class ExpressionParserTests {
     @ParameterizedTest
     @NullSource
     @ValueSource(strings = {"", "      "})
-    void shouldParseAnEmptyExpression(String expr) {
+    void shouldParseAnEmptyExpression(final String expr) {
         final var result = parser.parse(expr);
         assertNull(result);
     }
@@ -119,7 +119,7 @@ public class ExpressionParserTests {
      */
     @ParameterizedTest
     @ValueSource(strings = {"1", " 1", "1 "})
-    void shouldParseSingleLiteral(String expr) {
+    void shouldParseSingleLiteral(final String expr) {
         final var expected = NumericLiteral.of(codeModel, new BigDecimal("1"));
         final var result = parser.parse(expr);
         assertGraph(expected, result);
@@ -130,7 +130,7 @@ public class ExpressionParserTests {
      */
     @ParameterizedTest
     @ValueSource(strings = {"1 + 2", "1+2", "1    +2 "})
-    void shouldParseSimpleAddition(String expr) {
+    void shouldParseSimpleAddition(final String expr) {
         final var expected = Addition.of(
             NumericLiteral.of(codeModel, new BigDecimal("1")),
             NumericLiteral.of(codeModel, new BigDecimal("2"))
@@ -144,7 +144,7 @@ public class ExpressionParserTests {
      */
     @ParameterizedTest
     @ValueSource(strings = {"1 * 2", "1*2", "1    *2 "})
-    void shouldParseSimpleMultiplication(String expr) {
+    void shouldParseSimpleMultiplication(final String expr) {
         final var expected = Multiplication.of(
             NumericLiteral.of(codeModel, new BigDecimal("1")),
             NumericLiteral.of(codeModel, new BigDecimal("2"))
@@ -159,7 +159,7 @@ public class ExpressionParserTests {
      */
     @ParameterizedTest
     @ValueSource(strings = {"1 + 2 * 3", "1+2*3", "1 +2* 3"})
-    void shouldParseAdditionThenMultiplicationWithCorrectPrecedence(String expr) {
+    void shouldParseAdditionThenMultiplicationWithCorrectPrecedence(final String expr) {
         final var expected = Addition.of(
             NumericLiteral.of(codeModel, new BigDecimal("1")),
             Multiplication.of(
@@ -177,7 +177,7 @@ public class ExpressionParserTests {
      */
     @ParameterizedTest
     @ValueSource(strings = {"1 * 2 + 3", "1*2+3", "1 *2+ 3"})
-    void shouldParseMultiplicationThenAdditionWithCorrectPrecedence(String expr) {
+    void shouldParseMultiplicationThenAdditionWithCorrectPrecedence(final String expr) {
         final var expected = Addition.of(
             Multiplication.of(
                 NumericLiteral.of(codeModel, new BigDecimal("1")),
@@ -195,7 +195,7 @@ public class ExpressionParserTests {
      */
     @ParameterizedTest
     @ValueSource(strings = {"1 + 2 - 3", "1+2-3"})
-    void shouldParseAdditionAndSubtractionAsEqualPrecedence(String expr) {
+    void shouldParseAdditionAndSubtractionAsEqualPrecedence(final String expr) {
         final var expected = Subtraction.of(
             Addition.of(
                 NumericLiteral.of(codeModel, new BigDecimal("1")),
@@ -212,7 +212,7 @@ public class ExpressionParserTests {
      */
     @ParameterizedTest
     @ValueSource(strings = {"1 + 2 * 3 - 4", "1+2*3-4"})
-    void shouldParseMultiNodeExpressionWithCorrectPrecedence(String expr) {
+    void shouldParseMultiNodeExpressionWithCorrectPrecedence(final String expr) {
         final var expected = Subtraction.of(
             Addition.of(
                 NumericLiteral.of(codeModel, new BigDecimal("1")),
@@ -244,7 +244,7 @@ public class ExpressionParserTests {
      */
     @ParameterizedTest
     @ValueSource(strings = {"-1 + 2", "-1+2"})
-    void shouldParseNegativeBeginningAnExpressionCorrectly(String expr) {
+    void shouldParseNegativeBeginningAnExpressionCorrectly(final String expr) {
         final var expected = Addition.of(
             Negative.of(
                 NumericLiteral.of(codeModel, new BigDecimal("1"))
@@ -260,7 +260,7 @@ public class ExpressionParserTests {
      */
     @ParameterizedTest
     @ValueSource(strings = {"1 + -2", "1+-2"})
-    void shouldParseNegativeWithinAnExpressionCorrectly(String expr) {
+    void shouldParseNegativeWithinAnExpressionCorrectly(final String expr) {
         final var expected = Addition.of(
             NumericLiteral.of(codeModel, new BigDecimal("1")),
             Negative.of(
@@ -276,7 +276,7 @@ public class ExpressionParserTests {
      */
     @ParameterizedTest
     @ValueSource(strings = {"(1 + 2) * 3", "(1+2)*3"})
-    void shouldParseASectionAtTheStartOfAnExpressionWithTheCorrectPrecedence(String expr) {
+    void shouldParseASectionAtTheStartOfAnExpressionWithTheCorrectPrecedence(final String expr) {
         final var expected = Multiplication.of(
             Addition.of(
                 NumericLiteral.of(codeModel, new BigDecimal("1")),
@@ -293,7 +293,7 @@ public class ExpressionParserTests {
      */
     @ParameterizedTest
     @ValueSource(strings = {"4 * (1 + 2) * 3", "4*(1+2)*3"})
-    void shouldParseASectionWithinAnExpressionWithTheCorrectPrecedence(String expr) {
+    void shouldParseASectionWithinAnExpressionWithTheCorrectPrecedence(final String expr) {
         final var expected = Multiplication.of(
             Multiplication.of(
                 NumericLiteral.of(codeModel, new BigDecimal("4")),
@@ -313,7 +313,7 @@ public class ExpressionParserTests {
      */
     @ParameterizedTest
     @ValueSource(strings = {"4 * (1 + (5 - 2)) * 3", "4*(1+(5-2))*3"})
-    void shouldParseNestedSectionsWithinAnExpressionCorrectly(String expr) {
+    void shouldParseNestedSectionsWithinAnExpressionCorrectly(final String expr) {
         final var expected = Multiplication.of(
             Multiplication.of(
                 NumericLiteral.of(codeModel, new BigDecimal("4")),
@@ -336,7 +336,7 @@ public class ExpressionParserTests {
      */
     @ParameterizedTest
     @ValueSource(strings = {"(1 + 2) * (3 - 4)", "(1+2)*(3-4)"})
-    void shouldParseMultipleDistinctSectionsWithinAnExpressionWithCorrectPrecedence(String expr) {
+    void shouldParseMultipleDistinctSectionsWithinAnExpressionWithCorrectPrecedence(final String expr) {
         final var expected = Multiplication.of(
             Addition.of(
                 NumericLiteral.of(codeModel, new BigDecimal("1")),
@@ -356,7 +356,7 @@ public class ExpressionParserTests {
      */
     @ParameterizedTest
     @ValueSource(strings = {"--1", "-   -1"})
-    void shouldParseDoubleNegativeCorrectly(String expr) {
+    void shouldParseDoubleNegativeCorrectly(final String expr) {
         final var expected = Negative.of(
             Negative.of(
                 NumericLiteral.of(codeModel, new BigDecimal("1"))
@@ -384,7 +384,7 @@ public class ExpressionParserTests {
      */
     @ParameterizedTest
     @ValueSource(strings = {"3 % 2", "3%2"})
-    void shouldParseModuloCorrectly(String expr) {
+    void shouldParseModuloCorrectly(final String expr) {
         final var expected = Modulo.of(
             NumericLiteral.of(codeModel, new BigDecimal("3")),
             NumericLiteral.of(codeModel, new BigDecimal("2"))
@@ -398,7 +398,7 @@ public class ExpressionParserTests {
      */
     @ParameterizedTest
     @ValueSource(strings = {"3 ^ 2", "3^2"})
-    void shouldParseExponentCorrectly(String expr) {
+    void shouldParseExponentCorrectly(final String expr) {
         final var expected = Exponent.of(
             NumericLiteral.of(codeModel, new BigDecimal("3")),
             NumericLiteral.of(codeModel, new BigDecimal("2"))
@@ -521,7 +521,7 @@ public class ExpressionParserTests {
      */
     @ParameterizedTest
     @ValueSource(strings = {"(1 + 2", "1 +", "-"})
-    void shouldThrowOnMalformedExpression(String expr) {
+    void shouldThrowOnMalformedExpression(final String expr) {
         final var exception = assertThrows(ExpressionParserException.class, () -> parser.parse(expr));
         assertEquals("The expression is malformed", exception.getMessage());
     }
@@ -531,7 +531,7 @@ public class ExpressionParserTests {
      */
     @ParameterizedTest
     @MethodSource("provideStringsForShouldThrowOnUnknownToken")
-    void shouldThrowOnUnknownToken(String expr, int location) {
+    void shouldThrowOnUnknownToken(final String expr, final int location) {
         final var exception = assertThrows(ExpressionParserException.class, () -> parser.parse(expr));
         assertEquals("The expression contains an unknown or unexpected token at Location 1:" + location, exception.getMessage());
     }
@@ -554,7 +554,7 @@ public class ExpressionParserTests {
      */
     @ParameterizedTest
     @ValueSource(strings = {"[this] lt [instances]", "[this] < [instances]"})
-    void shouldCorrectlyParseExpression_2_lt_Issue_263(String expr) {
+    void shouldCorrectlyParseExpression_2_lt_Issue_263(final String expr) {
         final var expected = LessThan.of(
             VariableUsage.of(codeModel, VariableName.of(IrreducibleName.of("this"))),
             VariableUsage.of(codeModel, VariableName.of(IrreducibleName.of("instances")))
@@ -568,7 +568,7 @@ public class ExpressionParserTests {
      */
     @ParameterizedTest
     @ValueSource(strings = {"[this] le [instances]", "[this] <= [instances]"})
-    void shouldCorrectlyParseExpression_2_le_Issue_263(String expr) {
+    void shouldCorrectlyParseExpression_2_le_Issue_263(final String expr) {
         final var expected = LessThanOrEqualTo.of(
             VariableUsage.of(codeModel, VariableName.of(IrreducibleName.of("this"))),
             VariableUsage.of(codeModel, VariableName.of(IrreducibleName.of("instances")))
@@ -582,7 +582,7 @@ public class ExpressionParserTests {
      */
     @ParameterizedTest
     @ValueSource(strings = {"[this] gt [instances]", "[this] > [instances]"})
-    void shouldCorrectlyParseExpression_2_gt_Issue_263(String expr) {
+    void shouldCorrectlyParseExpression_2_gt_Issue_263(final String expr) {
         final var expected = GreaterThan.of(
             VariableUsage.of(codeModel, VariableName.of(IrreducibleName.of("this"))),
             VariableUsage.of(codeModel, VariableName.of(IrreducibleName.of("instances")))
@@ -596,7 +596,7 @@ public class ExpressionParserTests {
      */
     @ParameterizedTest
     @ValueSource(strings = {"[this] ge [instances]", "[this] >= [instances]"})
-    void shouldCorrectlyParseExpression_2_ge_Issue_263(String expr) {
+    void shouldCorrectlyParseExpression_2_ge_Issue_263(final String expr) {
         final var expected = GreaterThanOrEqualTo.of(
             VariableUsage.of(codeModel, VariableName.of(IrreducibleName.of("this"))),
             VariableUsage.of(codeModel, VariableName.of(IrreducibleName.of("instances")))
@@ -628,7 +628,7 @@ public class ExpressionParserTests {
      */
     @ParameterizedTest
     @ValueSource(strings = {"[this] eq [instance parm]", "[this] == [instance parm]"})
-    void shouldCorrectlyParseExpression_4a_Issue_263(String expr) {
+    void shouldCorrectlyParseExpression_4a_Issue_263(final String expr) {
         final var expected = EqualTo.of(
             VariableUsage.of(codeModel, VariableName.of(IrreducibleName.of("this"))),
             VariableUsage.of(codeModel, VariableName.of(IrreducibleName.of("instance parm")))
@@ -642,7 +642,7 @@ public class ExpressionParserTests {
      */
     @ParameterizedTest
     @ValueSource(strings = {"[this] ne [instance parm]", "[this] != [instance parm]"})
-    void shouldCorrectlyParseExpression_4b_Issue_263(String expr) {
+    void shouldCorrectlyParseExpression_4b_Issue_263(final String expr) {
         final var expected = NotEqualTo.of(
             VariableUsage.of(codeModel, VariableName.of(IrreducibleName.of("this"))),
             VariableUsage.of(codeModel, VariableName.of(IrreducibleName.of("instance parm")))
@@ -990,10 +990,10 @@ public class ExpressionParserTests {
         );
     }
 
-    private void assertGraph(Expression expected, Expression actual) {
+    private void assertGraph(final Expression expected, final Expression actual) {
 
-        var expectedClass = expected.getClass();
-        var actualClass = actual.getClass();
+        final var expectedClass = expected.getClass();
+        final var actualClass = actual.getClass();
 
         if (!expectedClass.isAssignableFrom(actualClass)) {
             throw new RuntimeException("Unmatched node");
@@ -1006,7 +1006,7 @@ public class ExpressionParserTests {
             try {
                 assertGraph((Expression) leftMethod.invoke(expected), (Expression) leftMethod.invoke(actual));
                 assertGraph((Expression) rightMethod.invoke(expected), (Expression) rightMethod.invoke(actual));
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 throw new RuntimeException("Unmatched node");
             }
             return;
@@ -1018,7 +1018,7 @@ public class ExpressionParserTests {
         if (expressionMethod != null) {
             try {
                 assertGraph((Expression) expressionMethod.invoke(expected), (Expression) expressionMethod.invoke(actual));
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 throw new RuntimeException("Unmatched node");
             }
             return;
@@ -1042,10 +1042,10 @@ public class ExpressionParserTests {
         }
     }
 
-    private Method safeGetMethod(Class<?> clazz, String methodName) {
+    private Method safeGetMethod(final Class<?> clazz, final String methodName) {
         try {
             return clazz.getMethod(methodName);
-        } catch (NoSuchMethodException e) {
+        } catch (final NoSuchMethodException e) {
             return null;
         }
     }

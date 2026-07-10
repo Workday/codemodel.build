@@ -79,26 +79,28 @@ class MethodDescriptorSignatureTests {
         classNamespace = Namespace.of(IrreducibleName.of("com.example.MyService"));
     }
 
-    private TypeUsage specific(String qualifiedName) {
+    private TypeUsage specific(final String qualifiedName) {
         return SpecificTypeUsage.of(codeModel, naming.getTypeName(Optional.empty(), qualifiedName));
     }
 
-    private TypeUsage specificWithModule(String module, String qualifiedName) {
+    private TypeUsage specificWithModule(final String module, final String qualifiedName) {
         return SpecificTypeUsage.of(codeModel, naming.getTypeName(naming.getModuleName(module), qualifiedName));
     }
 
-    private FormalParameterDescriptor param(TypeUsage type) {
+    private FormalParameterDescriptor param(final TypeUsage type) {
         return FormalParameterDescriptor.of(codeModel, Optional.empty(), type);
     }
 
-    private MethodDescriptor method(String name, TypeUsage returnType, Optional<Namespace> namespace,
-                                    FormalParameterDescriptor... params) {
+    private MethodDescriptor method(final String name,
+                                    final TypeUsage returnType,
+                                    final Optional<Namespace> namespace,
+                                    final FormalParameterDescriptor... params) {
         final var methodName = MethodName.of(Optional.empty(), namespace, Optional.empty(),
             IrreducibleName.of(name));
         return MethodDescriptor.of(declaringType, methodName, returnType, Stream.of(params));
     }
 
-    private MethodDescriptor withModifier(MethodDescriptor descriptor, AccessModifier modifier) {
+    private MethodDescriptor withModifier(final MethodDescriptor descriptor, final AccessModifier modifier) {
         descriptor.addTrait(modifier);
         return descriptor;
     }

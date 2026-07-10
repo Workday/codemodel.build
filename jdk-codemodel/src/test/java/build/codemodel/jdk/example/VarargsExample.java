@@ -27,12 +27,12 @@ package build.codemodel.jdk.example;
  */
 public class VarargsExample {
 
-    public VarargsExample(String first, String... rest) {
+    public VarargsExample(final String first, final String... rest) {
     }
 
-    public void format(String prefix, Object... args) {
+    public void format(final String prefix, final Object... args) {
     }
 
-    public void fixed(String a, String b) {
+    public void fixed(final String a, final String b) {
     }
 }

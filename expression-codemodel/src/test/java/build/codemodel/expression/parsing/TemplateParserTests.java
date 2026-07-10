@@ -52,7 +52,7 @@ public class TemplateParserTests {
      */
     @ParameterizedTest
     @MethodSource("templateAndParsedProvider")
-    void shouldCorrectlyParseTemplateExpressions(String expression, List<Expression> expected) {
+    void shouldCorrectlyParseTemplateExpressions(final String expression, final List<Expression> expected) {
         final var result = parser.parse(expression);
         assertNotNull(result);
 

@@ -150,7 +150,7 @@ class DefaultOptionResolverTests
         extends AbstractValueOption<String> {
 
         @Default
-        public OptionWithConstructorDefault() {
+        OptionWithConstructorDefault() {
             super("constructor-default");
         }
     }
@@ -169,7 +169,7 @@ class DefaultOptionResolverTests
     public static class OptionWithNoDefault
         extends AbstractValueOption<String> {
 
-        public OptionWithNoDefault(final String value) {
+        OptionWithNoDefault(final String value) {
             super(value);
         }
     }
