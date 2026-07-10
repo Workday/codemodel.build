@@ -448,4 +448,95 @@ class SymbolResolutionTests {
         assertThat(patternBinding.declaredType().toString()).contains("String");
         assertThat(patternBinding.declaration()).contains(instanceOf);
     }
+
+    @Test
+    void shouldResolveInstanceOfDeconstructionPatternComponentBinding() {
+        final var source = JavaFileObjects.forSourceString("com.example.Foo", """
+            package com.example;
+            public class Foo {
+                record Point(int x, int y) {}
+                public int bar(Object o) {
+                    if (o instanceof Point(int x, int y)) {
+                        return x + y;
+                    }
+                    return 0;
+                }
+            }
+            """);
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
+        final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
+        final var method = descriptor.traits(MethodDescriptor.class)
+            .filter(m -> m.methodName().name().toString().equals("bar"))
+            .findFirst().orElseThrow();
+        final var body = method.getTrait(MethodBodyDescriptor.class).orElseThrow().body();
+
+        final var ifStatement = (If) body.statements()
+            .filter(s -> s instanceof If)
+            .findFirst().orElseThrow();
+        final var instanceOf = (InstanceOf) ((build.codemodel.jdk.expression.Parenthesized) ifStatement.condition()).inner();
+        final var innerReturn = (Return) ((build.codemodel.imperative.Block) ifStatement.thenStatement()).statements()
+            .filter(s -> s instanceof Return)
+            .findFirst().orElseThrow();
+
+        final var addition = (build.codemodel.expression.Addition) innerReturn.expression().orElseThrow();
+        final var x = (Identifier) addition.left();
+        final var y = (Identifier) addition.right();
+
+        final var xSymbol = (Symbol.PatternBinding) x.getTrait(Symbol.class).orElseThrow();
+        assertThat(xSymbol.declaration()).contains(instanceOf);
+        final var ySymbol = (Symbol.PatternBinding) y.getTrait(Symbol.class).orElseThrow();
+        assertThat(ySymbol.declaration()).contains(instanceOf);
+    }
+
+    @Test
+    void shouldResolveSwitchDeconstructionPatternComponentBinding() {
+        final var source = JavaFileObjects.forSourceString("com.example.Foo", """
+            package com.example;
+            public class Foo {
+                record Point(int x, int y) {}
+                public int bar(Object o) {
+                    switch (o) {
+                        case Point(int x, int y) -> {
+                            return x + y;
+                        }
+                        default -> {
+                            return 0;
+                        }
+                    }
+                }
+            }
+            """);
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
+        final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
+        final var method = descriptor.traits(MethodDescriptor.class)
+            .filter(m -> m.methodName().name().toString().equals("bar"))
+            .findFirst().orElseThrow();
+        final var body = method.getTrait(MethodBodyDescriptor.class).orElseThrow().body();
+
+        final var switchStatement = (SwitchStatement) body.statements()
+            .filter(s -> s instanceof SwitchStatement)
+            .findFirst().orElseThrow();
+        final var pointCase = switchStatement.cases()
+            .filter(c -> c.labels().findFirst().orElseThrow() instanceof InstanceOf)
+            .findFirst().orElseThrow();
+        final var instanceOf = (InstanceOf) pointCase.labels().findFirst().orElseThrow();
+        final var innerReturn = (Return) pointCase.statements()
+            .filter(s -> s instanceof Return)
+            .findFirst().orElseThrow();
+
+        final var addition = (build.codemodel.expression.Addition) innerReturn.expression().orElseThrow();
+        final var x = (Identifier) addition.left();
+        final var y = (Identifier) addition.right();
+
+        final var xSymbol = (Symbol.PatternBinding) x.getTrait(Symbol.class).orElseThrow();
+        assertThat(xSymbol.declaration()).contains(instanceOf);
+        final var ySymbol = (Symbol.PatternBinding) y.getTrait(Symbol.class).orElseThrow();
+        assertThat(ySymbol.declaration()).contains(instanceOf);
+    }
 }

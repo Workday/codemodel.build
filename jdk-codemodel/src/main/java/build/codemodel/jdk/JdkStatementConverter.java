@@ -339,11 +339,15 @@ public class JdkStatementConverter
             return Optional.of(instanceOf);
         }
         if (pattern instanceof DeconstructionPatternTree deconstruction) {
-            // Nested binding variables of a record deconstruction pattern are not yet captured;
-            // only the deconstructed type is preserved.
             final var type = exprConverter.resolveTypeUsage(deconstruction.getDeconstructor());
             exprConverter.addSourceLocation(deconstruction.getDeconstructor()).ifPresent(type::addTrait);
-            return Optional.of(InstanceOf.of(selector, type));
+            final var components = deconstruction.getNestedPatterns().stream()
+                .map(exprConverter::convertPattern)
+                .toList();
+            final var instanceOf = InstanceOf.ofDeconstruction(selector, type, components);
+            deconstruction.getNestedPatterns()
+                .forEach(nested -> exprConverter.registerNestedPatternBindings(nested, instanceOf));
+            return Optional.of(instanceOf);
         }
         return Optional.empty();
     }
