@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -85,6 +86,91 @@ class MarshallingTests {
                 IrreducibleName.of("MyType")),
             AnnotationValue.of(codeModel, "Annotation1", "Value1"),
             AnnotationValue.of(codeModel, "Annotation2", "Value2")));
+    }
+
+    /**
+     * Ensures that an {@link AnnotationValue.Value.ClassRef} survives a marshal → transport →
+     * unmarshal round-trip. Regression test: the raw-{@link Object} marshalling this replaced
+     * serialized a {@link AnnotationValue.Value.ClassRef} to a bare {@link TypeName} with no
+     * matching deserialize case, so it silently came back as a {@link AnnotationValue.Value.Literal}
+     * instead.
+     *
+     * @throws IOException if an error occurs during marshalling, transport or unmarshalling
+     */
+    @Test
+    void shouldMarshallAndTransportAndUnmarshallAnnotationValueClassRef()
+        throws IOException {
+
+        final var typeName = TypeName.of(
+            ModuleName.of("some.module", this.nameProvider),
+            Optional.empty(),
+            Optional.empty(),
+            IrreducibleName.of("MyType"));
+
+        marshallAndTransportAndUnMarshalAndAssert(
+            AnnotationValue.of(codeModel, "classValue", new AnnotationValue.Value.ClassRef(typeName)));
+    }
+
+    /**
+     * Ensures that an {@link AnnotationValue.Value.EnumConstant} survives a marshal → transport →
+     * unmarshal round-trip. Regression test: the raw-{@link Object} marshalling this replaced
+     * serialized an {@link AnnotationValue.Value.EnumConstant} to a formatted {@code "Type.CONSTANT"}
+     * string with no matching deserialize case, so it silently came back as a
+     * {@link AnnotationValue.Value.Literal} instead, losing the type name and constant name as
+     * separate fields.
+     *
+     * @throws IOException if an error occurs during marshalling, transport or unmarshalling
+     */
+    @Test
+    void shouldMarshallAndTransportAndUnmarshallAnnotationValueEnumConstant()
+        throws IOException {
+
+        final var typeName = TypeName.of(
+            ModuleName.of("some.module", this.nameProvider),
+            Optional.empty(),
+            Optional.empty(),
+            IrreducibleName.of("MyEnum"));
+
+        marshallAndTransportAndUnMarshalAndAssert(
+            AnnotationValue.of(codeModel, "enumValue", new AnnotationValue.Value.EnumConstant(typeName, "CONSTANT")));
+    }
+
+    /**
+     * Ensures that an {@link AnnotationValue.Value.Nested} annotation value survives a marshal →
+     * transport → unmarshal round-trip.
+     *
+     * @throws IOException if an error occurs during marshalling, transport or unmarshalling
+     */
+    @Test
+    void shouldMarshallAndTransportAndUnmarshallAnnotationValueNested()
+        throws IOException {
+
+        final var typeName = TypeName.of(
+            ModuleName.of("some.module", this.nameProvider),
+            Optional.empty(),
+            Optional.empty(),
+            IrreducibleName.of("NestedAnnotation"));
+        final var nested = AnnotationTypeUsage.of(codeModel, typeName,
+            AnnotationValue.of(codeModel, "inner", "innerValue"));
+
+        marshallAndTransportAndUnMarshalAndAssert(
+            AnnotationValue.of(codeModel, "nestedValue", new AnnotationValue.Value.Nested(nested)));
+    }
+
+    /**
+     * Ensures that an {@link AnnotationValue.Value.Array} survives a marshal → transport →
+     * unmarshal round-trip.
+     *
+     * @throws IOException if an error occurs during marshalling, transport or unmarshalling
+     */
+    @Test
+    void shouldMarshallAndTransportAndUnmarshallAnnotationValueArray()
+        throws IOException {
+
+        marshallAndTransportAndUnMarshalAndAssert(
+            AnnotationValue.of(codeModel, "arrayValue", new AnnotationValue.Value.Array(List.of(
+                new AnnotationValue.Value.Literal("a"),
+                new AnnotationValue.Value.Literal("b")))));
     }
 
     /**

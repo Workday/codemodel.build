@@ -63,9 +63,23 @@ public class AnnotationValue
          * A primitive or {@link String} literal.
          */
         record Literal(Object value) implements Value {
+
+            @Unmarshal
+            public Literal {
+            }
+
+            @Marshal
+            public void destructor(final Out<Object> value) {
+                value.set(this.value);
+            }
+
             @Override
             public String toString() {
                 return value.toString();
+            }
+
+            static {
+                Marshalling.register(Literal.class, MethodHandles.lookup());
             }
         }
 
@@ -75,9 +89,23 @@ public class AnnotationValue
          * @param typeName the codemodel {@link TypeName} for the referenced class
          */
         record ClassRef(TypeName typeName) implements Value {
+
+            @Unmarshal
+            public ClassRef {
+            }
+
+            @Marshal
+            public void destructor(final Out<TypeName> typeName) {
+                typeName.set(this.typeName);
+            }
+
             @Override
             public String toString() {
                 return typeName.canonicalName() + ".class";
+            }
+
+            static {
+                Marshalling.register(ClassRef.class, MethodHandles.lookup());
             }
         }
 
@@ -88,9 +116,24 @@ public class AnnotationValue
          * @param constantName the constant name
          */
         record EnumConstant(TypeName typeName, String constantName) implements Value {
+
+            @Unmarshal
+            public EnumConstant {
+            }
+
+            @Marshal
+            public void destructor(final Out<TypeName> typeName, final Out<String> constantName) {
+                typeName.set(this.typeName);
+                constantName.set(this.constantName);
+            }
+
             @Override
             public String toString() {
                 return typeName.canonicalName() + "." + constantName;
+            }
+
+            static {
+                Marshalling.register(EnumConstant.class, MethodHandles.lookup());
             }
         }
 
@@ -100,9 +143,24 @@ public class AnnotationValue
          * @param annotation the {@link AnnotationTypeUsage} representing the nested annotation
          */
         record Nested(AnnotationTypeUsage annotation) implements Value {
+
+            @Unmarshal
+            public Nested(final Marshaller marshaller, final Marshalled<AnnotationTypeUsage> annotation) {
+                this(marshaller.unmarshal(annotation));
+            }
+
+            @Marshal
+            public void destructor(final Marshaller marshaller, final Out<Marshalled<AnnotationTypeUsage>> annotation) {
+                annotation.set(marshaller.marshal(this.annotation));
+            }
+
             @Override
             public String toString() {
                 return annotation.toString();
+            }
+
+            static {
+                Marshalling.register(Nested.class, MethodHandles.lookup());
             }
         }
 
@@ -112,46 +170,27 @@ public class AnnotationValue
          * @param elements the elements
          */
         record Array(List<Value> elements) implements Value {
+
+            @Unmarshal
+            public Array(final Marshaller marshaller, final Stream<Marshalled<Value>> elements) {
+                this(elements.map(marshaller::unmarshal).toList());
+            }
+
+            @Marshal
+            public void destructor(final Marshaller marshaller, final Out<Stream<Marshalled<Value>>> elements) {
+                elements.set(this.elements.stream().map(marshaller::marshal));
+            }
+
             @Override
             public String toString() {
                 return elements.toString();
             }
+
+            static {
+                Marshalling.register(Array.class, MethodHandles.lookup());
+            }
         }
     }
-
-    // --- Marshalling conversion helpers ---
-
-    /**
-     * Converts a raw marshalled {@link Object} back to a typed {@link Value}.
-     * Handles the legacy format (plain Object) and the structured format (AnnotationTypeUsage, List).
-     */
-    private static Value toValue(final Object raw) {
-        return switch (raw) {
-            case Value v -> v;
-            case AnnotationTypeUsage a -> new Value.Nested(a);
-            case List<?> list -> new Value.Array(list.stream()
-                .map(AnnotationValue::toValue)
-                .toList());
-            default -> new Value.Literal(raw);
-        };
-    }
-
-    /**
-     * Converts a {@link Value} back to the raw object used in the marshal format.
-     */
-    private static Object fromValue(final Value value) {
-        return switch (value) {
-            case Value.Literal(var v) -> v;
-            case Value.Nested(var a) -> a;
-            case Value.Array(var elements) -> elements.stream()
-                .map(AnnotationValue::fromValue)
-                .toList();
-            case Value.ClassRef(var typeName) -> typeName;
-            case Value.EnumConstant(var typeName, var constantName) -> typeName.canonicalName() + "." + constantName;
-        };
-    }
-
-    // ---
 
     private final IrreducibleName name;
     private final Value value;
@@ -169,20 +208,20 @@ public class AnnotationValue
                            final Marshaller marshaller,
                            final Stream<Marshalled<Trait>> traits,
                            final IrreducibleName name,
-                           final Object value) {
+                           final Marshalled<Value> value) {
         super(codeModel, marshaller, traits);
         this.name = name;
-        this.value = toValue(value);
+        this.value = marshaller.unmarshal(value);
     }
 
     @Marshal
     public void destructor(final Marshaller marshaller,
                            final Out<Stream<Marshalled<Trait>>> traits,
                            final Out<IrreducibleName> name,
-                           final Out<Object> value) {
+                           final Out<Marshalled<Value>> value) {
         super.destructor(marshaller, traits);
         name.set(this.name);
-        value.set(fromValue(this.value));
+        value.set(marshaller.marshal(this.value));
     }
 
     public IrreducibleName name() {
