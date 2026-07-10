@@ -10,7 +10,6 @@ import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -40,7 +39,7 @@ class TypeAnnotationDiscoveryTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "Foo");
+        final var typeName = codeModel.getEmptyModuleTypeName("Foo");
         final var field = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(FieldDescriptor.class)
             .filter(f -> f.fieldName().toString().equals("value"))
@@ -73,7 +72,7 @@ class TypeAnnotationDiscoveryTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "Foo");
+        final var typeName = codeModel.getEmptyModuleTypeName("Foo");
         final var field = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(FieldDescriptor.class)
             .filter(f -> f.fieldName().toString().equals("items"))
@@ -107,7 +106,7 @@ class TypeAnnotationDiscoveryTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "Foo");
+        final var typeName = codeModel.getEmptyModuleTypeName("Foo");
         final var field = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(FieldDescriptor.class)
             .filter(f -> f.fieldName().toString().equals("items"))
@@ -137,7 +136,7 @@ class TypeAnnotationDiscoveryTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "Foo");
+        final var typeName = codeModel.getEmptyModuleTypeName("Foo");
         final var field = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(FieldDescriptor.class)
             .filter(f -> f.fieldName().toString().equals("dependency"))

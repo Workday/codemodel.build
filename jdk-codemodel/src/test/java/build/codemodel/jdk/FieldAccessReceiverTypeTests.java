@@ -9,7 +9,6 @@ import build.codemodel.objectoriented.descriptor.MethodDescriptor;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -43,8 +42,7 @@ class FieldAccessReceiverTypeTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(itemSource, workerSource)));
 
-        final var typeName = codeModel.getNameProvider()
-            .getTypeName(Optional.empty(), "build.codemodel.jdk.example.Worker");
+        final var typeName = codeModel.getEmptyModuleTypeName("build.codemodel.jdk.example.Worker");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
 
         final var run = descriptor.traits(MethodDescriptor.class)
@@ -79,8 +77,7 @@ class FieldAccessReceiverTypeTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider()
-            .getTypeName(Optional.empty(), "build.codemodel.jdk.example.Wrapper");
+        final var typeName = codeModel.getEmptyModuleTypeName("build.codemodel.jdk.example.Wrapper");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
 
         final var run = descriptor.traits(MethodDescriptor.class)

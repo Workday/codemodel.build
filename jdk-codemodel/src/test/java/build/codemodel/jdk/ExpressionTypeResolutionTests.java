@@ -16,7 +16,6 @@ import build.codemodel.objectoriented.descriptor.MethodDescriptor;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -43,8 +42,7 @@ class ExpressionTypeResolutionTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider()
-            .getTypeName(Optional.empty(), "build.codemodel.jdk.example.Example");
+        final var typeName = codeModel.getEmptyModuleTypeName("build.codemodel.jdk.example.Example");
         final var run = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(MethodDescriptor.class)
             .filter(m -> m.methodName().name().toString().equals("run"))
@@ -75,8 +73,7 @@ class ExpressionTypeResolutionTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider()
-            .getTypeName(Optional.empty(), "build.codemodel.jdk.example.Example");
+        final var typeName = codeModel.getEmptyModuleTypeName("build.codemodel.jdk.example.Example");
         final var run = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(MethodDescriptor.class)
             .filter(m -> m.methodName().name().toString().equals("run"))
@@ -108,8 +105,7 @@ class ExpressionTypeResolutionTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider()
-            .getTypeName(Optional.empty(), "build.codemodel.jdk.example.Example");
+        final var typeName = codeModel.getEmptyModuleTypeName("build.codemodel.jdk.example.Example");
         final var run = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(MethodDescriptor.class)
             .filter(m -> m.methodName().name().toString().equals("run"))
@@ -140,8 +136,7 @@ class ExpressionTypeResolutionTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider()
-            .getTypeName(Optional.empty(), "build.codemodel.jdk.example.Example");
+        final var typeName = codeModel.getEmptyModuleTypeName("build.codemodel.jdk.example.Example");
         final var run = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(MethodDescriptor.class)
             .filter(m -> m.methodName().name().toString().equals("run"))
@@ -179,8 +174,7 @@ class ExpressionTypeResolutionTests {
         final var codeModel = JdkInitializerTests.runInternal(new JdkInitializer(List.of(), List.of(),
             List.of(JavaFileObjects.forSourceString("build.codemodel.jdk.example.Example", source))));
 
-        final var typeName = codeModel.getNameProvider()
-            .getTypeName(Optional.empty(), "build.codemodel.jdk.example.Example");
+        final var typeName = codeModel.getEmptyModuleTypeName("build.codemodel.jdk.example.Example");
         final var run = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(MethodDescriptor.class)
             .filter(m -> m.methodName().name().toString().equals("run"))
@@ -211,8 +205,7 @@ class ExpressionTypeResolutionTests {
         final var codeModel = JdkInitializerTests.runInternal(new JdkInitializer(List.of(), List.of(),
             List.of(JavaFileObjects.forSourceString("build.codemodel.jdk.example.Example", source))));
 
-        final var typeName = codeModel.getNameProvider()
-            .getTypeName(Optional.empty(), "build.codemodel.jdk.example.Example");
+        final var typeName = codeModel.getEmptyModuleTypeName("build.codemodel.jdk.example.Example");
         final var run = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(MethodDescriptor.class)
             .filter(m -> m.methodName().name().toString().equals("run"))
@@ -242,8 +235,7 @@ class ExpressionTypeResolutionTests {
         final var codeModel = JdkInitializerTests.runInternal(new JdkInitializer(List.of(), List.of(),
             List.of(JavaFileObjects.forSourceString("build.codemodel.jdk.example.Example", source))));
 
-        final var typeName = codeModel.getNameProvider()
-            .getTypeName(Optional.empty(), "build.codemodel.jdk.example.Example");
+        final var typeName = codeModel.getEmptyModuleTypeName("build.codemodel.jdk.example.Example");
         final var run = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(MethodDescriptor.class)
             .filter(m -> m.methodName().name().toString().equals("run"))
@@ -273,8 +265,7 @@ class ExpressionTypeResolutionTests {
         final var codeModel = JdkInitializerTests.runInternal(new JdkInitializer(List.of(), List.of(),
             List.of(JavaFileObjects.forSourceString("build.codemodel.jdk.example.Example", source))));
 
-        final var typeName = codeModel.getNameProvider()
-            .getTypeName(Optional.empty(), "build.codemodel.jdk.example.Example");
+        final var typeName = codeModel.getEmptyModuleTypeName("build.codemodel.jdk.example.Example");
         final var run = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(MethodDescriptor.class)
             .filter(m -> m.methodName().name().toString().equals("run"))

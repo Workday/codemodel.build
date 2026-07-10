@@ -17,7 +17,6 @@ import build.codemodel.objectoriented.descriptor.MethodDescriptor;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -44,8 +43,7 @@ class BodyCaptureTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider()
-            .getTypeName(Optional.empty(), "build.codemodel.jdk.example.SimplePerson");
+        final var typeName = codeModel.getEmptyModuleTypeName("build.codemodel.jdk.example.SimplePerson");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
 
         // constructor has body
@@ -81,8 +79,7 @@ class BodyCaptureTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider()
-            .getTypeName(Optional.empty(), "build.codemodel.jdk.example.Defaults");
+        final var typeName = codeModel.getEmptyModuleTypeName("build.codemodel.jdk.example.Defaults");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
 
         final var count = descriptor.traits(FieldDescriptor.class)
@@ -116,8 +113,7 @@ class BodyCaptureTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider()
-            .getTypeName(Optional.empty(), "build.codemodel.jdk.example.Sorter");
+        final var typeName = codeModel.getEmptyModuleTypeName("build.codemodel.jdk.example.Sorter");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
 
         final var method = descriptor.traits(MethodDescriptor.class)
@@ -158,8 +154,7 @@ class BodyCaptureTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider()
-            .getTypeName(Optional.empty(), "build.codemodel.jdk.example.ImplicitSorter");
+        final var typeName = codeModel.getEmptyModuleTypeName("build.codemodel.jdk.example.ImplicitSorter");
         final var method = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(MethodDescriptor.class)
             .filter(m -> m.methodName().name().toString().equals("comparator"))
@@ -203,8 +198,7 @@ class BodyCaptureTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider()
-            .getTypeName(Optional.empty(), "build.codemodel.jdk.example.ResourceUser");
+        final var typeName = codeModel.getEmptyModuleTypeName("build.codemodel.jdk.example.ResourceUser");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
 
         final var method = descriptor.traits(MethodDescriptor.class)
@@ -243,8 +237,7 @@ class BodyCaptureTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider()
-            .getTypeName(Optional.empty(), "build.codemodel.jdk.example.EffectivelyFinalResource");
+        final var typeName = codeModel.getEmptyModuleTypeName("build.codemodel.jdk.example.EffectivelyFinalResource");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
 
         final var method = descriptor.traits(MethodDescriptor.class)
@@ -281,8 +274,7 @@ class BodyCaptureTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider()
-            .getTypeName(Optional.empty(), "build.codemodel.jdk.example.MultiCatcher");
+        final var typeName = codeModel.getEmptyModuleTypeName("build.codemodel.jdk.example.MultiCatcher");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
 
         final var method = descriptor.traits(MethodDescriptor.class)
@@ -317,8 +309,7 @@ class BodyCaptureTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider()
-            .getTypeName(Optional.empty(), "build.codemodel.jdk.example.Greeter");
+        final var typeName = codeModel.getEmptyModuleTypeName("build.codemodel.jdk.example.Greeter");
         final var method = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(MethodDescriptor.class)
             .filter(m -> m.methodName().name().toString().equals("greet"))
@@ -344,7 +335,7 @@ class BodyCaptureTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
         final var ctor = descriptor.traits(ConstructorDescriptor.class).findFirst().orElseThrow();
         final var body = ctor.getTrait(MethodBodyDescriptor.class).orElseThrow().body();
@@ -371,7 +362,7 @@ class BodyCaptureTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Singleton");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Singleton");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
 
         final var staticInits = descriptor.traits(build.codemodel.jdk.descriptor.InitializerBlockDescriptor.class)
@@ -397,7 +388,7 @@ class BodyCaptureTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Counter");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Counter");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
 
         final var instanceInits = descriptor.traits(build.codemodel.jdk.descriptor.InitializerBlockDescriptor.class)

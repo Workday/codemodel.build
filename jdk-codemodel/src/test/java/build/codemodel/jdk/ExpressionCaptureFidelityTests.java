@@ -69,8 +69,7 @@ class ExpressionCaptureFidelityTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider()
-            .getTypeName(Optional.empty(), "build.codemodel.jdk.example.Caster");
+        final var typeName = codeModel.getEmptyModuleTypeName("build.codemodel.jdk.example.Caster");
         final var run = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(MethodDescriptor.class)
             .filter(m -> m.methodName().name().toString().equals("run"))
@@ -99,8 +98,7 @@ class ExpressionCaptureFidelityTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider()
-            .getTypeName(Optional.empty(), "build.codemodel.jdk.example.PatternChecker");
+        final var typeName = codeModel.getEmptyModuleTypeName("build.codemodel.jdk.example.PatternChecker");
         final var check = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(MethodDescriptor.class)
             .filter(m -> m.methodName().name().toString().equals("check"))
@@ -130,8 +128,7 @@ class ExpressionCaptureFidelityTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider()
-            .getTypeName(Optional.empty(), "build.codemodel.jdk.example.ListFactory");
+        final var typeName = codeModel.getEmptyModuleTypeName("build.codemodel.jdk.example.ListFactory");
         final var create = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(MethodDescriptor.class)
             .filter(m -> m.methodName().name().toString().equals("create"))
@@ -164,8 +161,7 @@ class ExpressionCaptureFidelityTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider()
-            .getTypeName(Optional.empty(), "build.codemodel.jdk.example.ArrayFactory");
+        final var typeName = codeModel.getEmptyModuleTypeName("build.codemodel.jdk.example.ArrayFactory");
         final var create = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(MethodDescriptor.class)
             .filter(m -> m.methodName().name().toString().equals("create"))
@@ -191,8 +187,7 @@ class ExpressionCaptureFidelityTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider()
-            .getTypeName(Optional.empty(), "build.codemodel.jdk.example.Bits");
+        final var typeName = codeModel.getEmptyModuleTypeName("build.codemodel.jdk.example.Bits");
         final var body = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(MethodDescriptor.class).findFirst().orElseThrow()
             .getTrait(MethodBodyDescriptor.class).orElseThrow().body();
@@ -214,8 +209,7 @@ class ExpressionCaptureFidelityTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider()
-            .getTypeName(Optional.empty(), "build.codemodel.jdk.example.Counter");
+        final var typeName = codeModel.getEmptyModuleTypeName("build.codemodel.jdk.example.Counter");
         final var body = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(MethodDescriptor.class).findFirst().orElseThrow()
             .getTrait(MethodBodyDescriptor.class).orElseThrow().body();
@@ -237,8 +231,7 @@ class ExpressionCaptureFidelityTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider()
-            .getTypeName(Optional.empty(), "build.codemodel.jdk.example.Postfix");
+        final var typeName = codeModel.getEmptyModuleTypeName("build.codemodel.jdk.example.Postfix");
         final var body = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(MethodDescriptor.class).findFirst().orElseThrow()
             .getTrait(MethodBodyDescriptor.class).orElseThrow().body();
@@ -260,8 +253,7 @@ class ExpressionCaptureFidelityTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider()
-            .getTypeName(Optional.empty(), "build.codemodel.jdk.example.Assigner");
+        final var typeName = codeModel.getEmptyModuleTypeName("build.codemodel.jdk.example.Assigner");
         final var body = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(MethodDescriptor.class).findFirst().orElseThrow()
             .getTrait(MethodBodyDescriptor.class).orElseThrow().body();
@@ -283,8 +275,7 @@ class ExpressionCaptureFidelityTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider()
-            .getTypeName(Optional.empty(), "build.codemodel.jdk.example.TypeTokens");
+        final var typeName = codeModel.getEmptyModuleTypeName("build.codemodel.jdk.example.TypeTokens");
         final var body = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(MethodDescriptor.class)
             .filter(m -> m.methodName().name().toString().equals("stringClass"))
@@ -312,8 +303,7 @@ class ExpressionCaptureFidelityTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider()
-            .getTypeName(Optional.empty(), "build.codemodel.jdk.example.PrimitiveTokens");
+        final var typeName = codeModel.getEmptyModuleTypeName("build.codemodel.jdk.example.PrimitiveTokens");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
 
         final var intClassBody = descriptor.traits(MethodDescriptor.class)

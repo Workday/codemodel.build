@@ -45,7 +45,6 @@ import build.codemodel.objectoriented.descriptor.ParameterizedTypeDescriptor;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -70,7 +69,7 @@ class SourceLocationTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
         final var field = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(FieldDescriptor.class).findFirst().orElseThrow();
 
@@ -93,7 +92,7 @@ class SourceLocationTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
         final var method = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(MethodDescriptor.class).findFirst().orElseThrow();
 
@@ -117,7 +116,7 @@ class SourceLocationTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Ordered");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Ordered");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
 
         final var firstPos = descriptor.traits(FieldDescriptor.class)
@@ -146,7 +145,7 @@ class SourceLocationTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
         final var method = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(MethodDescriptor.class).findFirst().orElseThrow();
         final var param = method.formalParameters().findFirst().orElseThrow();
@@ -170,7 +169,7 @@ class SourceLocationTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
         final var ctor = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(ConstructorDescriptor.class).findFirst().orElseThrow();
         final var param = ctor.formalParameters().findFirst().orElseThrow();
@@ -193,7 +192,7 @@ class SourceLocationTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
         final var method = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(MethodDescriptor.class).findFirst().orElseThrow();
         final var body = method.getTrait(MethodBodyDescriptor.class).orElseThrow().body();
@@ -221,7 +220,7 @@ class SourceLocationTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
         final var method = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(MethodDescriptor.class).findFirst().orElseThrow();
         final var body = method.getTrait(MethodBodyDescriptor.class).orElseThrow().body();
@@ -246,7 +245,7 @@ class SourceLocationTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
         final var method = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(MethodDescriptor.class).findFirst().orElseThrow();
         final var body = method.getTrait(MethodBodyDescriptor.class).orElseThrow().body();
@@ -276,7 +275,7 @@ class SourceLocationTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Color");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Color");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
 
         final var red = descriptor.traits(EnumConstantDescriptor.class)
@@ -310,7 +309,7 @@ class SourceLocationTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
         final var descriptor = (JDKTypeDescriptor) codeModel.getTypeDescriptor(typeName).orElseThrow();
 
         final var superUsage = descriptor.parentTypeUsage().orElseThrow();
@@ -347,7 +346,7 @@ class SourceLocationTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
         final var field = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(FieldDescriptor.class).findFirst().orElseThrow();
 
@@ -371,7 +370,7 @@ class SourceLocationTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
         final var method = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(MethodDescriptor.class).findFirst().orElseThrow();
         final var param = method.formalParameters().findFirst().orElseThrow();
@@ -395,7 +394,7 @@ class SourceLocationTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
         final var method = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(MethodDescriptor.class).findFirst().orElseThrow();
 
@@ -424,7 +423,7 @@ class SourceLocationTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
         final var method = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(MethodDescriptor.class).findFirst().orElseThrow();
         final var body = method.getTrait(MethodBodyDescriptor.class).orElseThrow().body();
@@ -448,7 +447,7 @@ class SourceLocationTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Point");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Point");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
         final var components = descriptor.traits(RecordComponentDescriptor.class).toList();
         assertThat(components).hasSize(2);
@@ -477,7 +476,7 @@ class SourceLocationTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
         final var method = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(MethodDescriptor.class).findFirst().orElseThrow();
         final var throwables = method.traits(ThrowableDescriptor.class).toList();
@@ -502,7 +501,7 @@ class SourceLocationTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Box");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Box");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
         final var typeVariable = descriptor.getTrait(ParameterizedTypeDescriptor.class)
             .orElseThrow().typeVariables().findFirst().orElseThrow();
@@ -526,7 +525,7 @@ class SourceLocationTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
         final var method = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(MethodDescriptor.class).findFirst().orElseThrow();
         final var body = method.getTrait(MethodBodyDescriptor.class).orElseThrow().body();
@@ -551,7 +550,7 @@ class SourceLocationTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
         final var method = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(MethodDescriptor.class).findFirst().orElseThrow();
         final var body = method.getTrait(MethodBodyDescriptor.class).orElseThrow().body();
@@ -578,7 +577,7 @@ class SourceLocationTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
         final var method = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(MethodDescriptor.class).findFirst().orElseThrow();
         final var body = method.getTrait(MethodBodyDescriptor.class).orElseThrow().body();
@@ -607,7 +606,7 @@ class SourceLocationTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
         final var method = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(MethodDescriptor.class).findFirst().orElseThrow();
         final var body = method.getTrait(MethodBodyDescriptor.class).orElseThrow().body();
@@ -638,7 +637,7 @@ class SourceLocationTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
         final var method = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(MethodDescriptor.class).findFirst().orElseThrow();
         final var body = method.getTrait(MethodBodyDescriptor.class).orElseThrow().body();
@@ -663,7 +662,7 @@ class SourceLocationTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
         final var method = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(MethodDescriptor.class).findFirst().orElseThrow();
         final var body = method.getTrait(MethodBodyDescriptor.class).orElseThrow().body();
@@ -689,7 +688,7 @@ class SourceLocationTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
         final var method = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(MethodDescriptor.class)
             .filter(m -> m.methodName().name().toString().equals("check"))
@@ -716,7 +715,7 @@ class SourceLocationTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
         final var method = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(MethodDescriptor.class).findFirst().orElseThrow();
         final var body = method.getTrait(MethodBodyDescriptor.class).orElseThrow().body();
@@ -742,7 +741,7 @@ class SourceLocationTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
         final var method = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(MethodDescriptor.class).findFirst().orElseThrow();
         final var body = method.getTrait(MethodBodyDescriptor.class).orElseThrow().body();
@@ -774,7 +773,7 @@ class SourceLocationTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
         final var method = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(MethodDescriptor.class).findFirst().orElseThrow();
         final var body = method.getTrait(MethodBodyDescriptor.class).orElseThrow().body();
@@ -799,7 +798,7 @@ class SourceLocationTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
         final var method = codeModel.getTypeDescriptor(typeName).orElseThrow()
             .traits(MethodDescriptor.class).findFirst().orElseThrow();
         final var body = method.getTrait(MethodBodyDescriptor.class).orElseThrow().body();

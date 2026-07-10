@@ -26,7 +26,6 @@ import build.codemodel.jdk.descriptor.MemberTypeDescriptor;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -53,7 +52,7 @@ class NestedTypeDiscoveryTests {
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
         final var naming = codeModel.getNameProvider();
-        final var outerName = naming.getTypeName(Optional.empty(), "com.example.Outer");
+        final var outerName = naming.getEmptyModuleTypeName("com.example.Outer");
         final var outerDescriptor = codeModel.getTypeDescriptor(outerName).orElseThrow();
 
         final var memberNames = outerDescriptor.traits(MemberTypeDescriptor.class)
@@ -79,7 +78,7 @@ class NestedTypeDiscoveryTests {
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
         final var naming = codeModel.getNameProvider();
-        final var outerName = naming.getTypeName(Optional.empty(), "com.example.Outer");
+        final var outerName = naming.getEmptyModuleTypeName("com.example.Outer");
         final var outerDescriptor = codeModel.getTypeDescriptor(outerName).orElseThrow();
         final var nestedName = outerDescriptor.traits(MemberTypeDescriptor.class)
             .map(MemberTypeDescriptor::memberTypeName)
@@ -110,7 +109,7 @@ class NestedTypeDiscoveryTests {
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
         final var naming = codeModel.getNameProvider();
-        final var outerName = naming.getTypeName(Optional.empty(), "com.example.Outer");
+        final var outerName = naming.getEmptyModuleTypeName("com.example.Outer");
         final var outerDescriptor = codeModel.getTypeDescriptor(outerName).orElseThrow();
 
         final var memberNames = outerDescriptor.traits(MemberTypeDescriptor.class)

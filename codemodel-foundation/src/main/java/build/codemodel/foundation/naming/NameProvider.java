@@ -122,6 +122,17 @@ public interface NameProvider {
     }
 
     /**
+     * Obtains a {@link TypeName} given a fully-qualified JDK-based type name, assuming the
+     * unnamed (empty) module.
+     *
+     * @param fullyQualifiedName the fully-qualified-JDK-based type name
+     * @return a {@link TypeName}
+     */
+    default TypeName getEmptyModuleTypeName(final String fullyQualifiedName) {
+        return getTypeName(Optional.empty(), fullyQualifiedName);
+    }
+
+    /**
      * Obtains a {@link TypeName} given a fully-qualified modular JDK-based type name.
      *
      * @param moduleName             the {@link Optional} {@link ModuleName}

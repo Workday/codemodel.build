@@ -27,7 +27,6 @@ import build.codemodel.objectoriented.descriptor.MethodDescriptor;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -55,7 +54,7 @@ class ReferencesToTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source, parent)));
 
-        final var parentName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Parent");
+        final var parentName = codeModel.getEmptyModuleTypeName("com.example.Parent");
         final var refs = codeModel.referencesTo(parentName, ReferenceKind.EXTENDS).toList();
 
         assertThat(refs).hasSize(1);
@@ -79,7 +78,7 @@ class ReferencesToTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source, svc)));
 
-        final var svcName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Svc");
+        final var svcName = codeModel.getEmptyModuleTypeName("com.example.Svc");
         final var refs = codeModel.referencesTo(svcName, ReferenceKind.IMPLEMENTS).toList();
 
         assertThat(refs).hasSize(1);
@@ -104,7 +103,7 @@ class ReferencesToTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source, target)));
 
-        final var targetName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Target");
+        final var targetName = codeModel.getEmptyModuleTypeName("com.example.Target");
         final var refs = codeModel.referencesTo(targetName, ReferenceKind.FIELD_TYPE).toList();
 
         assertThat(refs).hasSize(1);
@@ -131,7 +130,7 @@ class ReferencesToTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source, target)));
 
-        final var targetName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Target");
+        final var targetName = codeModel.getEmptyModuleTypeName("com.example.Target");
         final var refs = codeModel.referencesTo(targetName, ReferenceKind.RETURN_TYPE).toList();
 
         assertThat(refs).hasSize(1);
@@ -157,7 +156,7 @@ class ReferencesToTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source, target)));
 
-        final var targetName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Target");
+        final var targetName = codeModel.getEmptyModuleTypeName("com.example.Target");
         final var refs = codeModel.referencesTo(targetName, ReferenceKind.PARAMETER_TYPE)
             .filter(r -> r.owner().typeName().toString().contains("Consumer"))
             .toList();
@@ -187,7 +186,7 @@ class ReferencesToTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source, target)));
 
-        final var targetName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Target");
+        final var targetName = codeModel.getEmptyModuleTypeName("com.example.Target");
         final var refs = codeModel.referencesTo(targetName, ReferenceKind.METHOD_BODY).toList();
 
         assertThat(refs).hasSize(1);
@@ -215,7 +214,7 @@ class ReferencesToTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source, target)));
 
-        final var targetName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Target");
+        final var targetName = codeModel.getEmptyModuleTypeName("com.example.Target");
         final var refs = codeModel.referencesTo(targetName, ReferenceKind.METHOD_BODY)
             .filter(r -> r.owner().typeName().toString().contains("Builder"))
             .toList();
@@ -244,7 +243,7 @@ class ReferencesToTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source, target)));
 
-        final var targetName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Target");
+        final var targetName = codeModel.getEmptyModuleTypeName("com.example.Target");
         final var refs = codeModel.referencesTo(targetName).toList();
 
         final var kinds = refs.stream().map(TypeReference::kind).distinct().toList();
@@ -262,7 +261,7 @@ class ReferencesToTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(target)));
 
-        final var targetName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Target");
+        final var targetName = codeModel.getEmptyModuleTypeName("com.example.Target");
         final var selfRefs = codeModel.referencesTo(targetName)
             .filter(r -> r.owner().typeName().equals(targetName))
             .toList();
@@ -285,7 +284,7 @@ class ReferencesToTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source, target)));
 
-        final var targetName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Target");
+        final var targetName = codeModel.getEmptyModuleTypeName("com.example.Target");
         final var refs = codeModel.referencesTo(targetName)
             .filter(r -> !r.owner().typeName().equals(targetName))
             .toList();
@@ -310,7 +309,7 @@ class ReferencesToTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source, target)));
 
-        final var targetName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Target");
+        final var targetName = codeModel.getEmptyModuleTypeName("com.example.Target");
         final var refs = codeModel.referencesTo(targetName, ReferenceKind.PARAMETER_TYPE)
             .filter(r -> r.owner().typeName().toString().contains("Wrapper"))
             .toList();
@@ -343,7 +342,7 @@ class ReferencesToTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source, target)));
 
-        final var targetName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Target");
+        final var targetName = codeModel.getEmptyModuleTypeName("com.example.Target");
         final var refs = codeModel.referencesTo(targetName, ReferenceKind.FIELD_TYPE)
             .filter(r -> r.owner().typeName().toString().contains("Holder"))
             .toList();
@@ -372,7 +371,7 @@ class ReferencesToTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source, target)));
 
-        final var targetName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Target");
+        final var targetName = codeModel.getEmptyModuleTypeName("com.example.Target");
         final var refs = codeModel.referencesTo(targetName, ReferenceKind.METHOD_BODY)
             .filter(r -> r.owner().typeName().toString().contains("Registry"))
             .toList();
@@ -402,7 +401,7 @@ class ReferencesToTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source, target)));
 
-        final var targetName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Target");
+        final var targetName = codeModel.getEmptyModuleTypeName("com.example.Target");
         final var refs = codeModel.referencesTo(targetName)
             .filter(r -> r.owner().typeName().toString().contains("Holder"))
             .toList();

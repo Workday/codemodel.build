@@ -388,6 +388,17 @@ public interface CodeModel
     }
 
     /**
+     * Obtains a {@link TypeName} given a fully-qualified JDK-based type name, assuming the
+     * unnamed (empty) module.
+     *
+     * @param fullyQualifiedName the fully-qualified-JDK-based type name
+     * @return a {@link TypeName}
+     */
+    default TypeName getEmptyModuleTypeName(final String fullyQualifiedName) {
+        return getNameProvider().getEmptyModuleTypeName(fullyQualifiedName);
+    }
+
+    /**
      * Adapts a {@link Streamable} of trait-supplier {@link Function}s into a populate {@link Consumer}.
      */
     private static <T extends Traitable> Consumer<T> applyTraitSuppliers(final Streamable<? extends Function<? super T, ? extends Trait>> traitSuppliers) {

@@ -28,7 +28,6 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -56,7 +55,7 @@ class MemberOrderTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Ordered");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Ordered");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
 
         final var fieldNames = descriptor.traits(FieldDescriptor.class)
@@ -82,7 +81,7 @@ class MemberOrderTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Ordered");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Ordered");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
 
         final var methodNames = descriptor.traits(MethodDescriptor.class)

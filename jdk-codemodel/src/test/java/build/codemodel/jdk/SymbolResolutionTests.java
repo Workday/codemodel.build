@@ -14,7 +14,6 @@ import build.codemodel.objectoriented.descriptor.MethodDescriptor;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -40,7 +39,7 @@ class SymbolResolutionTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
         final var method = descriptor.traits(MethodDescriptor.class)
             .filter(m -> m.methodName().name().toString().equals("bar"))
@@ -85,7 +84,7 @@ class SymbolResolutionTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
         final var method = descriptor.traits(MethodDescriptor.class)
             .filter(m -> m.methodName().name().toString().equals("bar"))
@@ -119,7 +118,7 @@ class SymbolResolutionTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
         final var method = descriptor.traits(MethodDescriptor.class)
             .filter(m -> m.methodName().name().toString().equals("bar"))
@@ -153,7 +152,7 @@ class SymbolResolutionTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
         final var constructor = descriptor.traits(ConstructorDescriptor.class).findFirst().orElseThrow();
         final var body = constructor.getTrait(MethodBodyDescriptor.class).orElseThrow().body();
@@ -185,7 +184,7 @@ class SymbolResolutionTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
         final var method = descriptor.traits(MethodDescriptor.class)
             .filter(m -> m.methodName().name().toString().equals("bar"))
@@ -218,7 +217,7 @@ class SymbolResolutionTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
         final var method = descriptor.traits(MethodDescriptor.class)
             .filter(m -> m.methodName().name().toString().equals("bar"))
@@ -249,7 +248,7 @@ class SymbolResolutionTests {
         final var codeModel = JdkInitializerTests.runInternal(
             new JdkInitializer(List.of(), List.of(), List.of(source)));
 
-        final var typeName = codeModel.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
         final var method = descriptor.traits(MethodDescriptor.class)
             .filter(m -> m.methodName().name().toString().equals("bar"))

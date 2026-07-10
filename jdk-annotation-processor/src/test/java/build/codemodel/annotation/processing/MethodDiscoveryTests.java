@@ -9,8 +9,6 @@ import build.codemodel.objectoriented.descriptor.MethodDescriptor;
 import build.codemodel.objectoriented.naming.MethodName;
 import org.junit.jupiter.api.Test;
 
-import java.util.Optional;
-
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -54,7 +52,7 @@ public class MethodDiscoveryTests
         final var naming = codeModel.getNameProvider();
 
         final var typeName = naming
-            .getTypeName(Optional.empty(), "Discover");
+            .getEmptyModuleTypeName("Discover");
 
         final var typeDescriptor = codeModel.getTypeDescriptor(typeName)
             .orElseThrow();
