@@ -365,7 +365,7 @@ public final class TypeMirrorResolver {
         if (fieldModifiers.contains(Modifier.STATIC)) {
             fieldDescriptor.addTrait(Static.STATIC);
         }
-        TypeMirrorResolver.getAccessModifier(fieldModifiers).ifPresent(fieldDescriptor::addTrait);
+        getAccessModifier(fieldModifiers).ifPresent(fieldDescriptor::addTrait);
     }
 
     // --- Annotations ---
@@ -466,7 +466,7 @@ public final class TypeMirrorResolver {
         }
 
         this.addTypeParameters(typeDescriptor, typeElement);
-        TypeMirrorResolver.applyModifiers(typeDescriptor, typeElement.getModifiers());
+        applyModifiers(typeDescriptor, typeElement.getModifiers());
 
         this.addSuperclass(typeDescriptor, typeElement);
         this.addInterfaces(typeDescriptor, typeElement);
@@ -532,7 +532,7 @@ public final class TypeMirrorResolver {
         if (methodElement.isDefault()) {
             methodDescriptor.addTrait(new MethodImplementationDescriptor(methodDescriptor));
         }
-        TypeMirrorResolver.applyModifiers(methodDescriptor, methodElement.getModifiers());
+        applyModifiers(methodDescriptor, methodElement.getModifiers());
         this.addTypeAnnotations(methodDescriptor, methodElement);
     }
 
@@ -540,7 +540,7 @@ public final class TypeMirrorResolver {
                                   final ExecutableElement constructorElement) {
         this.addTypeParameters(constructorDescriptor, constructorElement);
         this.addThrowables(constructorElement, constructorDescriptor);
-        TypeMirrorResolver.getAccessModifier(constructorElement.getModifiers())
+        getAccessModifier(constructorElement.getModifiers())
             .ifPresent(constructorDescriptor::addTrait);
         this.addTypeAnnotations(constructorDescriptor, constructorElement);
     }

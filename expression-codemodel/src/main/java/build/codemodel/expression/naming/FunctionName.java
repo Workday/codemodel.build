@@ -131,7 +131,7 @@ public final class FunctionName
      * @return a {@link FunctionName}
      */
     public static FunctionName of(final IrreducibleName irreducibleName) {
-        return FunctionName.of(Optional.empty(),
+        return of(Optional.empty(),
             Optional.empty(),
             Optional.empty(),
             irreducibleName);

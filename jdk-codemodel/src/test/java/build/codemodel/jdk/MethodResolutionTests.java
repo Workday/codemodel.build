@@ -147,7 +147,7 @@ class MethodResolutionTests {
         final var typeName = cm.getNameProvider().getTypeName(Optional.empty(), "com.example.Foo");
         final var method = cm.getTypeDescriptor(typeName).orElseThrow()
             .traits(MethodDescriptor.class).findFirst().orElseThrow();
-        final var trait = new ResolvedMethod(cm, typeName, "hello", java.util.List.of());
+        final var trait = new ResolvedMethod(cm, typeName, "hello", List.of());
         assertThat(trait.parts().toList()).containsExactly(method);
     }
 }

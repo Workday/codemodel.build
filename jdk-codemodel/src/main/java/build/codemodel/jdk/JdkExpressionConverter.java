@@ -474,7 +474,7 @@ public class JdkExpressionConverter
             .orElseGet(() -> UnknownTypeUsage.create(codeModel));
     }
 
-    private Optional<TypeUsage> resolveLambdaParameterType(final com.sun.source.tree.VariableTree p) {
+    private Optional<TypeUsage> resolveLambdaParameterType(final VariableTree p) {
         final var tree = p.getType() != null ? p.getType() : p;
         return resolveTypeMirror(tree).map(typeResolver);
     }

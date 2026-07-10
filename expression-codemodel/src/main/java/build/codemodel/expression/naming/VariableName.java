@@ -264,7 +264,7 @@ public final class VariableName
      * @return a {@link VariableName}
      */
     public static VariableName of(final IrreducibleName irreducibleName) {
-        return VariableName.of(Optional.empty(),
+        return of(Optional.empty(),
             Optional.empty(),
             Optional.empty(),
             irreducibleName);
