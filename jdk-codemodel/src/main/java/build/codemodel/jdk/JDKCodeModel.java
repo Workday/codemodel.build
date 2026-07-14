@@ -46,11 +46,11 @@ import build.codemodel.foundation.usage.AnnotationTypeUsage;
 import build.codemodel.foundation.usage.AnnotationValue;
 import build.codemodel.foundation.usage.ArrayTypeUsage;
 import build.codemodel.foundation.usage.GenericTypeUsage;
+import build.codemodel.foundation.usage.IntersectionTypeUsage;
 import build.codemodel.foundation.usage.NamedTypeUsage;
 import build.codemodel.foundation.usage.SpecificTypeUsage;
 import build.codemodel.foundation.usage.TypeUsage;
 import build.codemodel.foundation.usage.TypeVariableUsage;
-import build.codemodel.foundation.usage.UnionTypeUsage;
 import build.codemodel.foundation.usage.UnknownTypeUsage;
 import build.codemodel.foundation.usage.WildcardTypeUsage;
 import build.codemodel.jdk.descriptor.ConstructorType;
@@ -78,8 +78,11 @@ import jakarta.inject.Inject;
 
 import java.lang.annotation.Annotation;
 import java.lang.invoke.MethodHandles;
+import java.lang.reflect.AnnotatedArrayType;
 import java.lang.reflect.AnnotatedElement;
+import java.lang.reflect.AnnotatedParameterizedType;
 import java.lang.reflect.AnnotatedType;
+import java.lang.reflect.AnnotatedWildcardType;
 import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Member;
@@ -259,13 +262,58 @@ public class JDKCodeModel
     public TypeUsage getTypeUsage(final AnnotatedType annotatedType) {
         Objects.requireNonNull(annotatedType, "The AnnotatedType must not be null");
 
-        final var typeUsage = getTypeUsage(annotatedType.getType());
+        final var typeUsage = getStructuralTypeUsage(annotatedType);
 
         // include the annotations on the TypeUsage
         getAnnotations(annotatedType)
             .forEach(typeUsage::addTrait);
 
         return typeUsage;
+    }
+
+    /**
+     * Builds the {@link TypeUsage} structure for the specified {@link AnnotatedType} using reflection,
+     * descending into nested {@code TYPE_USE} annotated positions (generic type arguments, wildcard
+     * bounds, and array components) so annotations at any depth are preserved. Unlike
+     * {@link #getTypeUsage(AnnotatedType)}, this does <strong>not</strong> apply the annotations declared
+     * directly on the outermost {@link AnnotatedType}, allowing callers (such as field resolution) to
+     * supply outer-level annotations from a different source without duplicating them.
+     *
+     * @param annotatedType the {@link AnnotatedType}
+     * @return the structural {@link TypeUsage}, without the outermost {@link AnnotatedType}'s own annotations
+     */
+    private TypeUsage getStructuralTypeUsage(final AnnotatedType annotatedType) {
+        if (annotatedType instanceof AnnotatedParameterizedType annotatedParameterizedType) {
+            final var parameterizedType = (ParameterizedType) annotatedType.getType();
+            final var rawTypeUsage = getNamedTypeUsage(parameterizedType.getRawType())
+                .orElseThrow(() -> new IllegalStateException(
+                    "RawType of ParameterizedType is not named:" + annotatedType.getType()));
+            final var parameters = Arrays.stream(annotatedParameterizedType.getAnnotatedActualTypeArguments())
+                .map(this::getTypeUsage)
+                .toArray(TypeUsage[]::new);
+
+            return GenericTypeUsage.of(this, rawTypeUsage.typeName(), parameters);
+        } else if (annotatedType instanceof AnnotatedWildcardType annotatedWildcardType) {
+            final var lowers = annotatedWildcardType.getAnnotatedLowerBounds();
+            final var uppers = annotatedWildcardType.getAnnotatedUpperBounds();
+
+            final Optional<Lazy<TypeUsage>> optLower = lowers.length > 0
+                ? Optional.of(Lazy.of(getTypeUsage(lowers[0])))
+                : Optional.empty();
+
+            // getAnnotatedUpperBounds() returns [Object] for unbounded `?` — treat that as no explicit upper bound
+            final Optional<Lazy<TypeUsage>> optUpper = uppers.length > 0 && !uppers[0].getType().equals(Object.class)
+                ? Optional.of(Lazy.of(getTypeUsage(uppers[0])))
+                : Optional.empty();
+
+            return WildcardTypeUsage.of(this, optLower, optUpper);
+        } else if (annotatedType instanceof AnnotatedArrayType annotatedArrayType) {
+            return ArrayTypeUsage.of(
+                this,
+                Lazy.of(getTypeUsage(annotatedArrayType.getAnnotatedGenericComponentType())));
+        }
+
+        return getTypeUsage(annotatedType.getType());
     }
 
     /**
@@ -303,7 +351,12 @@ public class JDKCodeModel
 
         if (type instanceof Class<?> classType) {
             final var typeName = nameProvider.getTypeName(classType);
-            typeUsage = SpecificTypeUsage.of(this, typeName);
+
+            // a bare Class with declared type parameters is a raw usage of a generic type
+            // (e.g. `List list;`), distinct from a genuinely non-generic type
+            typeUsage = classType.getTypeParameters().length > 0
+                ? GenericTypeUsage.of(this, typeName)
+                : SpecificTypeUsage.of(this, typeName);
         } else if (type instanceof ParameterizedType parameterizedType) {
             final var rawTypeUsage = getNamedTypeUsage(parameterizedType.getRawType())
                 .orElseThrow(() -> new IllegalStateException("RawType of ParameterizedType is not named:" + type));
@@ -331,7 +384,7 @@ public class JDKCodeModel
                         ? Optional.empty()
                         : (upperBoundTypeUsages.size() == 1)
                           ? Optional.of(upperBoundTypeUsages.getFirst())
-                          : Optional.of(Lazy.of(UnionTypeUsage.of(this, upperBoundTypeUsages.stream())));
+                          : Optional.of(Lazy.of(IntersectionTypeUsage.of(this, upperBoundTypeUsages.stream())));
                 } finally {
                     inProgress.remove(typeVariable);
                 }
@@ -643,10 +696,12 @@ public class JDKCodeModel
             .forEach(field -> {
                 final var fieldName = nameProvider.getIrreducibleName(field.getName());
 
-                // NOTE: Field.getAnnotatedType() does not define the field annotations, thus
-                // we must use Field.getGenericType() to obtain the TypeUsage for the Field and
-                // not Field.getAnnotatedType()
-                final var fieldType = getTypeUsage(field.getGenericType());
+                // Field.getAnnotatedType().getAnnotations() omits declaration-only annotations
+                // (i.e. those not targeting TYPE_USE), so the outer-level annotations must come from
+                // Field.getAnnotations() rather than the AnnotatedType, to avoid missing or duplicating
+                // them; getStructuralTypeUsage still descends into the AnnotatedType for nested
+                // TYPE_USE annotations (generic arguments, wildcard bounds, array components).
+                final var fieldType = getStructuralTypeUsage(field.getAnnotatedType());
 
                 // include the annotations on the Field TypeUsage
                 getAnnotations(field)

@@ -20,14 +20,13 @@ package build.codemodel.jdk.example;
  * #L%
  */
 
-import java.util.List;
-
 /**
- * A test fixture for wildcard type discovery via reflection.
+ * A container with a multi-bound (intersection) type parameter, used for reflection-path
+ * generic discovery tests.
+ *
+ * @param <T> the element type, bounded by both {@link Number} and {@link Comparable}
  */
-public class WildcardContainer {
-    public List<? extends Number> upper;
-    public List<? super Integer> lower;
-    public List<?> unbounded;
-    public List<? extends Object> explicitObjectBound;
+public class MultiBoundContainer<T extends Number & Comparable<T>> {
+
+    public T value;
 }

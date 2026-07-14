@@ -23,11 +23,10 @@ package build.codemodel.jdk.example;
 import java.util.List;
 
 /**
- * A test fixture for wildcard type discovery via reflection.
+ * A container with a {@code TYPE_USE} annotation nested inside a generic type argument,
+ * used for reflection-path type-use annotation discovery tests.
  */
-public class WildcardContainer {
-    public List<? extends Number> upper;
-    public List<? super Integer> lower;
-    public List<?> unbounded;
-    public List<? extends Object> explicitObjectBound;
+public class AnnotatedGenericContainer {
+
+    public List<@NonNull String> items;
 }

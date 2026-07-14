@@ -20,14 +20,15 @@ package build.codemodel.jdk.example;
  * #L%
  */
 
-import java.util.List;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
- * A test fixture for wildcard type discovery via reflection.
+ * A {@code TYPE_USE} annotation, used for reflection-path type-use annotation discovery tests.
  */
-public class WildcardContainer {
-    public List<? extends Number> upper;
-    public List<? super Integer> lower;
-    public List<?> unbounded;
-    public List<? extends Object> explicitObjectBound;
+@Target(ElementType.TYPE_USE)
+@Retention(RetentionPolicy.RUNTIME)
+public @interface NonNull {
 }

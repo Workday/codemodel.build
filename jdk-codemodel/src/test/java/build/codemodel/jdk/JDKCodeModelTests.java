@@ -5,6 +5,7 @@ import build.codemodel.foundation.descriptor.TypeDescriptor;
 import build.codemodel.foundation.naming.NonCachingNameProvider;
 import build.codemodel.foundation.usage.AnnotationTypeUsage;
 import build.codemodel.foundation.usage.GenericTypeUsage;
+import build.codemodel.foundation.usage.IntersectionTypeUsage;
 import build.codemodel.foundation.usage.NamedTypeUsage;
 import build.codemodel.foundation.usage.TypeVariableUsage;
 import build.codemodel.foundation.usage.WildcardTypeUsage;
@@ -13,11 +14,14 @@ import build.codemodel.jdk.descriptor.Final;
 import build.codemodel.jdk.descriptor.JDKTypeDescriptor;
 import build.codemodel.jdk.descriptor.Varargs;
 import build.codemodel.jdk.example.AbstractPerson;
+import build.codemodel.jdk.example.AnnotatedGenericContainer;
 import build.codemodel.jdk.example.BoundedContainer;
 import build.codemodel.jdk.example.Container;
 import build.codemodel.jdk.example.Description;
 import build.codemodel.jdk.example.FinalParamExample;
+import build.codemodel.jdk.example.MultiBoundContainer;
 import build.codemodel.jdk.example.NonAbstractPerson;
+import build.codemodel.jdk.example.RawFieldContainer;
 import build.codemodel.jdk.example.ThrowingExample;
 import build.codemodel.jdk.example.VarargsExample;
 import build.codemodel.jdk.example.WildcardContainer;
@@ -29,6 +33,7 @@ import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 import build.codemodel.objectoriented.descriptor.ImplementsTypeDescriptor;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
 import build.codemodel.objectoriented.descriptor.ParameterizedTypeDescriptor;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -531,5 +536,107 @@ class JDKCodeModelTests {
         assertThat(typeVar.typeName().name().toString()).isEqualTo("T");
         assertThat(typeVar.upperBound()).isPresent();
         assertThat(((NamedTypeUsage) typeVar.upperBound().get()).typeName().toString()).contains("Number");
+    }
+
+    /**
+     * Demonstrates: a multi-bound type variable ({@code T extends Number & Comparable<T>}) must resolve
+     * to an {@link IntersectionTypeUsage} on the reflection path, just as it does on the source-parsing
+     * path (see {@code GenericsDiscoveryTests.shouldDiscoverIntersectionTypeBound}). Reflection currently
+     * builds a {@code UnionTypeUsage} instead, which models multi-catch parameters, not intersection bounds.
+     */
+    @Test
+    void shouldDiscoverIntersectionTypeBoundViaReflection() {
+        final var codeModel = createCodeModel();
+        final var descriptor = codeModel.getJDKTypeDescriptor(MultiBoundContainer.class).orElseThrow();
+
+        final var typeVar = descriptor.getTrait(ParameterizedTypeDescriptor.class)
+            .orElseThrow()
+            .typeVariables()
+            .findFirst()
+            .orElseThrow();
+        assertThat(typeVar).isInstanceOf(TypeVariableUsage.class);
+
+        final var upperBound = ((TypeVariableUsage) typeVar).upperBound();
+        assertThat(upperBound).isPresent();
+        assertThat(upperBound.get()).isInstanceOf(IntersectionTypeUsage.class);
+
+        final var boundNames = ((IntersectionTypeUsage) upperBound.get()).types()
+            .map(t -> ((NamedTypeUsage) t).typeName().toString())
+            .toList();
+        assertThat(boundNames).anyMatch(name -> name.contains("Number"));
+        assertThat(boundNames).anyMatch(name -> name.contains("Comparable"));
+    }
+
+    /**
+     * Demonstrates: a raw usage of a generic type ({@code List raw;}, no type argument) should resolve
+     * to a {@link GenericTypeUsage} with zero parameters, distinguishing it from usage of a genuinely
+     * non-generic type. Reflection currently cannot tell "raw usage of a generic class" apart from
+     * "non-generic class" and always produces a {@code SpecificTypeUsage} instead.
+     */
+    @Test
+    void shouldDiscoverRawGenericUsageAsGenericTypeUsageViaReflection() {
+        final var codeModel = createCodeModel();
+        final var descriptor = codeModel.getJDKTypeDescriptor(RawFieldContainer.class).orElseThrow();
+
+        final var rawField = descriptor.traits(FieldDescriptor.class)
+            .filter(f -> f.fieldName().toString().equals("raw"))
+            .findFirst().orElseThrow();
+
+        assertThat(rawField.type()).isInstanceOf(GenericTypeUsage.class);
+        assertThat(((GenericTypeUsage) rawField.type()).parameters()).isEmpty();
+    }
+
+    /**
+     * Demonstrates: a {@code TYPE_USE} annotation nested inside a generic type argument
+     * ({@code List<@NonNull String>}) must be preserved on the reflection path, just as it is on the
+     * source-parsing path (see {@code TypeAnnotationDiscoveryTests.shouldPreserveAnnotationOnGenericTypeArgument}).
+     * Reflection currently only reads the outermost {@code AnnotatedType}'s annotations and drops
+     * annotations nested inside {@code AnnotatedParameterizedType.getAnnotatedActualTypeArguments()}.
+     */
+    @Test
+    void shouldPreserveAnnotationOnGenericTypeArgumentViaReflection() {
+        final var codeModel = createCodeModel();
+        final var descriptor = codeModel.getJDKTypeDescriptor(AnnotatedGenericContainer.class).orElseThrow();
+
+        final var itemsField = descriptor.traits(FieldDescriptor.class)
+            .filter(f -> f.fieldName().toString().equals("items"))
+            .findFirst().orElseThrow();
+
+        assertThat(itemsField.type()).isInstanceOf(GenericTypeUsage.class);
+        final var arg = ((GenericTypeUsage) itemsField.type()).parameters().findFirst().orElseThrow();
+        assertThat(arg.traits(AnnotationTypeUsage.class)
+            .map(a -> a.typeName().name().toString())
+            .toList())
+            .contains("NonNull");
+    }
+
+    /**
+     * Demonstrates a known, unfixable limitation: an explicitly bounded {@code ? extends Object}
+     * wildcard cannot be distinguished from an unbounded {@code ?} wildcard via reflection. Both
+     * {@link java.lang.reflect.WildcardType#getUpperBounds()} and
+     * {@link java.lang.reflect.AnnotatedWildcardType#getAnnotatedUpperBounds()} synthesize
+     * {@code [Object.class]} for both cases; the distinction only survives in the raw bytecode
+     * {@code Signature} attribute ({@code *} vs {@code +Ljava/lang/Object;}), which {@code java.lang.reflect}
+     * does not expose. Fixing this would require hand-parsing generic signature bytecode. The
+     * source-parsing path does not have this limitation since {@code javax.lang.model.type.WildcardType}
+     * preserves the distinction.
+     */
+    @Test
+    @Disabled("java.lang.reflect cannot distinguish `? extends Object` from unbounded `?` -- "
+        + "see method Javadoc")
+    void shouldDistinguishExplicitObjectBoundFromUnboundedWildcardViaReflection() {
+        final var codeModel = createCodeModel();
+        final var descriptor = codeModel.getJDKTypeDescriptor(WildcardContainer.class).orElseThrow();
+
+        final var field = descriptor.traits(FieldDescriptor.class)
+            .filter(f -> f.fieldName().toString().equals("explicitObjectBound"))
+            .findFirst().orElseThrow();
+        final var param = ((GenericTypeUsage) field.type()).parameters().findFirst().orElseThrow();
+        assertThat(param).isInstanceOf(WildcardTypeUsage.class);
+
+        final var wildcard = (WildcardTypeUsage) param;
+        assertThat(wildcard.upperBound()).isPresent();
+        assertThat(((NamedTypeUsage) wildcard.upperBound().orElseThrow()).typeName().toString())
+            .contains("Object");
     }
 }
