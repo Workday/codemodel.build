@@ -44,6 +44,7 @@ module build.codemodel.jdk.annotation.processor {
     requires build.base.mereology;
     requires build.base.telemetry;
     requires build.base.telemetry.foundation;
+    requires build.base.telemetry.javac;
 
     requires build.codemodel.foundation;
     requires build.codemodel.objectoriented;

@@ -21,7 +21,7 @@ package build.codemodel.jdk;
  */
 
 import build.base.foundation.Lazy;
-import build.base.foundation.Memoizer;
+import build.base.foundation.memoizer.Memoizer;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.FormalParameterDescriptor;
 import build.codemodel.foundation.descriptor.ThrowableDescriptor;
@@ -125,7 +125,7 @@ public final class TypeMirrorResolver {
     private final NameProvider nameProvider;
     private final Elements elements;
     private final Consumer<ErrorType> errorHandler;
-    private final Memoizer<TypeElement, TypeName> typeNameCache = new Memoizer<>(this::computeTypeName);
+    private final Memoizer<TypeElement, TypeName> typeNameCache = Memoizer.of(this::computeTypeName).build();
 
     public TypeMirrorResolver(final CodeModel codeModel,
                               final Elements elements,

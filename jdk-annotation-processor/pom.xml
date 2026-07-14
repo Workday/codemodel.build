@@ -35,6 +35,10 @@
             <groupId>build.base</groupId>
             <artifactId>base-telemetry-foundation</artifactId>
         </dependency>
+        <dependency>
+            <groupId>build.base</groupId>
+            <artifactId>base-telemetry-javac</artifactId>
+        </dependency>
 
         <dependency>
             <groupId>build.codemodel</groupId>
