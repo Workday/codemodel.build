@@ -109,7 +109,13 @@ class MarshallingTests {
     }
 
     /**
-     * Ensures that {@link ConstructorDescriptor} can be marshalled, transported and unmarshalled using a {@link JsonTransport}.
+     * Ensures that a {@link ConstructorDescriptor} attached to its declaring {@link TypeDescriptor} —
+     * the shape every real constructor is in ({@code JdkInitializer} always does
+     * {@code typeDescriptor.addTrait(ConstructorDescriptor.of(typeDescriptor, ...))}) — round-trips
+     * through marshalling, transport and unmarshalling using a {@link JsonTransport}. Like
+     * {@link MethodDescriptor}, {@link ConstructorDescriptor}'s {@code typeDescriptor} is
+     * {@code @Bound} rather than independently marshalled, so marshalling the {@link TypeDescriptor}
+     * does not recurse back into re-marshalling itself via this trait.
      *
      * @throws IOException if an error occurs during marshalling, transport or unmarshalling
      */
@@ -131,9 +137,9 @@ class MarshallingTests {
                 Optional.of(IrreducibleName.of("param1")),
                 VoidTypeUsage.create(codeModel)));
 
-        marshallAndTransportAndUnMarshalAndAssert(ConstructorDescriptor.of(
-            typeDescriptor,
-            formalParameters));
+        typeDescriptor.addTrait(ConstructorDescriptor.of(typeDescriptor, formalParameters));
+
+        marshallAndTransportAndUnMarshalAndAssert(typeDescriptor);
     }
 
     /**

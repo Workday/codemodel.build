@@ -103,25 +103,25 @@ public final class FunctionDescriptor
      * Un{@link Marshal} a {@link FunctionDescriptor}.
      *
      * @param codeModel        the {@link CodeModel}
+     * @param typeDescriptor   the {@link TypeDescriptor}
      * @param marshaller       the {@link Marshaller}
      * @param traits           the {@link Stream} of {@link Marshalled} {@link Trait}s
-     * @param typeDescriptor   the {@link Marshalled} {@link TypeDescriptor}
      * @param functionName     the {@link FunctionName}
      * @param returnType       the {@link Marshalled} {@link TypeUsage} of the return type
      * @param formalParameters the {@link Stream} of {@link Marshalled} {@link FormalParameterDescriptor}s
      */
     @Unmarshal
     public FunctionDescriptor(@Bound final CodeModel codeModel,
+                              @Bound final TypeDescriptor typeDescriptor,
                               final Marshaller marshaller,
                               final Stream<Marshalled<Trait>> traits,
-                              final Marshalled<TypeDescriptor> typeDescriptor,
                               final FunctionName functionName,
                               final Marshalled<TypeUsage> returnType,
                               final Stream<Marshalled<FormalParameterDescriptor>> formalParameters) {
 
         super(codeModel, marshaller, traits);
 
-        this.typeDescriptor = marshaller.unmarshal(typeDescriptor);
+        this.typeDescriptor = typeDescriptor;
         this.functionName = functionName;
         this.returnType = marshaller.unmarshal(returnType);
         this.formalParameters = formalParameters
@@ -134,7 +134,6 @@ public final class FunctionDescriptor
      *
      * @param marshaller       the {@link Marshaller}
      * @param traits           the {@link Out} {@link Stream} of {@link Marshalled} {@link Trait}s
-     * @param typeDescriptor   the {@link Out} {@link Marshalled} {@link TypeDescriptor}
      * @param functionName     the {@link Out} {@link FunctionName}
      * @param returnType       the {@link Out} {@link TypeUsage} of the return type
      * @param formalParameters the {@link Out} {@link Stream} of {@link Marshalled} {@link FormalParameterDescriptor}s
@@ -142,13 +141,11 @@ public final class FunctionDescriptor
     @Marshal
     public void destructor(final Marshaller marshaller,
                            final Out<Stream<Marshalled<Trait>>> traits,
-                           final Out<Marshalled<TypeDescriptor>> typeDescriptor,
                            final Out<FunctionName> functionName,
                            final Out<Marshalled<TypeUsage>> returnType,
                            final Out<Stream<Marshalled<FormalParameterDescriptor>>> formalParameters) {
 
         super.destructor(marshaller, traits);
-        typeDescriptor.set(marshaller.marshal(this.typeDescriptor));
         functionName.set(this.functionName);
         returnType.set(marshaller.marshal(this.returnType));
         formalParameters.set(this.formalParameters.stream()

@@ -110,25 +110,25 @@ public final class ConstructorDescriptor
      * {@link Unmarshal} a {@link ConstructorDescriptor}.
      *
      * @param codeModel        the {@link CodeModel}
+     * @param typeDescriptor   the {@link TypeDescriptor}
      * @param marshaller       the {@link Marshaller} for unmarshalling the {@link Marshalled} {@link Trait}s
      * @param traits           the {@link Marshalled} {@link Trait}s
-     * @param typeDescriptor   the {@link TypeDescriptor}
      * @param methodName       the {@link MethodName}
      * @param returnType       the {@link Marshalled} {@link TypeUsage} defining the return type
      * @param formalParameters the {@link Marshalled} {@link FormalParameterDescriptor}s for the formal parameters
      */
     @Unmarshal
     public ConstructorDescriptor(@Bound final CodeModel codeModel,
+                                 @Bound final TypeDescriptor typeDescriptor,
                                  final Marshaller marshaller,
                                  final Stream<Marshalled<Trait>> traits,
-                                 final Marshalled<TypeDescriptor> typeDescriptor,
                                  final MethodName methodName,
                                  final Marshalled<TypeUsage> returnType,
                                  final Stream<Marshalled<FormalParameterDescriptor>> formalParameters) {
 
         super(codeModel, marshaller, traits);
 
-        this.typeDescriptor = marshaller.unmarshal(typeDescriptor);
+        this.typeDescriptor = typeDescriptor;
         this.methodName = methodName;
         this.returnType = marshaller.unmarshal(returnType);
         this.formalParameters = formalParameters == null
@@ -141,7 +141,6 @@ public final class ConstructorDescriptor
      *
      * @param marshaller       the {@link Marshaller}
      * @param traits           the {@link Marshalled} {@link Trait}s
-     * @param typeDescriptor   the {@link TypeDescriptor}
      * @param methodName       the {@link MethodName}
      * @param returnType       the {@link Marshalled} {@link TypeUsage} defining the return type
      * @param formalParameters the {@link Marshalled} {@link FormalParameterDescriptor}s for the formal parameters
@@ -149,14 +148,12 @@ public final class ConstructorDescriptor
     @Marshal
     public void destructor(final Marshaller marshaller,
                            final Out<Stream<Marshalled<Trait>>> traits,
-                           final Out<Marshalled<TypeDescriptor>> typeDescriptor,
                            final Out<MethodName> methodName,
                            final Out<Marshalled<TypeUsage>> returnType,
                            final Out<Stream<Marshalled<FormalParameterDescriptor>>> formalParameters) {
 
         super.destructor(marshaller, traits);
 
-        typeDescriptor.set(marshaller.marshal(this.typeDescriptor));
         methodName.set(this.methodName);
         returnType.set(marshaller.marshal(this.returnType));
         formalParameters.set(this.formalParameters.stream()
