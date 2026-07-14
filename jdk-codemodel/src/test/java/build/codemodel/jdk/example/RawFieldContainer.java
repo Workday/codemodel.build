@@ -23,11 +23,13 @@ package build.codemodel.jdk.example;
 import java.util.List;
 
 /**
- * A test fixture for wildcard type discovery via reflection.
+ * A container with both a raw and a parameterized usage of the same generic type,
+ * used for reflection-path generic discovery tests.
  */
-public class WildcardContainer {
-    public List<? extends Number> upper;
-    public List<? super Integer> lower;
-    public List<?> unbounded;
-    public List<? extends Object> explicitObjectBound;
+public class RawFieldContainer {
+
+    @SuppressWarnings("rawtypes")
+    public List raw;
+
+    public List<String> typed;
 }
