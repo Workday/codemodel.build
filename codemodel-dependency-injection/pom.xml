@@ -11,11 +11,16 @@
         <version>${revision}</version>
     </parent>
 
-    <artifactId>codemodel-framework-builder</artifactId>
+    <artifactId>codemodel-dependency-injection</artifactId>
 
-    <name>Code Model Framework Builder</name>
+    <name>Dependency Injection</name>
 
     <dependencies>
+        <dependency>
+            <groupId>jakarta.inject</groupId>
+            <artifactId>jakarta.inject-api</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>build.base</groupId>
             <artifactId>base-foundation</artifactId>
@@ -23,7 +28,12 @@
 
         <dependency>
             <groupId>build.base</groupId>
-            <artifactId>base-mereology</artifactId>
+            <artifactId>base-configuration</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>build.base</groupId>
+            <artifactId>base-graph</artifactId>
         </dependency>
 
         <dependency>
@@ -32,13 +42,13 @@
         </dependency>
 
         <dependency>
-            <groupId>build.base</groupId>
-            <artifactId>base-telemetry-foundation</artifactId>
+            <groupId>build.codemodel</groupId>
+            <artifactId>codemodel-foundation</artifactId>
         </dependency>
 
         <dependency>
             <groupId>build.codemodel</groupId>
-            <artifactId>codemodel-foundation</artifactId>
+            <artifactId>codemodel-objectoriented</artifactId>
         </dependency>
 
         <dependency>
@@ -49,11 +59,6 @@
         <dependency>
             <groupId>build.codemodel</groupId>
             <artifactId>codemodel-framework</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>build.codemodel</groupId>
-            <artifactId>codemodel-dependency-injection</artifactId>
         </dependency>
 
         <!-- Test Dependencies -->

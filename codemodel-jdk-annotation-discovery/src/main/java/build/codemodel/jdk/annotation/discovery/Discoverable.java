@@ -1,6 +1,8 @@
+package build.codemodel.jdk.annotation.discovery;
+
 /*-
  * #%L
- * Code Model Framework Builder
+ * JDK Annotation Discovery
  * %%
  * Copyright (C) 2026 Workday, Inc.
  * %%
@@ -18,26 +20,21 @@
  * #L%
  */
 
-import build.codemodel.framework.Framework;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
- * Defines a mechanism to programmatically build <i>Code Model</i> {@link Framework}s.
+ * Indicates that a type is part of a <i>discoverable</i> <i>Code Model</i> whose values, creation, access, retrieval,
+ * mutation, events and lifecycle may be inspected, interpreted, transformed, compiled and managed by the
+ * <i>Code Model Framework</i>.
  *
  * @author brian.oliver
- * @since Feb-2024
+ * @since Jan-2024
  */
-module build.codemodel.framework.builder {
-    requires build.base.foundation;
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+public @interface Discoverable {
 
-    requires build.base.telemetry;
-    requires build.base.telemetry.foundation;
-
-    requires build.codemodel.foundation;
-    requires build.codemodel.jdk;
-
-    requires build.codemodel.dependency.injection;
-    requires build.codemodel.framework;
-    requires build.base.mereology;
-
-    exports build.codemodel.framework.builder;
 }

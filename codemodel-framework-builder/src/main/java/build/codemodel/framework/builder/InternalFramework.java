@@ -28,6 +28,8 @@ import build.base.mereology.Strategy;
 import build.base.telemetry.Error;
 import build.base.telemetry.TelemetryRecorder;
 import build.base.telemetry.foundation.ObservableTelemetryRecorder;
+import build.codemodel.dependency.injection.Context;
+import build.codemodel.dependency.injection.InjectionFramework;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.ConceptualCodeModel;
 import build.codemodel.foundation.descriptor.Trait;
@@ -44,8 +46,6 @@ import build.codemodel.framework.completer.Completer;
 import build.codemodel.framework.completer.Completion;
 import build.codemodel.framework.initialization.Enricher;
 import build.codemodel.framework.initialization.Initializer;
-import build.codemodel.injection.Context;
-import build.codemodel.injection.InjectionFramework;
 import build.codemodel.jdk.JDKCodeModel;
 
 import java.nio.file.FileSystem;

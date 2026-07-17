@@ -93,20 +93,20 @@
     <modules>
         <module>codemodel-foundation</module>
 
-        <module>expression-codemodel</module>
-        <module>hierarchical-codemodel</module>
-        <module>imperative-codemodel</module>
-        <module>objectoriented-codemodel</module>
+        <module>codemodel-expression</module>
+        <module>codemodel-hierarchical</module>
+        <module>codemodel-imperative</module>
+        <module>codemodel-objectoriented</module>
 
-        <module>jdk-codemodel</module>
+        <module>codemodel-jdk</module>
 
-        <module>dependency-injection</module>
+        <module>codemodel-dependency-injection</module>
 
         <module>codemodel-framework</module>
         <module>codemodel-framework-builder</module>
 
-        <module>jdk-annotation-discovery</module>
-        <module>jdk-annotation-processor</module>
+        <module>codemodel-jdk-annotation-discovery</module>
+        <module>codemodel-jdk-annotation-processor</module>
 
     </modules>
 
@@ -120,32 +120,32 @@
             </dependency>
             <dependency>
                 <groupId>build.codemodel</groupId>
-                <artifactId>expression-codemodel</artifactId>
+                <artifactId>codemodel-expression</artifactId>
                 <version>${revision}</version>
             </dependency>
             <dependency>
                 <groupId>build.codemodel</groupId>
-                <artifactId>hierarchical-codemodel</artifactId>
+                <artifactId>codemodel-hierarchical</artifactId>
                 <version>${revision}</version>
             </dependency>
             <dependency>
                 <groupId>build.codemodel</groupId>
-                <artifactId>imperative-codemodel</artifactId>
+                <artifactId>codemodel-imperative</artifactId>
                 <version>${revision}</version>
             </dependency>
             <dependency>
                 <groupId>build.codemodel</groupId>
-                <artifactId>objectoriented-codemodel</artifactId>
+                <artifactId>codemodel-objectoriented</artifactId>
                 <version>${revision}</version>
             </dependency>
             <dependency>
                 <groupId>build.codemodel</groupId>
-                <artifactId>jdk-codemodel</artifactId>
+                <artifactId>codemodel-jdk</artifactId>
                 <version>${revision}</version>
             </dependency>
             <dependency>
                 <groupId>build.codemodel</groupId>
-                <artifactId>dependency-injection</artifactId>
+                <artifactId>codemodel-dependency-injection</artifactId>
                 <version>${revision}</version>
             </dependency>
             <dependency>
@@ -160,12 +160,12 @@
             </dependency>
             <dependency>
                 <groupId>build.codemodel</groupId>
-                <artifactId>jdk-annotation-discovery</artifactId>
+                <artifactId>codemodel-jdk-annotation-discovery</artifactId>
                 <version>${revision}</version>
             </dependency>
             <dependency>
                 <groupId>build.codemodel</groupId>
-                <artifactId>jdk-annotation-processor</artifactId>
+                <artifactId>codemodel-jdk-annotation-processor</artifactId>
                 <version>${revision}</version>
             </dependency>
 

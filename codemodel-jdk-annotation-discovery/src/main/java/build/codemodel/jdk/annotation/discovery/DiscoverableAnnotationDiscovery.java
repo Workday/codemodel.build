@@ -1,6 +1,8 @@
+package build.codemodel.jdk.annotation.discovery;
+
 /*-
  * #%L
- * Code Model Framework Builder
+ * JDK Annotation Discovery
  * %%
  * Copyright (C) 2026 Workday, Inc.
  * %%
@@ -18,26 +20,27 @@
  * #L%
  */
 
-import build.codemodel.framework.Framework;
+import java.lang.annotation.Annotation;
+import java.util.stream.Stream;
 
 /**
- * Defines a mechanism to programmatically build <i>Code Model</i> {@link Framework}s.
+ * An {@link AnnotationDiscovery} for the {@link Discoverable}.
  *
  * @author brian.oliver
- * @since Feb-2024
+ * @since Mar-2024
  */
-module build.codemodel.framework.builder {
-    requires build.base.foundation;
+public class DiscoverableAnnotationDiscovery
+    implements AnnotationDiscovery {
 
-    requires build.base.telemetry;
-    requires build.base.telemetry.foundation;
+    /**
+     * Constructs a {@link DiscoverableAnnotationDiscovery}.
+     */
+    public DiscoverableAnnotationDiscovery() {
+        // required for ServiceLoaders
+    }
 
-    requires build.codemodel.foundation;
-    requires build.codemodel.jdk;
-
-    requires build.codemodel.dependency.injection;
-    requires build.codemodel.framework;
-    requires build.base.mereology;
-
-    exports build.codemodel.framework.builder;
+    @Override
+    public Stream<? extends Class<? extends Annotation>> getDiscoverableAnnotationTypes() {
+        return Stream.of(Discoverable.class);
+    }
 }

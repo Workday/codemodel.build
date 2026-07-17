@@ -1,6 +1,8 @@
+package build.codemodel.dependency.injection;
+
 /*-
  * #%L
- * Code Model Framework Builder
+ * Dependency Injection
  * %%
  * Copyright (C) 2026 Workday, Inc.
  * %%
@@ -18,26 +20,24 @@
  * #L%
  */
 
-import build.codemodel.framework.Framework;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Inherited;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
- * Defines a mechanism to programmatically build <i>Code Model</i> {@link Framework}s.
+ * Defines a zero-args non-static method to be invoked on an {@link Object} after successful injection with an
+ * {@link Injector}.
  *
  * @author brian.oliver
- * @since Feb-2024
+ * @since Nov-2018
  */
-module build.codemodel.framework.builder {
-    requires build.base.foundation;
+@Documented
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.METHOD)
+@Inherited
+public @interface PostInject {
 
-    requires build.base.telemetry;
-    requires build.base.telemetry.foundation;
-
-    requires build.codemodel.foundation;
-    requires build.codemodel.jdk;
-
-    requires build.codemodel.dependency.injection;
-    requires build.codemodel.framework;
-    requires build.base.mereology;
-
-    exports build.codemodel.framework.builder;
 }

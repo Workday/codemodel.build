@@ -1,6 +1,6 @@
 /*-
  * #%L
- * Code Model Framework Builder
+ * Dependency Injection
  * %%
  * Copyright (C) 2026 Workday, Inc.
  * %%
@@ -17,27 +17,23 @@
  * limitations under the License.
  * #L%
  */
-
-import build.codemodel.framework.Framework;
-
 /**
- * Defines a mechanism to programmatically build <i>Code Model</i> {@link Framework}s.
+ * An implementation of the Jakarta Dependency Injection specification using the JDKCodeModel.
  *
  * @author brian.oliver
- * @since Feb-2024
+ * @since Sep-2024
  */
-module build.codemodel.framework.builder {
-    requires build.base.foundation;
+module build.codemodel.dependency.injection {
+    requires jakarta.inject;
+    requires transitive build.base.foundation;
+    requires transitive build.base.telemetry;
+    requires build.base.configuration;
+    requires build.base.graph;
 
-    requires build.base.telemetry;
-    requires build.base.telemetry.foundation;
-
-    requires build.codemodel.foundation;
-    requires build.codemodel.jdk;
-
-    requires build.codemodel.dependency.injection;
+    requires transitive build.codemodel.foundation;
+    requires build.codemodel.objectoriented;
+    requires transitive build.codemodel.jdk;
     requires build.codemodel.framework;
-    requires build.base.mereology;
 
-    exports build.codemodel.framework.builder;
+    exports build.codemodel.dependency.injection;
 }

@@ -11,49 +11,27 @@
         <version>${revision}</version>
     </parent>
 
-    <artifactId>codemodel-framework-builder</artifactId>
+    <artifactId>codemodel-hierarchical</artifactId>
 
-    <name>Code Model Framework Builder</name>
+    <name>Hierarchical Code Model</name>
 
     <dependencies>
         <dependency>
             <groupId>build.base</groupId>
             <artifactId>base-foundation</artifactId>
         </dependency>
-
+        <dependency>
+            <groupId>build.base</groupId>
+            <artifactId>base-marshalling</artifactId>
+        </dependency>
         <dependency>
             <groupId>build.base</groupId>
             <artifactId>base-mereology</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>build.base</groupId>
-            <artifactId>base-telemetry</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>build.base</groupId>
-            <artifactId>base-telemetry-foundation</artifactId>
-        </dependency>
-
-        <dependency>
             <groupId>build.codemodel</groupId>
             <artifactId>codemodel-foundation</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>build.codemodel</groupId>
-            <artifactId>codemodel-jdk</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>build.codemodel</groupId>
-            <artifactId>codemodel-framework</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>build.codemodel</groupId>
-            <artifactId>codemodel-dependency-injection</artifactId>
         </dependency>
 
         <!-- Test Dependencies -->
@@ -69,4 +47,19 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <configuration>
+                    <ignoredNonTestScopedDependencies>
+                        <!-- used in main code (AbstractHierarchicalTypeDescriptor); false positive -->
+                        <ignoredNonTestScopedDependency>build.base:base-foundation</ignoredNonTestScopedDependency>
+                    </ignoredNonTestScopedDependencies>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>
