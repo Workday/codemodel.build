@@ -11,9 +11,9 @@
         <version>${revision}</version>
     </parent>
 
-    <artifactId>codemodel-framework-builder</artifactId>
+    <artifactId>codemodel-objectoriented</artifactId>
 
-    <name>Code Model Framework Builder</name>
+    <name>Object-Oriented Code Model</name>
 
     <dependencies>
         <dependency>
@@ -23,17 +23,11 @@
 
         <dependency>
             <groupId>build.base</groupId>
+            <artifactId>base-marshalling</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>build.base</groupId>
             <artifactId>base-mereology</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>build.base</groupId>
-            <artifactId>base-telemetry</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>build.base</groupId>
-            <artifactId>base-telemetry-foundation</artifactId>
         </dependency>
 
         <dependency>
@@ -43,17 +37,12 @@
 
         <dependency>
             <groupId>build.codemodel</groupId>
-            <artifactId>codemodel-jdk</artifactId>
+            <artifactId>codemodel-hierarchical</artifactId>
         </dependency>
 
         <dependency>
             <groupId>build.codemodel</groupId>
-            <artifactId>codemodel-framework</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>build.codemodel</groupId>
-            <artifactId>codemodel-dependency-injection</artifactId>
+            <artifactId>codemodel-expression</artifactId>
         </dependency>
 
         <!-- Test Dependencies -->
@@ -66,6 +55,18 @@
         <dependency>
             <groupId>org.assertj</groupId>
             <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>build.base</groupId>
+            <artifactId>base-transport</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>build.base</groupId>
+            <artifactId>base-transport-json</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

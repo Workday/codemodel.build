@@ -1,6 +1,6 @@
 /*-
  * #%L
- * Code Model Framework Builder
+ * JDK Annotation Discovery
  * %%
  * Copyright (C) 2026 Workday, Inc.
  * %%
@@ -18,26 +18,19 @@
  * #L%
  */
 
-import build.codemodel.framework.Framework;
+import build.codemodel.jdk.annotation.discovery.AnnotationDiscovery;
+import build.codemodel.jdk.annotation.discovery.DiscoverableAnnotationDiscovery;
 
 /**
- * Defines a mechanism to programmatically build <i>Code Model</i> {@link Framework}s.
+ * Defines interfaces used by the {@code jdk-annotation-processor} enabling discovery of types to
+ * reverse-engineer into a <i>Code Model</i>.
  *
  * @author brian.oliver
- * @since Feb-2024
+ * @since Apr-2024
  */
-module build.codemodel.framework.builder {
-    requires build.base.foundation;
+module build.codemodel.jdk.annotation.discovery {
+    exports build.codemodel.jdk.annotation.discovery;
 
-    requires build.base.telemetry;
-    requires build.base.telemetry.foundation;
-
-    requires build.codemodel.foundation;
-    requires build.codemodel.jdk;
-
-    requires build.codemodel.dependency.injection;
-    requires build.codemodel.framework;
-    requires build.base.mereology;
-
-    exports build.codemodel.framework.builder;
+    provides AnnotationDiscovery
+        with DiscoverableAnnotationDiscovery;
 }

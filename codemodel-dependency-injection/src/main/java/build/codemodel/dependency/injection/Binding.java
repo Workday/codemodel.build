@@ -1,6 +1,8 @@
+package build.codemodel.dependency.injection;
+
 /*-
  * #%L
- * Code Model Framework Builder
+ * Dependency Injection
  * %%
  * Copyright (C) 2026 Workday, Inc.
  * %%
@@ -18,26 +20,24 @@
  * #L%
  */
 
-import build.codemodel.framework.Framework;
+import jakarta.inject.Inject;
 
 /**
- * Defines a mechanism to programmatically build <i>Code Model</i> {@link Framework}s.
+ * Defines a mechanism to resolve a {@link Dependency} for injection.
  *
+ * @param <T> the type produced by the {@link Binding} for a {@link Dependency}
  * @author brian.oliver
- * @since Feb-2024
+ * @see Inject
+ * @see Injector
+ * @see Dependency
+ * @since Oct-2024
  */
-module build.codemodel.framework.builder {
-    requires build.base.foundation;
+public interface Binding<T> {
 
-    requires build.base.telemetry;
-    requires build.base.telemetry.foundation;
-
-    requires build.codemodel.foundation;
-    requires build.codemodel.jdk;
-
-    requires build.codemodel.dependency.injection;
-    requires build.codemodel.framework;
-    requires build.base.mereology;
-
-    exports build.codemodel.framework.builder;
+    /**
+     * The {@link Dependency}.
+     *
+     * @return the {@link Dependency}
+     */
+    Dependency dependency();
 }

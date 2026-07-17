@@ -1,6 +1,8 @@
+package build.codemodel.dependency.injection;
+
 /*-
  * #%L
- * Code Model Framework Builder
+ * Dependency Injection
  * %%
  * Copyright (C) 2026 Workday, Inc.
  * %%
@@ -18,26 +20,20 @@
  * #L%
  */
 
-import build.codemodel.framework.Framework;
-
 /**
- * Defines a mechanism to programmatically build <i>Code Model</i> {@link Framework}s.
+ * A {@link Binding} that requires an instance of a concrete {@link Class} to be created.
  *
+ * @param <T> the type of {@link Class}.
  * @author brian.oliver
- * @since Feb-2024
+ * @since Oct-2024
  */
-module build.codemodel.framework.builder {
-    requires build.base.foundation;
+public interface ClassBinding<T>
+    extends Binding<T> {
 
-    requires build.base.telemetry;
-    requires build.base.telemetry.foundation;
-
-    requires build.codemodel.foundation;
-    requires build.codemodel.jdk;
-
-    requires build.codemodel.dependency.injection;
-    requires build.codemodel.framework;
-    requires build.base.mereology;
-
-    exports build.codemodel.framework.builder;
+    /**
+     * The concrete {@link Class}.
+     *
+     * @return the concrete {@link Class}
+     */
+    Class<? extends T> concreteClass();
 }

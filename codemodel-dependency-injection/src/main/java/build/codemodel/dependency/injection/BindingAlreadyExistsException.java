@@ -1,6 +1,8 @@
+package build.codemodel.dependency.injection;
+
 /*-
  * #%L
- * Code Model Framework Builder
+ * Dependency Injection
  * %%
  * Copyright (C) 2026 Workday, Inc.
  * %%
@@ -18,26 +20,21 @@
  * #L%
  */
 
-import build.codemodel.framework.Framework;
-
 /**
- * Defines a mechanism to programmatically build <i>Code Model</i> {@link Framework}s.
+ * Indicates an attempt to create an {@link Binding} when one with the same {@link Dependency} already exists.
  *
- * @author brian.oliver
- * @since Feb-2024
+ * @author spencer.firestone
+ * @since Nov-2019
  */
-module build.codemodel.framework.builder {
-    requires build.base.foundation;
+public class BindingAlreadyExistsException
+    extends InjectionException {
 
-    requires build.base.telemetry;
-    requires build.base.telemetry.foundation;
-
-    requires build.codemodel.foundation;
-    requires build.codemodel.jdk;
-
-    requires build.codemodel.dependency.injection;
-    requires build.codemodel.framework;
-    requires build.base.mereology;
-
-    exports build.codemodel.framework.builder;
+    /**
+     * Constructs a new {@link BindingAlreadyExistsException}.
+     *
+     * @param message the message
+     */
+    public BindingAlreadyExistsException(final String message) {
+        super(message);
+    }
 }
