@@ -142,8 +142,8 @@ public sealed interface Symbol extends Trait, Composite
      * {@link #codeModel()} on every call, the same way a {@link build.codemodel.foundation.usage.NamedTypeUsage}
      * resolves its {@link TypeName} live, rather than pinning to whatever {@link FieldDescriptor}
      * object existed at parse time. This keeps the resolution tracking the declaring type across a
-     * {@link build.codemodel.jdk.JDKCodeModel#rescan} of that type instead of going stale when the
-     * type is evicted and re-created.
+     * re-population of that type from updated source instead of going stale when the type is
+     * evicted and re-created.
      *
      * @param declaredType  the declared type of the field, resolved independently of {@link #descriptor()}
      * @param codeModel     the {@link CodeModel} to resolve {@link #descriptor()} against

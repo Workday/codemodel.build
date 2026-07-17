@@ -61,7 +61,6 @@ import build.codemodel.jdk.descriptor.JDKType;
 import build.codemodel.jdk.descriptor.JDKTypeDescriptor;
 import build.codemodel.jdk.descriptor.MethodBodyDescriptor;
 import build.codemodel.jdk.descriptor.MethodType;
-import build.codemodel.jdk.descriptor.SourceLocation;
 import build.codemodel.jdk.descriptor.Static;
 import build.codemodel.jdk.descriptor.Varargs;
 import build.codemodel.objectoriented.ObjectOrientedCodeModel;
@@ -92,7 +91,6 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
 import java.lang.reflect.WildcardType;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -106,8 +104,6 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
-import javax.tools.DiagnosticListener;
-import javax.tools.JavaFileObject;
 
 /**
  * A <i>JDK-based</i> {@link ObjectOrientedCodeModel} allowing the runtime discovery, access and representation of
@@ -170,87 +166,6 @@ public class JDKCodeModel
                            final Out<Stream<Marshalled<NamespaceDescriptor>>> namespaceDescriptors) {
 
         super.destructor(marshaller, traits, typeDescriptors, moduleDescriptors, namespaceDescriptors);
-    }
-
-    /**
-     * Drops all descriptors sourced from {@code updatedFile} and re-analyzes it.
-     *
-     * <p>Every {@link TypeDescriptor} whose {@link build.codemodel.jdk.descriptor.SourceLocation.FilePosition}
-     * URI matches {@code updatedFile.toUri()} is evicted from this model and unindexed.
-     * A fresh {@link JdkInitializer} then re-populates the model from the new content.
-     *
-     * <p>Descriptors sourced from other files are not affected. Embedded {@link build.codemodel.foundation.usage.TypeUsage}
-     * references inside other descriptors that pointed to evicted types become stale and are not updated.
-     *
-     * @param updatedFile the new version of the source file to analyze
-     */
-    public void rescan(final JavaFileObject updatedFile) {
-        rescan(updatedFile, List.of(), List.of());
-    }
-
-    /**
-     * Drops all descriptors sourced from {@code updatedFile} and re-analyzes it,
-     * using the supplied {@code classpath} and {@code modulePath} for resolution.
-     *
-     * <p>Every {@link TypeDescriptor} whose {@link SourceLocation.FilePosition} URI matches
-     * {@code updatedFile.toUri()} is evicted and unindexed. A fresh {@link JdkInitializer}
-     * then re-populates the model from the new content. Callers must forward the same
-     * classpath/modulePath used during the initial {@link JdkInitializer#initialize} call;
-     * omitting them causes classpath-only types to degrade to
-     * {@link build.codemodel.foundation.usage.UnknownTypeUsage}.
-     *
-     * @param updatedFile the new version of the source file to analyze
-     * @param classpath   jars or directories to pass as {@code --class-path}
-     * @param modulePath  jars or directories to pass as {@code --module-path}
-     */
-    public void rescan(final JavaFileObject updatedFile,
-                       final List<Path> classpath,
-                       final List<Path> modulePath) {
-        rescan(updatedFile, List.of(), classpath, modulePath, d -> {
-        });
-    }
-
-    /**
-     * Drops all descriptors sourced from {@code updatedFile} and re-analyzes it together with
-     * any {@code contextFiles} needed for symbol resolution (e.g. {@code module-info.java}),
-     * reporting compiler diagnostics produced during the re-analysis to {@code diagnosticListener}.
-     *
-     * <p>Only descriptors whose {@link SourceLocation.FilePosition} URI matches
-     * {@code updatedFile.toUri()} are evicted. The {@code contextFiles} are compiled alongside
-     * {@code updatedFile} to give javac the module context it needs to resolve cross-module
-     * type references, but no descriptors are evicted for them.
-     *
-     * @param updatedFile        the new version of the source file to analyze
-     * @param contextFiles       additional source files to include in the compilation for resolution
-     *                           context only (not evicted; deduplicated against {@code updatedFile})
-     * @param classpath          jars or directories to pass as {@code --class-path}
-     * @param modulePath         jars or directories to pass as {@code --module-path}
-     * @param diagnosticListener receives compiler diagnostics (errors, warnings) produced while
-     *                           re-analyzing {@code updatedFile} and {@code contextFiles}
-     */
-    public void rescan(final JavaFileObject updatedFile,
-                       final List<JavaFileObject> contextFiles,
-                       final List<Path> classpath,
-                       final List<Path> modulePath,
-                       final DiagnosticListener<JavaFileObject> diagnosticListener) {
-        final var uri = updatedFile.toUri();
-        typeDescriptors()
-            .filter(d -> d.getTrait(SourceLocation.FilePosition.class)
-                .map(fp -> fp.uri().equals(uri))
-                .orElse(false))
-            .forEach(this::removeTypeDescriptor);
-        moduleDescriptors()
-            .filter(d -> d.getTrait(SourceLocation.FilePosition.class)
-                .map(fp -> fp.uri().equals(uri))
-                .orElse(false))
-            .forEach(this::removeModuleDescriptor);
-        final var allFiles = new ArrayList<JavaFileObject>(contextFiles.size() + 1);
-        allFiles.add(updatedFile);
-        contextFiles.stream().filter(f -> !f.toUri().equals(uri)).forEach(allFiles::add);
-        new JdkInitializer(List.of(), List.of(), allFiles, classpath, modulePath)
-            .withRegistrationFilter(uri::equals)
-            .withDiagnosticListener(diagnosticListener)
-            .initialize(this);
     }
 
     /**

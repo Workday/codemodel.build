@@ -18,12 +18,12 @@
  * #L%
  */
 
-import build.codemodel.jdk.annotation.discovery.AnnotationDiscovery;
 import build.codemodel.framework.Plugin;
 import build.codemodel.framework.compiler.Compiler;
 import build.codemodel.framework.compiler.TypeChecker;
 import build.codemodel.framework.completer.Completer;
 import build.codemodel.framework.initialization.Enricher;
+import build.codemodel.jdk.annotation.discovery.AnnotationDiscovery;
 import build.codemodel.jdk.annotation.processor.AnnotationProcessor;
 
 import java.lang.reflect.Type;
@@ -50,6 +50,7 @@ module build.codemodel.jdk.annotation.processor {
     requires build.codemodel.foundation;
     requires build.codemodel.objectoriented;
     requires build.codemodel.jdk;
+    requires build.codemodel.jdk.populator;
 
     requires build.codemodel.dependency.injection;
 

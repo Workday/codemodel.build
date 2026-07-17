@@ -33,13 +33,6 @@ import build.codemodel.foundation.naming.TypeName;
 import build.codemodel.foundation.usage.AnnotationTypeUsage;
 import build.codemodel.foundation.usage.SpecificTypeUsage;
 import build.codemodel.foundation.usage.TypeUsage;
-import com.sun.source.tree.AnnotationTree;
-import com.sun.source.tree.ExportsTree;
-import com.sun.source.tree.ModuleTree;
-import com.sun.source.tree.OpensTree;
-import com.sun.source.tree.ProvidesTree;
-import com.sun.source.tree.RequiresTree;
-import com.sun.source.tree.UsesTree;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -54,7 +47,6 @@ import java.util.ArrayList;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiFunction;
-import java.util.function.Function;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
@@ -108,67 +100,6 @@ public final class JDKModuleDescriptor
     public static JDKModuleDescriptor of(final CodeModel codeModel,
                                          final ModuleName moduleName) {
         return new JDKModuleDescriptor(codeModel, moduleName);
-    }
-
-    // ---- Populate from source (ModuleTree) --------------------------------
-
-    /**
-     * Populates this descriptor's traits from a javac {@link ModuleTree}.
-     * Called by {@link build.codemodel.jdk.JdkInitializer} after creating the descriptor.
-     *
-     * @param moduleTree                 the {@link ModuleTree} produced by javac
-     * @param annotationTypeNameResolver resolves an annotation's {@link AnnotationTree} to the
-     *                                   module-qualified {@link TypeName} of its declaring type,
-     *                                   matching how that type's descriptor was registered
-     */
-    public void populateFrom(final ModuleTree moduleTree,
-                             final Function<AnnotationTree, TypeName> annotationTypeNameResolver) {
-
-        if (moduleTree.getModuleType() == ModuleTree.ModuleKind.OPEN) {
-            addTrait(OpenModule.OPEN);
-        }
-
-        for (final AnnotationTree ann : moduleTree.getAnnotations()) {
-            addTrait(AnnotationTypeUsage.of(codeModel(),
-                annotationTypeNameResolver.apply(ann),
-                Stream.empty()));
-        }
-
-        for (final var directive : moduleTree.getDirectives()) {
-            switch (directive.getKind()) {
-                case REQUIRES -> {
-                    final var req = (RequiresTree) directive;
-                    addRequires(req.getModuleName().toString(), req.isTransitive(), req.isStatic(),
-                        false, false, Optional.empty());
-                }
-                case EXPORTS -> {
-                    final var exp = (ExportsTree) directive;
-                    addExports(exp.getPackageName().toString(),
-                        exp.getModuleNames() == null
-                            ? Stream.empty()
-                            : exp.getModuleNames().stream().map(Object::toString),
-                        Optional.empty());
-                }
-                case OPENS -> {
-                    final var op = (OpensTree) directive;
-                    addOpens(op.getPackageName().toString(),
-                        op.getModuleNames() == null
-                            ? Stream.empty()
-                            : op.getModuleNames().stream().map(Object::toString),
-                        Optional.empty());
-                }
-                case PROVIDES -> {
-                    final var prov = (ProvidesTree) directive;
-                    addProvides(prov.getServiceName().toString(),
-                        prov.getImplementationNames().stream().map(Object::toString));
-                }
-                case USES -> {
-                    final var uses = (UsesTree) directive;
-                    addUses(uses.getServiceName().toString());
-                }
-                default -> { /* version directive — not modelled */ }
-            }
-        }
     }
 
     // ---- Populate from bytecode (ModuleAttribute) -------------------------
@@ -659,12 +590,12 @@ public final class JDKModuleDescriptor
         return targets;
     }
 
-    private void addRequires(final String rawName,
-                             final boolean isTransitive,
-                             final boolean isStatic,
-                             final boolean isSynthetic,
-                             final boolean isMandated,
-                             final Optional<Version> version) {
+    public void addRequires(final String rawName,
+                            final boolean isTransitive,
+                            final boolean isStatic,
+                            final boolean isSynthetic,
+                            final boolean isMandated,
+                            final Optional<Version> version) {
 
         codeModel().getNameProvider().getModuleName(rawName).ifPresent(reqName -> {
             // idempotent: skip if this module is already in the requires list
@@ -689,9 +620,9 @@ public final class JDKModuleDescriptor
         });
     }
 
-    private void addExports(final String rawPkg,
-                            final Stream<String> rawTargets,
-                            final Optional<PackageDirectiveModifier> modifier) {
+    public void addExports(final String rawPkg,
+                           final Stream<String> rawTargets,
+                           final Optional<PackageDirectiveModifier> modifier) {
         final String pkg = rawPkg.replace('/', '.');
         codeModel().getNameProvider().getNamespace(pkg).ifPresent(ns -> {
             if (exportsClauses().anyMatch(e -> e.packageName().equals(ns))) {
@@ -703,9 +634,9 @@ public final class JDKModuleDescriptor
         });
     }
 
-    private void addOpens(final String rawPkg,
-                          final Stream<String> rawTargets,
-                          final Optional<PackageDirectiveModifier> modifier) {
+    public void addOpens(final String rawPkg,
+                         final Stream<String> rawTargets,
+                         final Optional<PackageDirectiveModifier> modifier) {
         final String pkg = rawPkg.replace('/', '.');
         codeModel().getNameProvider().getNamespace(pkg).ifPresent(ns -> {
             if (opensClauses().anyMatch(o -> o.packageName().equals(ns))) {
@@ -717,8 +648,8 @@ public final class JDKModuleDescriptor
         });
     }
 
-    private void addProvides(final String rawService,
-                             final Stream<String> rawProviders) {
+    public void addProvides(final String rawService,
+                            final Stream<String> rawProviders) {
         final var service = typeUsage(rawService);
         if (providesClauses().anyMatch(p -> p.serviceType().equals(service))) {
             return;
@@ -727,7 +658,7 @@ public final class JDKModuleDescriptor
         addTrait(ProvidesDescriptor.of(service, impls));
     }
 
-    private void addUses(final String rawService) {
+    public void addUses(final String rawService) {
         final var service = typeUsage(rawService);
         if (usesClauses().anyMatch(u -> u.serviceType().equals(service))) {
             return;

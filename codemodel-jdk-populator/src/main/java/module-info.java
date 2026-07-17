@@ -1,6 +1,6 @@
 /*-
  * #%L
- * JDK Code Model
+ * JDK Code Model Populator
  * %%
  * Copyright (C) 2026 Workday, Inc.
  * %%
@@ -17,20 +17,19 @@
  * limitations under the License.
  * #L%
  */
-/**
- * Provides <i>JDK</i>-based {@code Trait}s for {@code CodeModel}s.
- *
- * @author brian.oliver
- * @since Mar-2024
- */
-open module build.codemodel.jdk {
+module build.codemodel.jdk.populator {
     requires jakarta.inject;
+
+    requires transitive build.codemodel.jdk;
+    requires build.codemodel.framework;
 
     requires transitive build.codemodel.foundation;
     requires transitive build.codemodel.expression;
     requires transitive build.codemodel.imperative;
     requires transitive build.codemodel.objectoriented;
 
+    requires java.compiler;
+    requires jdk.compiler;
     requires build.base.telemetry;
     requires build.base.telemetry.foundation;
 
@@ -41,8 +40,6 @@ open module build.codemodel.jdk {
     requires build.base.mereology;
     requires build.base.query;
 
-    exports build.codemodel.jdk;
-    exports build.codemodel.jdk.descriptor;
-    exports build.codemodel.jdk.expression;
-    exports build.codemodel.jdk.statement;
+    exports build.codemodel.jdk.populator;
+    exports build.codemodel.jdk.populator.descriptor;
 }
