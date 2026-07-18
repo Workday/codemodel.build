@@ -302,7 +302,7 @@ public abstract class AbstractCodeModel
      *
      * @param descriptor the {@link TypeDescriptor} to remove
      */
-    protected void removeTypeDescriptor(final TypeDescriptor descriptor) {
+    public void removeTypeDescriptor(final TypeDescriptor descriptor) {
         if (this.typeDescriptors.remove(descriptor.typeName(), descriptor)) {
             this.index.unindex(descriptor);
         }
@@ -314,7 +314,7 @@ public abstract class AbstractCodeModel
      *
      * @param descriptor the {@link ModuleDescriptor} to remove
      */
-    protected void removeModuleDescriptor(final ModuleDescriptor descriptor) {
+    public void removeModuleDescriptor(final ModuleDescriptor descriptor) {
         if (this.moduleDescriptors.remove(descriptor.moduleName(), descriptor)) {
             this.index.unindex(descriptor);
         }

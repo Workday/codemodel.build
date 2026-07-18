@@ -44,9 +44,8 @@ import java.util.Optional;
  * <p>{@link #descriptor()} looks the {@link MethodDescriptor} up live against {@link #codeModel()}
  * on every call, the same way a {@link NamedTypeUsage} resolves its {@link TypeName} live, rather
  * than pinning to whatever {@link MethodDescriptor} object existed at parse time. This means the
- * resolution keeps tracking the declaring type across a
- * {@link build.codemodel.jdk.JDKCodeModel#rescan} of that type instead of going stale when the
- * type is evicted and re-created.
+ * resolution keeps tracking the declaring type across a re-population of that type from updated
+ * source instead of going stale when the type is evicted and re-created.
  *
  * <p>Exactly one {@link ResolvedMethod} may be present on a {@link MethodInvocation}
  * ({@link Singular}). If the declaring type is not present in the

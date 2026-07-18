@@ -107,6 +107,7 @@
 
         <module>codemodel-jdk-annotation-discovery</module>
         <module>codemodel-jdk-annotation-processor</module>
+        <module>codemodel-jdk-populator</module>
 
     </modules>
 
@@ -141,6 +142,11 @@
             <dependency>
                 <groupId>build.codemodel</groupId>
                 <artifactId>codemodel-jdk</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>build.codemodel</groupId>
+                <artifactId>codemodel-jdk-populator</artifactId>
                 <version>${revision}</version>
             </dependency>
             <dependency>

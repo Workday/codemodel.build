@@ -20,10 +20,8 @@ package build.codemodel.jdk;
  * #L%
  */
 
-import build.codemodel.foundation.descriptor.TypeDescriptor;
 import build.codemodel.foundation.naming.Namespace;
 import build.codemodel.foundation.naming.TypeName;
-import build.codemodel.foundation.usage.AnnotationTypeUsage;
 import build.codemodel.foundation.usage.ArrayTypeUsage;
 import build.codemodel.foundation.usage.GenericTypeUsage;
 import build.codemodel.foundation.usage.NamedTypeUsage;
@@ -34,7 +32,6 @@ import java.lang.reflect.Type;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import javax.annotation.processing.Generated;
 
 /**
  * Helper methods for working with JDK-based {@link TypeUsage}s.
@@ -49,34 +46,6 @@ public final class TypeUsages {
      */
     private TypeUsages() {
         // prevent instantiation
-    }
-
-    /**
-     * Determines if the specified {@link AnnotationTypeUsage} is for the {@link Generated} annotation.
-     *
-     * @param annotationTypeUsage the {@link AnnotationTypeUsage}
-     * @return {@code true} when the {@link AnnotationTypeUsage} is for the {@link Generated} annotation,
-     * {@code false} otherwise
-     */
-    public static boolean isGenerated(final AnnotationTypeUsage annotationTypeUsage) {
-        return annotationTypeUsage != null
-            && annotationTypeUsage
-            .typeName()
-            .canonicalName()
-            .equals("javax.annotation.processing.Generated");
-    }
-
-    /**
-     * Determines if the specified {@link TypeDescriptor} has the {@link javax.annotation.processing.Generated}
-     * annotation.
-     *
-     * @param typeDescriptor the {@link TypeDescriptor}
-     * @return {@code true} when the {@link TypeDescriptor} is generated, {@code false} otherwiser
-     */
-    public static boolean isGenerated(final TypeDescriptor typeDescriptor) {
-        return typeDescriptor != null
-            && typeDescriptor.traits(AnnotationTypeUsage.class)
-            .anyMatch(TypeUsages::isGenerated);
     }
 
     /**

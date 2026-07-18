@@ -11,24 +11,14 @@
         <version>${revision}</version>
     </parent>
 
-    <artifactId>codemodel-jdk</artifactId>
+    <artifactId>codemodel-jdk-populator</artifactId>
 
-    <name>JDK Code Model</name>
+    <name>JDK Code Model Populator</name>
 
     <dependencies>
         <dependency>
-            <groupId>jakarta.inject</groupId>
-            <artifactId>jakarta.inject-api</artifactId>
-        </dependency>
-
-        <dependency>
             <groupId>build.base</groupId>
             <artifactId>base-foundation</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>build.base</groupId>
-            <artifactId>base-io</artifactId>
         </dependency>
 
         <dependency>
@@ -39,20 +29,6 @@
         <dependency>
             <groupId>build.base</groupId>
             <artifactId>base-version</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>build.base</groupId>
-            <artifactId>base-mereology</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>build.base</groupId>
-            <artifactId>base-marshalling</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>build.base</groupId>
-            <artifactId>base-query</artifactId>
         </dependency>
 
         <dependency>
@@ -80,10 +56,25 @@
             <artifactId>codemodel-objectoriented</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>build.codemodel</groupId>
+            <artifactId>codemodel-framework</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>build.codemodel</groupId>
+            <artifactId>codemodel-jdk</artifactId>
+        </dependency>
+
         <!-- Test Dependencies -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-params</artifactId>
             <scope>test</scope>
         </dependency>
 
@@ -95,8 +86,7 @@
 
         <dependency>
             <groupId>build.base</groupId>
-            <artifactId>base-transport</artifactId>
-            <scope>test</scope>
+            <artifactId>base-telemetry</artifactId>
         </dependency>
 
         <dependency>
@@ -106,7 +96,7 @@
 
         <dependency>
             <groupId>build.base</groupId>
-            <artifactId>base-transport-json</artifactId>
+            <artifactId>base-compile-testing</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -123,7 +113,8 @@
                     </ignoredUnusedDeclaredDependencies>
                     <ignoredNonTestScopedDependencies>
                         <!-- no separate test module-info is feasible with Maven's single-module constraint -->
-                        <ignoredNonTestScopedDependency>build.base:base-query</ignoredNonTestScopedDependency>
+                        <ignoredNonTestScopedDependency>build.base:base-parsing</ignoredNonTestScopedDependency>
+                        <ignoredNonTestScopedDependency>build.base:base-version</ignoredNonTestScopedDependency>
                     </ignoredNonTestScopedDependencies>
                 </configuration>
             </plugin>
