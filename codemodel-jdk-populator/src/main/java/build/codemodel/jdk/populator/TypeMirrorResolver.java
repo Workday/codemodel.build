@@ -366,6 +366,7 @@ public final class TypeMirrorResolver {
             fieldDescriptor.addTrait(Static.STATIC);
         }
         getAccessModifier(fieldModifiers).ifPresent(fieldDescriptor::addTrait);
+        fieldDescriptor.addTrait(getClassification(fieldModifiers));
     }
 
     // --- Annotations ---

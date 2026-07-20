@@ -169,21 +169,28 @@ public class TypeVariableUsage
     @Override
     protected String render(final Function<TypeName, String> nameRenderer,
                             final Function<TypeUsage, String> usageRenderer) {
-        final Function<TypeUsage, String> boundRenderer = u -> switch (u) {
-            case TypeVariableUsage tvu -> nameRenderer.apply(tvu.typeName());
-            default -> usageRenderer.apply(u);
-        };
         return nameRenderer.apply(typeName())
-            + upperBound().map(b -> " extends " + renderBound(b, nameRenderer, boundRenderer)).orElse("")
-            + lowerBound().map(b -> " super " + renderBound(b, nameRenderer, boundRenderer)).orElse("");
+            + upperBound().map(b -> " extends " + renderBound(b, nameRenderer, usageRenderer)).orElse("")
+            + lowerBound().map(b -> " super " + renderBound(b, nameRenderer, usageRenderer)).orElse("");
     }
 
+    /**
+     * Renders a bound, short-circuiting any nested {@link TypeVariableUsage} to just its name rather than
+     * recursing into its own bound. Without this, a self-referential bound (e.g. {@code T extends
+     * Comparable<T>}, or the same shape nested inside a {@link UnionTypeUsage}/{@link IntersectionTypeUsage}
+     * such as {@code T extends Number & Comparable<T>}) would recurse forever: {@code T}'s bound contains
+     * {@code T} again, however deeply it's nested inside other {@link AbstractTypeUsage} containers, so this
+     * guard must be threaded through every level of that nesting - not just the immediate bound - by having
+     * every recursive step re-enter {@code renderBound} rather than falling back to the plain {@code
+     * usageRenderer}.
+     */
     private static String renderBound(final TypeUsage b,
                                       final Function<TypeName, String> nameRenderer,
-                                      final Function<TypeUsage, String> boundRenderer) {
+                                      final Function<TypeUsage, String> usageRenderer) {
         return switch (b) {
-            case AbstractTypeUsage atu -> atu.render(nameRenderer, boundRenderer);
-            default -> boundRenderer.apply(b);
+            case TypeVariableUsage tvu -> nameRenderer.apply(tvu.typeName());
+            case AbstractTypeUsage atu -> atu.render(nameRenderer, u -> renderBound(u, nameRenderer, usageRenderer));
+            default -> usageRenderer.apply(b);
         };
     }
 

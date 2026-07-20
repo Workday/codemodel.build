@@ -539,10 +539,28 @@ class JDKCodeModelTests {
     }
 
     /**
+     * Demonstrates: an unbounded type variable ({@code <T>}) has no upper bound trait, matching the
+     * source-parsing path. Reflection reports an implicit {@code java.lang.Object} bound for every type
+     * variable, so the reflection path must elide it rather than surfacing it as an explicit upper bound.
+     */
+    @Test
+    void shouldDiscoverUnboundedTypeParameterWithNoUpperBoundViaReflection() {
+        final var codeModel = createCodeModel();
+        final var descriptor = codeModel.getJDKTypeDescriptor(Container.class).orElseThrow();
+
+        final var typeVar = descriptor.getTrait(ParameterizedTypeDescriptor.class)
+            .orElseThrow()
+            .typeVariables()
+            .findFirst()
+            .orElseThrow();
+        assertThat(typeVar).isInstanceOf(TypeVariableUsage.class);
+        assertThat(typeVar.upperBound()).isEmpty();
+    }
+
+    /**
      * Demonstrates: a multi-bound type variable ({@code T extends Number & Comparable<T>}) must resolve
      * to an {@link IntersectionTypeUsage} on the reflection path, just as it does on the source-parsing
-     * path (see {@code GenericsDiscoveryTests.shouldDiscoverIntersectionTypeBound}). Reflection currently
-     * builds a {@code UnionTypeUsage} instead, which models multi-catch parameters, not intersection bounds.
+     * path (see {@code GenericsDiscoveryTests.shouldDiscoverIntersectionTypeBound}).
      */
     @Test
     void shouldDiscoverIntersectionTypeBoundViaReflection() {
@@ -556,7 +574,7 @@ class JDKCodeModelTests {
             .orElseThrow();
         assertThat(typeVar).isInstanceOf(TypeVariableUsage.class);
 
-        final var upperBound = ((TypeVariableUsage) typeVar).upperBound();
+        final var upperBound = typeVar.upperBound();
         assertThat(upperBound).isPresent();
         assertThat(upperBound.get()).isInstanceOf(IntersectionTypeUsage.class);
 
@@ -565,6 +583,27 @@ class JDKCodeModelTests {
             .toList();
         assertThat(boundNames).anyMatch(name -> name.contains("Number"));
         assertThat(boundNames).anyMatch(name -> name.contains("Comparable"));
+    }
+
+    /**
+     * Guards against a regression of a {@link StackOverflowError} in {@code TypeVariableUsage.render()}.
+     * For {@code T extends Number & Comparable<T>}, T's upper bound is
+     * {@code IntersectionTypeUsage[Number, Comparable<T>]} — two levels of nesting between T and its own
+     * self-reference. {@code TypeVariableUsage.render()}'s cycle guard must be threaded through every level
+     * of that nesting, not just the immediate bound, or rendering recurses forever.
+     */
+    @Test
+    void shouldNotStackOverflowRenderingIntersectionTypeBoundViaReflection() {
+        final var codeModel = createCodeModel();
+        final var descriptor = codeModel.getJDKTypeDescriptor(MultiBoundContainer.class).orElseThrow();
+
+        final var typeVar = descriptor.getTrait(ParameterizedTypeDescriptor.class)
+            .orElseThrow()
+            .typeVariables()
+            .findFirst()
+            .orElseThrow();
+
+        assertThat(typeVar.canonicalName()).isNotBlank();
     }
 
     /**
