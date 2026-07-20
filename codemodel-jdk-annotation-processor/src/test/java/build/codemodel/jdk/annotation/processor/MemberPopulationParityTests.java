@@ -108,7 +108,7 @@ class MemberPopulationParityTests extends AnnotationProcessorTests {
     }
 
     private void assertNestedTypeVariableBoundShape(final TypeDescriptor expected, final TypeDescriptor actual,
-                                                     final String expectedLabel, final String actualLabel) {
+                                                    final String expectedLabel, final String actualLabel) {
         assertThat(nestedTypeVariableBoundCanonicalName(actual))
             .as("nested self-referential E's upperBound shape via %s vs %s", expectedLabel, actualLabel)
             .isEqualTo(nestedTypeVariableBoundCanonicalName(expected));
