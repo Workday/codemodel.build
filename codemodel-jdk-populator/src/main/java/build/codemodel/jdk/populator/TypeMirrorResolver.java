@@ -125,7 +125,7 @@ public final class TypeMirrorResolver {
     private final NameProvider nameProvider;
     private final Elements elements;
     private final Consumer<ErrorType> errorHandler;
-    private final Memoizer<TypeElement, TypeName> typeNameCache = Memoizer.of(this::computeTypeName).build();
+    private final Memoizer<TypeElement, TypeName> typeNameCache = Memoizer.of(this::computeTypeName).concurrent().build();
 
     public TypeMirrorResolver(final CodeModel codeModel,
                               final Elements elements,
