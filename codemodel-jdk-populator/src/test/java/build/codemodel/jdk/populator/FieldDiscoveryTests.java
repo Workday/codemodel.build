@@ -2,7 +2,9 @@ package build.codemodel.jdk.populator;
 
 import build.base.compile.testing.JavaFileObjects;
 import build.codemodel.foundation.usage.NamedTypeUsage;
+import build.codemodel.jdk.descriptor.Static;
 import build.codemodel.objectoriented.descriptor.AccessModifier;
+import build.codemodel.objectoriented.descriptor.Classification;
 import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
 import org.junit.jupiter.api.Test;
@@ -63,5 +65,33 @@ public class FieldDiscoveryTests {
                 Optional.of(AccessModifier.PRIVATE),
                 Optional.of(AccessModifier.PROTECTED),
                 Optional.empty());
+    }
+
+    @Test
+    void shouldAttachClassificationToFields() {
+        final var source = JavaFileObjects.forSourceString("Discover", """
+            public class Discover {
+                static final int MAX = 10;
+                int count;
+            }
+            """);
+        final var initializer = new JdkInitializer(List.of(), List.of(), List.of(source));
+        final var codeModel = JdkInitializerTests.runInternal(initializer);
+
+        final var naming = codeModel.getNameProvider();
+        final var typeName = naming.getEmptyModuleTypeName("Discover");
+        final var typeDescriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
+
+        final var max = typeDescriptor.traits(FieldDescriptor.class)
+            .filter(f -> f.fieldName().toString().equals("MAX"))
+            .findFirst().orElseThrow();
+        assertThat(max.getTrait(Classification.class)).as("MAX is final").contains(Classification.FINAL);
+        assertThat(max.hasTrait(Static.class)).as("MAX is static").isTrue();
+
+        final var count = typeDescriptor.traits(FieldDescriptor.class)
+            .filter(f -> f.fieldName().toString().equals("count"))
+            .findFirst().orElseThrow();
+        assertThat(count.getTrait(Classification.class)).as("count is not final").contains(Classification.CONCRETE);
+        assertThat(count.hasTrait(Static.class)).as("count is not static").isFalse();
     }
 }

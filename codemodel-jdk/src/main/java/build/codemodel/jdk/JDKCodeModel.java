@@ -82,9 +82,12 @@ import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.AnnotatedParameterizedType;
 import java.lang.reflect.AnnotatedType;
 import java.lang.reflect.AnnotatedWildcardType;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Member;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.ParameterizedType;
@@ -93,15 +96,16 @@ import java.lang.reflect.TypeVariable;
 import java.lang.reflect.WildcardType;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Queue;
-import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
@@ -281,31 +285,7 @@ public class JDKCodeModel
 
             typeUsage = GenericTypeUsage.of(this, rawTypeUsage.typeName(), parameters);
         } else if (type instanceof TypeVariable<?> typeVariable) {
-            final var variableName = nameProvider.getIrreducibleName(typeVariable.getName());
-            final var typeName = resolveTypeVariableTypeName(typeVariable, variableName);
-
-            // guard against self-referential bounds like T extends Comparable<T> or E extends Enum<E>
-            final var inProgress = IN_PROGRESS_TYPE_VARIABLES.get();
-            Optional<Lazy<TypeUsage>> upperBound = Optional.empty();
-
-            if (inProgress.add(typeVariable)) {
-                try {
-                    // determine upper bounds from TypeVariable
-                    final List<Lazy<TypeUsage>> upperBoundTypeUsages = Streams.of(typeVariable.getAnnotatedBounds())
-                        .map(annotatedType -> Lazy.of(getTypeUsage(annotatedType)))
-                        .toList();
-
-                    upperBound = upperBoundTypeUsages.isEmpty()
-                        ? Optional.empty()
-                        : (upperBoundTypeUsages.size() == 1)
-                          ? Optional.of(upperBoundTypeUsages.getFirst())
-                          : Optional.of(Lazy.of(IntersectionTypeUsage.of(this, upperBoundTypeUsages.stream())));
-                } finally {
-                    inProgress.remove(typeVariable);
-                }
-            }
-
-            typeUsage = TypeVariableUsage.of(this, typeName, Optional.empty(), upperBound);
+            typeUsage = resolveTypeVariableUsage(typeVariable);
         } else if (type instanceof WildcardType wildcardType) {
             final Type[] lowers = wildcardType.getLowerBounds();
             final Type[] uppers = wildcardType.getUpperBounds();
@@ -336,6 +316,64 @@ public class JDKCodeModel
         }
 
         return typeUsage;
+    }
+
+    /**
+     * Resolves the {@link TypeVariableUsage} for a reflective {@link TypeVariable}, guarding against
+     * self-referential bounds (e.g. {@code T extends Comparable<T>} or {@code E extends Enum<E>}).
+     * <p>
+     * A skeleton {@link TypeVariableUsage} with an as-yet-unset {@link Lazy} upper bound is created and
+     * registered under the {@link TypeVariable}'s identity <i>before</i> its bound is resolved. If
+     * resolving that bound recurses back to the same {@link TypeVariable} (directly or transitively),
+     * the in-flight skeleton is returned instead of re-entering resolution, and the recursive reference
+     * shares the same instance whose {@link Lazy} is filled in exactly once when the outer resolution
+     * completes. This allows resolution to any depth without truncating information, unlike a guard that
+     * simply skips re-resolution and leaves the bound empty.
+     *
+     * @param typeVariable the reflective {@link TypeVariable}
+     * @return the {@link TypeVariableUsage}
+     */
+    private TypeVariableUsage resolveTypeVariableUsage(final TypeVariable<?> typeVariable) {
+        final var inProgress = IN_PROGRESS_TYPE_VARIABLES.get();
+        final var existing = inProgress.get(typeVariable);
+        if (existing != null) {
+            return existing;
+        }
+
+        final var nameProvider = getNameProvider();
+        final var variableName = nameProvider.getIrreducibleName(typeVariable.getName());
+        final var typeName = resolveTypeVariableTypeName(typeVariable, variableName);
+        final var annotatedBounds = typeVariable.getAnnotatedBounds();
+
+        // an unbounded type variable still reports an implicit java.lang.Object bound; elide it
+        // to match the source-parsing path, where an unbounded `<T>` has no upper bound trait at all
+        final var isImplicitObjectBound = annotatedBounds.length == 1
+            && annotatedBounds[0].getType() == Object.class;
+
+        if (annotatedBounds.length == 0 || isImplicitObjectBound) {
+            return TypeVariableUsage.of(this, typeName, Optional.empty(), Optional.empty());
+        }
+
+        final Lazy<TypeUsage> upperBound = Lazy.empty();
+        final var typeVariableUsage =
+            TypeVariableUsage.of(this, typeName, Optional.empty(), Optional.of(upperBound));
+
+        inProgress.put(typeVariable, typeVariableUsage);
+        try {
+            final List<TypeUsage> upperBoundTypeUsages = Streams.of(annotatedBounds)
+                .map(this::getTypeUsage)
+                .toList();
+
+            final var resolvedUpperBound = upperBoundTypeUsages.size() == 1
+                ? upperBoundTypeUsages.getFirst()
+                : IntersectionTypeUsage.of(this, upperBoundTypeUsages.stream().map(Lazy::of));
+
+            upperBound.set(resolvedUpperBound);
+        } finally {
+            inProgress.remove(typeVariable);
+        }
+
+        return typeVariableUsage;
     }
 
     /**
@@ -468,7 +506,6 @@ public class JDKCodeModel
                                            final Class<?> classType,
                                            final Consumer<? super Class<?>> consumer) {
 
-        final var nameProvider = getNameProvider();
         final var typeName = typeDescriptor.typeName();
 
         // include the JDKType in the TypeDescriptor
@@ -528,124 +565,132 @@ public class JDKCodeModel
 
         // include ConstructorDescriptor for the declared Constructors
         Streams.of(classType.getDeclaredConstructors())
-            .forEach(constructor -> {
-
-                final var formalParameters = getFormalParameters(constructor.getParameters());
-                final var constructorDescriptor = ConstructorDescriptor.of(typeDescriptor, formalParameters);
-
-                // include the annotations on the ConstructorDescriptor
-                getAnnotations(constructor)
-                    .forEach(constructorDescriptor::addTrait);
-
-                // include the AccessModifier
-                getAccessModifier(constructor.getModifiers())
-                    .ifPresent(constructorDescriptor::addTrait);
-
-                // include the ThrowableDescriptors
-                Streams.of(constructor.getAnnotatedExceptionTypes())
-                    .forEach(exceptionType -> {
-                        final var exceptionTypeUsage = getNamedTypeUsage(exceptionType)
-                            .orElseThrow(() -> new IllegalStateException(
-                                "The exception type " + exceptionType + " is not named!"));
-                        final var throwableDescriptor = ThrowableDescriptor.of(exceptionTypeUsage);
-                        constructorDescriptor.addTrait(throwableDescriptor);
-                    });
-
-                // include the ConstructorType
-                constructorDescriptor.addTrait(new ConstructorType(constructor));
-
-                typeDescriptor.addTrait(constructorDescriptor);
-            });
+            .forEach(constructor -> populateConstructor(typeDescriptor, constructor));
 
         // include MethodDescriptors for the declared Methods
         Streams.of(classType.getDeclaredMethods())
-            .forEach(method -> {
-                final var methodName = MethodName.of(
-                    typeName.moduleName(),
-                    typeName.namespace(),
-                    Optional.of(typeName),
-                    nameProvider.getIrreducibleName(method.getName()));
-
-                final var returnType = getTypeUsage(method.getAnnotatedReturnType());
-                final var formalParameters = getFormalParameters(method.getParameters());
-
-                final var methodDescriptor = MethodDescriptor
-                    .of(typeDescriptor, methodName, returnType, formalParameters);
-
-                final var methodModifiers = method.getModifiers();
-
-                // include the Static trait (if necessary)
-                if (Modifier.isStatic(methodModifiers)) {
-                    methodDescriptor.addTrait(Static.STATIC);
-                }
-
-                // include the AccessModifier
-                getAccessModifier(methodModifiers)
-                    .ifPresent(methodDescriptor::addTrait);
-
-                // include the Classification
-                methodDescriptor.addTrait(getClassification(methodModifiers));
-
-                // include the annotations on the MethodDescriptor
-                getAnnotations(method)
-                    .forEach(methodDescriptor::addTrait);
-
-                // include the ThrowableDescriptors
-                Streams.of(method.getAnnotatedExceptionTypes())
-                    .forEach(exceptionType -> {
-                        final var exceptionTypeUsage = getNamedTypeUsage(exceptionType)
-                            .orElseThrow(() -> new IllegalStateException(
-                                "The exception type " + exceptionType + " is not named!"));
-                        final var throwableDescriptor = ThrowableDescriptor.of(exceptionTypeUsage);
-                        methodDescriptor.addTrait(throwableDescriptor);
-                    });
-
-                // include the MethodType
-                methodDescriptor.addTrait(new MethodType(method));
-
-                typeDescriptor.addTrait(methodDescriptor);
-            });
+            .forEach(method -> populateMethod(typeDescriptor, typeName, method));
 
         // include FieldDescriptors for the declared Fields
         Streams.of(classType.getDeclaredFields())
-            .forEach(field -> {
-                final var fieldName = nameProvider.getIrreducibleName(field.getName());
-
-                // Field.getAnnotatedType().getAnnotations() omits declaration-only annotations
-                // (i.e. those not targeting TYPE_USE), so the outer-level annotations must come from
-                // Field.getAnnotations() rather than the AnnotatedType, to avoid missing or duplicating
-                // them; getStructuralTypeUsage still descends into the AnnotatedType for nested
-                // TYPE_USE annotations (generic arguments, wildcard bounds, array components).
-                final var fieldType = getStructuralTypeUsage(field.getAnnotatedType());
-
-                // include the annotations on the Field TypeUsage
-                getAnnotations(field)
-                    .forEach(fieldType::addTrait);
-
-                final var fieldDescriptor = FieldDescriptor.of(this, fieldName, fieldType);
-                final var fieldModifiers = field.getModifiers();
-
-                // include the Static trait (if necessary)
-                if (Modifier.isStatic(fieldModifiers)) {
-                    fieldDescriptor.addTrait(Static.STATIC);
-                }
-
-                // include the AccessModifier
-                getAccessModifier(fieldModifiers)
-                    .ifPresent(fieldDescriptor::addTrait);
-
-                // include the Classification
-                fieldDescriptor.addTrait(getClassification(fieldModifiers));
-
-                // include the FieldType
-                fieldDescriptor.addTrait(new FieldType(field));
-
-                typeDescriptor.addTrait(fieldDescriptor);
-            });
+            .forEach(field -> populateField(typeDescriptor, field));
 
         // include the annotations on the TypeDescriptor (from the Class Type)
         getAnnotations(classType)
             .forEach(typeDescriptor::addTrait);
+    }
+
+    private void populateConstructor(final JDKTypeDescriptor typeDescriptor, final Constructor<?> constructor) {
+        final var formalParameters = getFormalParameters(constructor.getParameters());
+        final var constructorDescriptor = ConstructorDescriptor.of(typeDescriptor, formalParameters);
+
+        // include the annotations on the ConstructorDescriptor
+        getAnnotations(constructor)
+            .forEach(constructorDescriptor::addTrait);
+
+        // include the AccessModifier
+        getAccessModifier(constructor.getModifiers())
+            .ifPresent(constructorDescriptor::addTrait);
+
+        // include the ThrowableDescriptors
+        Streams.of(constructor.getAnnotatedExceptionTypes())
+            .forEach(exceptionType -> {
+                final var exceptionTypeUsage = getNamedTypeUsage(exceptionType)
+                    .orElseThrow(() -> new IllegalStateException(
+                        "The exception type " + exceptionType + " is not named!"));
+                final var throwableDescriptor = ThrowableDescriptor.of(exceptionTypeUsage);
+                constructorDescriptor.addTrait(throwableDescriptor);
+            });
+
+        // include the ConstructorType
+        constructorDescriptor.addTrait(new ConstructorType(constructor));
+
+        typeDescriptor.addTrait(constructorDescriptor);
+    }
+
+    private void populateMethod(final JDKTypeDescriptor typeDescriptor, final TypeName typeName,
+                                final Method method) {
+        final var nameProvider = getNameProvider();
+        final var methodName = MethodName.of(
+            typeName.moduleName(),
+            typeName.namespace(),
+            Optional.of(typeName),
+            nameProvider.getIrreducibleName(method.getName()));
+
+        final var returnType = getTypeUsage(method.getAnnotatedReturnType());
+        final var formalParameters = getFormalParameters(method.getParameters());
+
+        final var methodDescriptor = MethodDescriptor
+            .of(typeDescriptor, methodName, returnType, formalParameters);
+
+        final var methodModifiers = method.getModifiers();
+
+        // include the Static trait (if necessary)
+        if (Modifier.isStatic(methodModifiers)) {
+            methodDescriptor.addTrait(Static.STATIC);
+        }
+
+        // include the AccessModifier
+        getAccessModifier(methodModifiers)
+            .ifPresent(methodDescriptor::addTrait);
+
+        // include the Classification
+        methodDescriptor.addTrait(getClassification(methodModifiers));
+
+        // include the annotations on the MethodDescriptor
+        getAnnotations(method)
+            .forEach(methodDescriptor::addTrait);
+
+        // include the ThrowableDescriptors
+        Streams.of(method.getAnnotatedExceptionTypes())
+            .forEach(exceptionType -> {
+                final var exceptionTypeUsage = getNamedTypeUsage(exceptionType)
+                    .orElseThrow(() -> new IllegalStateException(
+                        "The exception type " + exceptionType + " is not named!"));
+                final var throwableDescriptor = ThrowableDescriptor.of(exceptionTypeUsage);
+                methodDescriptor.addTrait(throwableDescriptor);
+            });
+
+        // include the MethodType
+        methodDescriptor.addTrait(new MethodType(method));
+
+        typeDescriptor.addTrait(methodDescriptor);
+    }
+
+    private void populateField(final JDKTypeDescriptor typeDescriptor, final Field field) {
+        final var nameProvider = getNameProvider();
+        final var fieldName = nameProvider.getIrreducibleName(field.getName());
+
+        // Field.getAnnotatedType().getAnnotations() omits declaration-only annotations
+        // (i.e. those not targeting TYPE_USE), so the outer-level annotations must come from
+        // Field.getAnnotations() rather than the AnnotatedType, to avoid missing or duplicating
+        // them; getStructuralTypeUsage still descends into the AnnotatedType for nested
+        // TYPE_USE annotations (generic arguments, wildcard bounds, array components).
+        final var fieldType = getStructuralTypeUsage(field.getAnnotatedType());
+
+        // include the annotations on the Field TypeUsage
+        getAnnotations(field)
+            .forEach(fieldType::addTrait);
+
+        final var fieldDescriptor = FieldDescriptor.of(this, fieldName, fieldType);
+        final var fieldModifiers = field.getModifiers();
+
+        // include the Static trait (if necessary)
+        if (Modifier.isStatic(fieldModifiers)) {
+            fieldDescriptor.addTrait(Static.STATIC);
+        }
+
+        // include the AccessModifier
+        getAccessModifier(fieldModifiers)
+            .ifPresent(fieldDescriptor::addTrait);
+
+        // include the Classification
+        fieldDescriptor.addTrait(getClassification(fieldModifiers));
+
+        // include the FieldType
+        fieldDescriptor.addTrait(new FieldType(field));
+
+        typeDescriptor.addTrait(fieldDescriptor);
     }
 
     /**
@@ -1073,8 +1118,8 @@ public class JDKCodeModel
             });
     }
 
-    private static final ThreadLocal<Set<TypeVariable<?>>> IN_PROGRESS_TYPE_VARIABLES =
-        ThreadLocal.withInitial(HashSet::new);
+    private static final ThreadLocal<Map<TypeVariable<?>, TypeVariableUsage>> IN_PROGRESS_TYPE_VARIABLES =
+        ThreadLocal.withInitial(HashMap::new);
 
     static {
         // register this type to be usable for marshalling
