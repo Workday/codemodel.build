@@ -193,9 +193,22 @@ public interface NameProvider {
             throw new IllegalArgumentException("The class for the TypeName must not be null");
         }
 
-        // determine the IrreducibleName from the simple name
-        final var simpleName = c.getSimpleName();
-        final var irreducibleName = getIrreducibleName(simpleName);
+        // getEnclosingClass() (unlike getDeclaringClass()) also resolves the enclosing class for
+        // anonymous and local classes, not just member classes
+        final var enclosingClass = c.getEnclosingClass();
+
+        // determine the IrreducibleName from the binary name's trailing segment (rather than
+        // the simple name) for anonymous and local classes: the simple name is empty for
+        // anonymous classes, and for local classes it drops the disambiguating numeric prefix
+        // the compiler adds so that same-named locals in sibling methods don't collide
+        // (e.g. binary names "Outer$1Foo" and "Outer$2Foo" both have simple name "Foo").
+        // That trailing segment always starts with the compiler's numeric counter (e.g. "1Foo",
+        // or just "1" for an anonymous class), which is not a valid Java identifier on its own,
+        // so it is prefixed with "_" to keep the IrreducibleName a valid identifier
+        final var effectiveSimpleName = c.isAnonymousClass() || c.isLocalClass()
+            ? "_" + c.getName().substring(c.getName().lastIndexOf('$') + 1)
+            : c.getSimpleName();
+        final var irreducibleName = getIrreducibleName(effectiveSimpleName);
 
         final var namespace = c.getPackageName().isEmpty()
             ? Optional.<Namespace>empty()
@@ -205,9 +218,9 @@ public interface NameProvider {
             ? getModuleName(c.getModule().getName())
             : Optional.<ModuleName>empty();
 
-        final var enclosingTypeName = c.getDeclaringClass() == null
+        final var enclosingTypeName = enclosingClass == null
             ? Optional.<TypeName>empty()
-            : Optional.of(getTypeName(c.getDeclaringClass()));
+            : Optional.of(getTypeName(enclosingClass));
 
         return getTypeName(moduleName,
             namespace,

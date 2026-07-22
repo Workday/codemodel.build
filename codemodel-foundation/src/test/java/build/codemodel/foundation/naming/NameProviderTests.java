@@ -365,6 +365,195 @@ interface NameProviderTests {
         assertThat(typeName.enclosingTypeName()).isEmpty();
     }
 
+    @Test
+    default void shouldCreateDistinctTypeNamesForDistinctAnonymousClasses() {
+        final var nameProvider = getNameProvider();
+
+        final Runnable first = new Runnable() {
+            @Override
+            public void run() {
+            }
+        };
+        final Runnable second = new Runnable() {
+            @Override
+            public void run() {
+            }
+        };
+
+        final var firstTypeName = nameProvider.getTypeName(first.getClass());
+        final var secondTypeName = nameProvider.getTypeName(second.getClass());
+
+        assertThat(firstTypeName).isNotEqualTo(secondTypeName);
+        assertThat(firstTypeName.name().isEmpty()).isFalse();
+        assertThat(secondTypeName.name().isEmpty()).isFalse();
+    }
+
+    @Test
+    default void shouldRetainEnclosingTypeNameForAnonymousClass() {
+        final var nameProvider = getNameProvider();
+
+        final Runnable anonymous = new Runnable() {
+            @Override
+            public void run() {
+            }
+        };
+
+        final var typeName = nameProvider.getTypeName(anonymous.getClass());
+        assertThat(typeName.enclosingTypeName())
+            .isPresent()
+            .hasValueSatisfying(enclosing ->
+                assertThat(enclosing.name().toString()).isEqualTo("NameProviderTests"));
+    }
+
+    @Test
+    default void shouldCreateDistinctTypeNamesForNestedAnonymousClasses() {
+        final var nameProvider = getNameProvider();
+
+        final Class<?>[] innerClasses = new Class<?>[1];
+        final Runnable outer = new Runnable() {
+            @Override
+            public void run() {
+                final Runnable inner = new Runnable() {
+                    @Override
+                    public void run() {
+                    }
+                };
+                innerClasses[0] = inner.getClass();
+            }
+        };
+        outer.run();
+
+        final var outerTypeName = nameProvider.getTypeName(outer.getClass());
+        final var innerTypeName = nameProvider.getTypeName(innerClasses[0]);
+
+        assertThat(outerTypeName).isNotEqualTo(innerTypeName);
+        assertThat(innerTypeName.enclosingTypeName())
+            .isPresent()
+            .hasValueSatisfying(enclosing -> assertThat(enclosing).isEqualTo(outerTypeName));
+    }
+
+    /**
+     * Declares a local class named {@code Foo} and returns its {@link Class}; used to check
+     * that two identically-named local classes declared in different methods of the same
+     * enclosing type are still given distinct {@link TypeName}s.
+     */
+    private Class<?> declareFirstLocalFoo() {
+        class Foo {
+        }
+        return Foo.class;
+    }
+
+    /**
+     * @see #declareFirstLocalFoo()
+     */
+    private Class<?> declareSecondLocalFoo() {
+        class Foo {
+        }
+        return Foo.class;
+    }
+
+    @Test
+    default void shouldCreateDistinctTypeNamesForSameNamedLambdaClassesFromDifferentSites() {
+        final var nameProvider = getNameProvider();
+
+        final Runnable first = () -> {
+        };
+        final Runnable second = () -> {
+        };
+
+        final var firstTypeName = nameProvider.getTypeName(first.getClass());
+        final var secondTypeName = nameProvider.getTypeName(second.getClass());
+
+        assertThat(firstTypeName).isNotEqualTo(secondTypeName);
+        assertThat(firstTypeName.name().isEmpty()).isFalse();
+        assertThat(secondTypeName.name().isEmpty()).isFalse();
+    }
+
+    @Test
+    default void shouldRoundTripEncodedTypeNameForLambdaClass() {
+        final var nameProvider = getNameProvider();
+
+        final Runnable lambda = () -> {
+        };
+
+        final var typeName = nameProvider.getTypeName(lambda.getClass());
+        final var roundTripped = nameProvider.getTypeName(typeName.toString());
+
+        assertThat(roundTripped).isEqualTo(typeName);
+    }
+
+    @Test
+    default void shouldCreateDistinctTypeNamesForSameNamedLocalClassesInDifferentMethods() {
+        final var nameProvider = getNameProvider();
+
+        final var firstTypeName = nameProvider.getTypeName(declareFirstLocalFoo());
+        final var secondTypeName = nameProvider.getTypeName(declareSecondLocalFoo());
+
+        assertThat(firstTypeName).isNotEqualTo(secondTypeName);
+    }
+
+    @Test
+    default void shouldProduceAValidJavaIdentifierForAnonymousClass() {
+        final var nameProvider = getNameProvider();
+
+        final Runnable anonymous = new Runnable() {
+            @Override
+            public void run() {
+            }
+        };
+
+        final var typeName = nameProvider.getTypeName(anonymous.getClass());
+
+        assertThat(isValidJavaIdentifier(typeName.name().toString())).isTrue();
+    }
+
+    @Test
+    default void shouldProduceAValidJavaIdentifierForLocalClass() {
+        final var nameProvider = getNameProvider();
+
+        final var typeName = nameProvider.getTypeName(declareFirstLocalFoo());
+
+        assertThat(isValidJavaIdentifier(typeName.name().toString())).isTrue();
+    }
+
+    /**
+     * Determines whether the given {@link String} is a valid Java identifier (ignoring
+     * reserved keywords, which compiler-generated names never collide with).
+     */
+    private static boolean isValidJavaIdentifier(final String string) {
+        if (string.isEmpty() || !Character.isJavaIdentifierStart(string.charAt(0))) {
+            return false;
+        }
+
+        return string.chars().allMatch(Character::isJavaIdentifierPart);
+    }
+
+    @Test
+    default void shouldRoundTripEncodedTypeNameForAnonymousClass() {
+        final var nameProvider = getNameProvider();
+
+        final Runnable anonymous = new Runnable() {
+            @Override
+            public void run() {
+            }
+        };
+
+        final var typeName = nameProvider.getTypeName(anonymous.getClass());
+        final var roundTripped = nameProvider.getTypeName(typeName.toString());
+
+        assertThat(roundTripped).isEqualTo(typeName);
+    }
+
+    @Test
+    default void shouldRoundTripEncodedTypeNameForLocalClass() {
+        final var nameProvider = getNameProvider();
+
+        final var typeName = nameProvider.getTypeName(declareFirstLocalFoo());
+        final var roundTripped = nameProvider.getTypeName(typeName.toString());
+
+        assertThat(roundTripped).isEqualTo(typeName);
+    }
+
     /**
      * Ensure an empty {@link TypeName} can be created.
      */
