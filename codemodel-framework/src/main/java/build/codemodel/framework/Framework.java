@@ -85,6 +85,12 @@ public interface Framework {
      * Creates a new {@link CodeModel} of the specified {@link Class} that has been initialized
      * through Dependency Injection by the {@link Framework}.
      *
+     * <p>Note: {@code codeModelClass} is constructed before this {@link CodeModel} becomes the one
+     * resolved by an injected {@code CodeModel}/{@code Provider<CodeModel>} elsewhere in the
+     * {@link Framework}, since it cannot be bound to an instance that does not yet exist. A
+     * {@code codeModelClass} that itself requires such an injection point would therefore observe a
+     * previously-bound {@link CodeModel} (or none, on the first call) rather than itself.
+     *
      * @param <T> the type of {@link CodeModel}
      * @return a new {@link CodeModel}
      */

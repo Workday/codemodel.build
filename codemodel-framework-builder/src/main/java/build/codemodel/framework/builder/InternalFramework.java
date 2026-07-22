@@ -29,7 +29,6 @@ import build.base.telemetry.Error;
 import build.base.telemetry.TelemetryRecorder;
 import build.base.telemetry.foundation.ObservableTelemetryRecorder;
 import build.codemodel.dependency.injection.Context;
-import build.codemodel.dependency.injection.InjectionFramework;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.ConceptualCodeModel;
 import build.codemodel.foundation.descriptor.Trait;
@@ -46,7 +45,6 @@ import build.codemodel.framework.completer.Completer;
 import build.codemodel.framework.completer.Completion;
 import build.codemodel.framework.initialization.Enricher;
 import build.codemodel.framework.initialization.Initializer;
-import build.codemodel.jdk.JDKCodeModel;
 
 import java.nio.file.FileSystem;
 import java.util.ArrayList;
@@ -94,11 +92,6 @@ class InternalFramework
     private final NameProvider nameProvider;
 
     /**
-     * The {@link InjectionFramework} with which to perform Dependency Injection
-     */
-    private final InjectionFramework injectionFramework;
-
-    /**
      * A {@link Context} with which to perform Dependency Injection.
      */
     private final Context context;
@@ -106,14 +99,18 @@ class InternalFramework
     /**
      * Constructs an {@link InternalFramework}.
      *
+     * @param context      the {@link Context} with which {@link Plugin}s were created, and against which the
+     *                     active {@link CodeModel} is (re)bound for each initialize/enrich/typeCheck/compile/
+     *                     complete call
      * @param fileSystem   the {@link FileSystem}
      * @param nameProvider the {@link NameProvider}
      * @param plugins      the {@link Plugin}s
      */
-    InternalFramework(final FileSystem fileSystem,
+    InternalFramework(final Context context,
+                      final FileSystem fileSystem,
                       final NameProvider nameProvider,
                       final Stream<? extends Plugin> plugins) {
-
+        this.context = Objects.requireNonNull(context, "The Context must not be null");
         this.fileSystem = Objects.requireNonNull(fileSystem, "The FileSystem must not be null");
         this.nameProvider = Objects.requireNonNull(nameProvider, "The NameProvider must not be null");
 
@@ -140,14 +137,7 @@ class InternalFramework
                 });
             }));
 
-        // establish the InjectionFramework and Context to be used to perform Dependency Injection by the Code Model
-        this.injectionFramework = new InjectionFramework(new JDKCodeModel(this.nameProvider));
-
-        this.context = this.injectionFramework.newContext();
-
         this.context.bind(Framework.class).to(this);
-        this.context.bind(FileSystem.class).to(this.fileSystem);
-        this.context.bind(NameProvider.class).to(this.nameProvider);
     }
 
     @Override
@@ -181,6 +171,8 @@ class InternalFramework
      * @return the {@link CodeModel} to permit fluent-style method invocation
      */
     private CodeModel initialize(final CodeModel codeModel) {
+        // rebind the CodeModel so Plugins holding an injected Provider<CodeModel> resolve to this instance
+        this.context.bind(CodeModel.class).toOverriding(codeModel);
         plugins(Initializer.class)
             .forEach(initializer -> initializer.initialize(codeModel));
 
@@ -196,6 +188,8 @@ class InternalFramework
     @SuppressWarnings("unchecked")
     public <T extends CodeModel> T newCodeModel(final Class<T> codeModelClass) {
 
+        // codeModelClass is constructed before initialize() rebinds CodeModel below, so it cannot
+        // itself have a CodeModel/Provider<CodeModel> injection point resolve to this instance
         final var codeModel = this.context.create(codeModelClass);
         return (T) initialize(codeModel);
     }
@@ -203,6 +197,9 @@ class InternalFramework
     @Override
     @SuppressWarnings("unchecked")
     public <T extends CodeModel> T enrich(final T codeModel, final TelemetryRecorder telemetryRecorder) {
+
+        // rebind the CodeModel so Plugins holding an injected Provider<CodeModel> resolve to this instance
+        this.context.bind(CodeModel.class).toOverriding(codeModel);
 
         // enrich the CodeModel using the Enricher(s) until no further enrichment occurs
 
@@ -299,6 +296,9 @@ class InternalFramework
     public <T extends CodeModel> Optional<T> typeCheck(final T codeModel,
                                                        final TelemetryRecorder telemetryRecorder) {
 
+        // rebind the CodeModel so Plugins holding an injected Provider<CodeModel> resolve to this instance
+        this.context.bind(CodeModel.class).toOverriding(codeModel);
+
         final var observableRecorder = ObservableTelemetryRecorder.of(telemetryRecorder);
 
         // a TraitVisitor to perform type checking on a Trait
@@ -388,6 +388,9 @@ class InternalFramework
     @Override
     public Optional<Compilation> compile(final CodeModel codeModel, final TelemetryRecorder telemetryRecorder) {
 
+        // rebind the CodeModel so Plugins holding an injected Provider<CodeModel> resolve to this instance
+        this.context.bind(CodeModel.class).toOverriding(codeModel);
+
         // we need to observe and query the Telemetry that is produced (to determine errors)
         final var observableRecorder = ObservableTelemetryRecorder.of(telemetryRecorder);
 
@@ -434,6 +437,9 @@ class InternalFramework
         }
 
         final var codeModel = compilation.codeModel();
+
+        // rebind the CodeModel so Plugins holding an injected Provider<CodeModel> resolve to this instance
+        this.context.bind(CodeModel.class).toOverriding(codeModel);
 
         // we need to observe and query the Telemetry that is produced (to determine errors)
         final var observableRecorder = ObservableTelemetryRecorder.of(telemetryRecorder);

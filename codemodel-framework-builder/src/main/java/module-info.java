@@ -28,16 +28,18 @@ import build.codemodel.framework.Framework;
  */
 module build.codemodel.framework.builder {
     requires build.base.foundation;
-
+    requires build.base.mereology;
     requires build.base.telemetry;
     requires build.base.telemetry.foundation;
 
+    requires build.codemodel.dependency.injection;
     requires build.codemodel.foundation;
+    requires build.codemodel.framework;
     requires build.codemodel.jdk;
 
-    requires build.codemodel.dependency.injection;
-    requires build.codemodel.framework;
-    requires build.base.mereology;
+    requires jakarta.inject;
+
+    opens build.codemodel.framework.builder to build.codemodel.dependency.injection;
 
     exports build.codemodel.framework.builder;
 }

@@ -28,6 +28,7 @@ import build.codemodel.dependency.injection.BindingBuilder;
 import build.codemodel.dependency.injection.Context;
 import build.codemodel.dependency.injection.InjectionFramework;
 import build.codemodel.dependency.injection.MultiBinder;
+import build.codemodel.dependency.injection.ProviderResolver;
 import build.codemodel.foundation.naming.CachingNameProvider;
 import build.codemodel.foundation.naming.NameProvider;
 import build.codemodel.foundation.naming.NonCachingNameProvider;
@@ -273,6 +274,10 @@ public class FrameworkBuilder
         // establish a new Context with which to create the Plugins
         final var context = this.context.newContext();
 
+        // enable jakarta.inject Provider<T> injection points; must be added before any Plugin is
+        // created below, since Plugin construction is where those injection points get resolved
+        context.addResolver(ProviderResolver::new);
+
         // establish the FileSystem
         final var fileSystem = this.fileSystemBuilder == null
             ? FileSystems.getDefault()
@@ -297,6 +302,6 @@ public class FrameworkBuilder
             .filter(Objects::nonNull)
             .map(builder -> builder.apply(context));
 
-        return new InternalFramework(fileSystem, nameProvider, plugins);
+        return new InternalFramework(context, fileSystem, nameProvider, plugins);
     }
 }
