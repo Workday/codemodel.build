@@ -29,7 +29,6 @@ import build.base.telemetry.Error;
 import build.base.telemetry.TelemetryRecorder;
 import build.base.telemetry.foundation.ObservableTelemetryRecorder;
 import build.codemodel.dependency.injection.Context;
-import build.codemodel.dependency.injection.InjectionFramework;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.ConceptualCodeModel;
 import build.codemodel.foundation.descriptor.Trait;
@@ -46,7 +45,6 @@ import build.codemodel.framework.completer.Completer;
 import build.codemodel.framework.completer.Completion;
 import build.codemodel.framework.initialization.Enricher;
 import build.codemodel.framework.initialization.Initializer;
-import build.codemodel.jdk.JDKCodeModel;
 
 import java.nio.file.FileSystem;
 import java.util.ArrayList;
@@ -94,11 +92,6 @@ class InternalFramework
     private final NameProvider nameProvider;
 
     /**
-     * The {@link InjectionFramework} with which to perform Dependency Injection
-     */
-    private final InjectionFramework injectionFramework;
-
-    /**
      * A {@link Context} with which to perform Dependency Injection.
      */
     private final Context context;
@@ -117,7 +110,7 @@ class InternalFramework
                       final FileSystem fileSystem,
                       final NameProvider nameProvider,
                       final Stream<? extends Plugin> plugins) {
-        this.context = Objects.requireNonNull(context, "The Context must not be null.");
+        this.context = Objects.requireNonNull(context, "The Context must not be null");
         this.fileSystem = Objects.requireNonNull(fileSystem, "The FileSystem must not be null");
         this.nameProvider = Objects.requireNonNull(nameProvider, "The NameProvider must not be null");
 
@@ -143,9 +136,6 @@ class InternalFramework
                     return set;
                 });
             }));
-
-        // establish the InjectionFramework and Context to be used to perform Dependency Injection by the Code Model
-        this.injectionFramework = new InjectionFramework(new JDKCodeModel(this.nameProvider));
 
         this.context.bind(Framework.class).to(this);
     }
@@ -198,6 +188,8 @@ class InternalFramework
     @SuppressWarnings("unchecked")
     public <T extends CodeModel> T newCodeModel(final Class<T> codeModelClass) {
 
+        // codeModelClass is constructed before initialize() rebinds CodeModel below, so it cannot
+        // itself have a CodeModel/Provider<CodeModel> injection point resolve to this instance
         final var codeModel = this.context.create(codeModelClass);
         return (T) initialize(codeModel);
     }
