@@ -63,6 +63,7 @@ import build.codemodel.jdk.descriptor.MethodBodyDescriptor;
 import build.codemodel.jdk.descriptor.MethodType;
 import build.codemodel.jdk.descriptor.Static;
 import build.codemodel.jdk.descriptor.Varargs;
+import build.codemodel.jdk.expression.ResolvedMethod;
 import build.codemodel.objectoriented.ObjectOrientedCodeModel;
 import build.codemodel.objectoriented.descriptor.AccessModifier;
 import build.codemodel.objectoriented.descriptor.Classification;
@@ -993,8 +994,17 @@ public class JDKCodeModel
     }
 
     private static boolean compositeContains(final Composite composite, final TypeName typeName) {
+        // ResolvedMethod.iterator() descends into the live-resolved MethodDescriptor (declaring
+        // type, formal parameter types, ...), none of which appear literally at the invocation
+        // site. Without this exclusion, e.g. `Other.take(null)` would spuriously "reference"
+        // take's formal parameter type even though it never appears in the caller's source.
+        // Symbol.Field needs no equivalent exclusion: its iterator() only ever yields the
+        // access expression's own declaredType (its javac-resolved static type), never anything
+        // from the live FieldDescriptor - see Symbol.Field's descriptor()/parts() split, locked
+        // down by MereologyTests#symbolField_partsContainsDeclaredType.
         return composite.traverse(NamedTypeUsage.class)
             .strategy(Strategy.DepthFirst)
+            .exclude(ResolvedMethod.class::isInstance)
             .stream()
             .anyMatch(ntu -> ntu.typeName().equals(typeName));
     }

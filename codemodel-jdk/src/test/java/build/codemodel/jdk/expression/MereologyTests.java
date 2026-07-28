@@ -291,10 +291,21 @@ class MereologyTests {
 
     @Test
     void symbolField_partsContainsDeclaredType() {
+        // Symbol.Field.descriptor() re-resolves the live FieldDescriptor on every call (so it
+        // tracks a type across rescans instead of pinning to a stale descriptor), but parts()
+        // must never route through it: JDKCodeModel#compositeContains walks method/constructor
+        // bodies looking for a TypeName, and if a field access exposed its resolved descriptor's
+        // structure as a part, an access like `Other.field` could spuriously "contain" types that
+        // only appear on the declaring field elsewhere (declaringType.parameterTypes,
+        // annotations, generic bounds, ...) and never at the access site itself - the same class
+        // of leak that ResolvedMethod needed an explicit exclude() for in compositeContains.
+        // declaringType below deliberately doesn't resolve to a real type (descriptor() is empty),
+        // proving parts() is computed from declaredType alone, independent of resolution.
         final var type = stringType();
         final var declaringType = codeModel.getEmptyModuleTypeName("com.example.Foo");
-        assertThat(new Symbol.Field(type, codeModel, declaringType, "value").parts().toList())
-            .containsExactly(type);
+        final var field = new Symbol.Field(type, codeModel, declaringType, "value");
+        assertThat(field.descriptor()).isEmpty();
+        assertThat(field.parts().toList()).containsExactly(type);
     }
 
     @Test
