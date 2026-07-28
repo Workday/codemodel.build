@@ -176,6 +176,13 @@ public class JdkExpressionConverter
     private final Map<Element, InstanceOf> patternBindingDeclarations = new HashMap<>();
 
     /**
+     * Maps a resolved javac {@link Element} for a lambda parameter to the {@link LambdaParameter}
+     * that declared it, populated while converting each lambda's parameter list — before its body
+     * is converted — so that identifier usages within the body can be linked back to it.
+     */
+    private final Map<Element, LambdaParameter> lambdaParameterDeclarations = new HashMap<>();
+
+    /**
      * Creates a {@link JdkExpressionConverter}.
      *
      * @param codeModel the {@link CodeModel} used to construct expression nodes
@@ -393,7 +400,9 @@ public class JdkExpressionConverter
                 typeUsage, Optional.ofNullable(catchParameterDeclarations.get(element))));
             case BINDING_VARIABLE -> Optional.<Symbol>of(new Symbol.PatternBinding(
                 typeUsage, Optional.ofNullable(patternBindingDeclarations.get(element))));
-            case PARAMETER -> resolveParameter(element).map(Symbol.class::cast);
+            case PARAMETER -> lambdaParameterDeclarations.containsKey(element)
+                ? Optional.<Symbol>of(new Symbol.LambdaVariable(typeUsage, Optional.of(lambdaParameterDeclarations.get(element))))
+                : resolveParameter(element).map(Symbol.class::cast);
             case FIELD, ENUM_CONSTANT -> resolveField(element, typeUsage).map(Symbol.class::cast);
             case CLASS, INTERFACE, ENUM, ANNOTATION_TYPE, RECORD ->
                 Optional.<Symbol>of(new Symbol.TypeReference(typeUsage));
@@ -418,8 +427,9 @@ public class JdkExpressionConverter
         if (!(element.getEnclosingElement() instanceof ExecutableElement executableElement)) {
             return Optional.empty();
         }
-        // A lambda expression's parameters are owned by the enclosing method/constructor rather than
-        // a symbol of their own, so they won't appear here — leave them without a Symbol trait.
+        // Lambda parameters are resolved to Symbol.LambdaVariable before reaching here (see the
+        // lambdaParameterDeclarations check in resolveSymbol), so this only ever sees real method
+        // and constructor parameters.
         final var index = executableElement.getParameters().indexOf(element);
         if (index < 0) {
             return Optional.empty();
@@ -808,6 +818,16 @@ public class JdkExpressionConverter
 
     @Override
     public Expression visitLambdaExpression(final LambdaExpressionTree t, final Void v) {
+        // Registers each parameter's element into lambdaParameterDeclarations before the body is
+        // converted below, so identifier usages inside the body resolve to Symbol.LambdaVariable.
+        final var params = t.getParameters().stream()
+            .map(p -> {
+                final var param = new LambdaParameter(codeModel, resolveLambdaParameterType(p), p.getName().toString());
+                addSourceLocation(p).ifPresent(param::addTrait);
+                elementOf(p).ifPresent(element -> lambdaParameterDeclarations.put(element, param));
+                return param;
+            })
+            .toList();
         final Statement body;
         if (t.getBodyKind() == LambdaExpressionTree.BodyKind.EXPRESSION) {
             body = ExpressionStatement.of(convert((ExpressionTree) t.getBody()));
@@ -816,13 +836,6 @@ public class JdkExpressionConverter
         } else {
             body = Block.empty(codeModel);
         }
-        final var params = t.getParameters().stream()
-            .map(p -> {
-                final var param = new LambdaParameter(codeModel, resolveLambdaParameterType(p), p.getName().toString());
-                addSourceLocation(p).ifPresent(param::addTrait);
-                return param;
-            })
-            .toList();
         return Lambda.of(codeModel, params, body);
     }
 

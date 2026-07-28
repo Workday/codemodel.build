@@ -49,7 +49,7 @@ import java.util.Optional;
 @Singular
 public sealed interface Symbol extends Trait, Composite
     permits Symbol.LocalVariable, Symbol.EnhancedForVariable, Symbol.CatchParameter,
-    Symbol.PatternBinding, Symbol.Parameter, Symbol.Field,
+    Symbol.PatternBinding, Symbol.Parameter, Symbol.LambdaVariable, Symbol.Field,
     Symbol.TypeReference, Symbol.ThisReference, Symbol.SuperReference {
 
     /**
@@ -133,6 +133,20 @@ public sealed interface Symbol extends Trait, Composite
         public TypeUsage declaredType() {
             return descriptor.type();
         }
+    }
+
+    /**
+     * A lambda parameter reference, e.g. {@code x} in {@code (x) -> x + 1}. Lambda parameters are
+     * owned by the {@link LambdaParameter} node of the enclosing {@link Lambda} rather than by a
+     * {@link build.codemodel.foundation.descriptor.TypeDescriptor}-backed member, so this carries a
+     * direct link to that node instead of a resolved descriptor.
+     *
+     * @param declaredType the declared type of the parameter
+     * @param declaration  the {@link Optional} {@link LambdaParameter} that declared this
+     *                     parameter, when it could be resolved back to the declaring lambda within
+     *                     the same body conversion
+     */
+    record LambdaVariable(TypeUsage declaredType, Optional<LambdaParameter> declaration) implements Symbol {
     }
 
     /**

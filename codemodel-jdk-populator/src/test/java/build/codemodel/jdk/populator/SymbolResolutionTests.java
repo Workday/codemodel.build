@@ -8,6 +8,7 @@ import build.codemodel.jdk.descriptor.MethodBodyDescriptor;
 import build.codemodel.jdk.expression.CompoundAssignment;
 import build.codemodel.jdk.expression.Identifier;
 import build.codemodel.jdk.expression.InstanceOf;
+import build.codemodel.jdk.expression.Lambda;
 import build.codemodel.jdk.expression.Symbol;
 import build.codemodel.jdk.statement.EnhancedFor;
 import build.codemodel.jdk.statement.ExpressionStatement;
@@ -174,6 +175,44 @@ class SymbolResolutionTests {
         final var parameter = (Symbol.Parameter) symbol;
         assertThat(parameter.declaredType().toString()).contains("String");
         assertThat(parameter.descriptor().name().orElseThrow().toString()).isEqualTo("value");
+    }
+
+    @Test
+    void shouldResolveLambdaParameter() {
+        final var source = JavaFileObjects.forSourceString("com.example.Foo", """
+            package com.example;
+            public class Foo {
+                public java.util.function.Function<String, Integer> bar() {
+                    return x -> x.length();
+                }
+            }
+            """);
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
+        final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
+        final var method = descriptor.traits(MethodDescriptor.class)
+            .filter(m -> m.methodName().name().toString().equals("bar"))
+            .findFirst().orElseThrow();
+        final var body = method.getTrait(MethodBodyDescriptor.class).orElseThrow().body();
+
+        final var ret = body.statements()
+            .filter(s -> s instanceof Return)
+            .map(s -> (Return) s)
+            .findFirst().orElseThrow();
+        final var lambda = (Lambda) ret.expression().orElseThrow();
+        final var lambdaParameter = lambda.parameters().findFirst().orElseThrow();
+
+        final var invocation = (build.codemodel.jdk.expression.MethodInvocation)
+            ((ExpressionStatement) lambda.body()).expression();
+        final var identifier = (Identifier) invocation.target().orElseThrow();
+        assertThat(identifier.name()).isEqualTo("x");
+        final var symbol = identifier.getTrait(Symbol.class).orElseThrow();
+        assertThat(symbol).isInstanceOf(Symbol.LambdaVariable.class);
+        final var lambdaVariable = (Symbol.LambdaVariable) symbol;
+        assertThat(lambdaVariable.declaredType().toString()).contains("String");
+        assertThat(lambdaVariable.declaration()).contains(lambdaParameter);
     }
 
     @Test
