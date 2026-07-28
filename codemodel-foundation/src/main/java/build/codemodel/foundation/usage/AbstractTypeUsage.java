@@ -85,6 +85,14 @@ public abstract class AbstractTypeUsage
         return render(TypeName::canonicalName, TypeUsage::canonicalName);
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Unlike {@link #canonicalName()}, this also appends any {@link Trait}s attached to this usage
+     * (e.g. {@code SourceLocation} on javac-populated usages) via {@link Traitable#toString(Traitable)},
+     * so the debug view is not just a name — do not rely on this for name equality, hashing, or as a key;
+     * use {@link #canonicalName()} or the module-qualified name from {@code render(...)} for that.
+     */
     @Override
     public String toString() {
         return render(TypeName::toString, TypeUsage::toString) + Traitable.toString(this);
