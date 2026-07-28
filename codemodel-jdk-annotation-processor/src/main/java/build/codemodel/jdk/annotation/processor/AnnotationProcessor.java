@@ -57,6 +57,7 @@ import build.codemodel.objectoriented.descriptor.ExtendsTypeDescriptor;
 import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 import build.codemodel.objectoriented.descriptor.ImplementsTypeDescriptor;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
+import com.sun.source.util.Trees;
 
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
@@ -427,6 +428,7 @@ public class AnnotationProcessor
             return new TypeMirrorResolver(
                 codeModel,
                 processingEnv.getElementUtils(),
+                Trees.instance(processingEnv),
                 errorType -> recorder.error(
                     SourceLocation.elementRef(errorType.asElement()),
                     "Missing or undefined type " + errorType.asElement().getSimpleName()));

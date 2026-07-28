@@ -34,6 +34,7 @@ import build.codemodel.foundation.naming.TypeName;
 import build.codemodel.foundation.usage.AnnotationTypeUsage;
 import build.codemodel.foundation.usage.AnnotationValue;
 import build.codemodel.foundation.usage.ArrayTypeUsage;
+import build.codemodel.foundation.usage.ExplicitAnnotationParens;
 import build.codemodel.foundation.usage.GenericTypeUsage;
 import build.codemodel.foundation.usage.IntersectionTypeUsage;
 import build.codemodel.foundation.usage.NamedTypeUsage;
@@ -68,6 +69,9 @@ import build.codemodel.objectoriented.descriptor.ImplementsTypeDescriptor;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
 import build.codemodel.objectoriented.descriptor.ParameterizedTypeDescriptor;
 import build.codemodel.objectoriented.naming.MethodName;
+import com.sun.source.tree.AnnotationTree;
+import com.sun.source.tree.Tree;
+import com.sun.source.util.Trees;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -105,6 +109,7 @@ import javax.lang.model.type.TypeVisitor;
 import javax.lang.model.type.UnionType;
 import javax.lang.model.type.WildcardType;
 import javax.lang.model.util.Elements;
+import javax.tools.Diagnostic;
 
 /**
  * Resolves a {@link TypeMirror} to a {@link TypeUsage} using a depth-first lazy-queue visitor.
@@ -124,16 +129,19 @@ public final class TypeMirrorResolver {
     private final CodeModel codeModel;
     private final NameProvider nameProvider;
     private final Elements elements;
+    private final Trees trees;
     private final Consumer<ErrorType> errorHandler;
     private final Memoizer<TypeElement, TypeName> typeNameCache = Memoizer.of(this::computeTypeName).concurrent().build();
 
     public TypeMirrorResolver(final CodeModel codeModel,
                               final Elements elements,
+                              final Trees trees,
                               final Consumer<ErrorType> errorHandler) {
 
         this.codeModel = codeModel;
         this.nameProvider = codeModel.getNameProvider();
         this.elements = elements;
+        this.trees = trees;
         this.errorHandler = errorHandler;
     }
 
@@ -280,7 +288,48 @@ public final class TypeMirrorResolver {
 
         final var annotationTypeUsage = AnnotationTypeUsage.of(codeModel, annotationTypeName, values.stream());
         annotationLocation.ifPresent(annotationTypeUsage::addTrait);
+        if (hasExplicitParens(enclosing, mirror)) {
+            annotationTypeUsage.addTrait(ExplicitAnnotationParens.EXPLICIT_ANNOTATION_PARENS);
+        }
         return annotationTypeUsage;
+    }
+
+    /**
+     * Determines whether {@code mirror}, as used on {@code enclosing}, was written with explicit
+     * parentheses in source (e.g. {@code @Foo()} rather than {@code @Foo}). Requires source to be
+     * available via {@link #trees}; without it (e.g. reflection-based population), this always
+     * reports {@code false} since the distinction cannot be recovered.
+     */
+    private boolean hasExplicitParens(final Element enclosing, final AnnotationMirror mirror) {
+        if (trees == null || enclosing == null) {
+            return false;
+        }
+
+        final Tree tree;
+        try {
+            tree = trees.getTree(enclosing, mirror);
+        } catch (final RuntimeException e) {
+            return false;
+        }
+        if (!(tree instanceof AnnotationTree annotationTree)) {
+            return false;
+        }
+        if (!annotationTree.getArguments().isEmpty()) {
+            return true;
+        }
+
+        final var path = trees.getPath(enclosing, mirror);
+        if (path == null) {
+            return false;
+        }
+
+        final var positions = trees.getSourcePositions();
+        final var unit = path.getCompilationUnit();
+        final var annotationEnd = positions.getEndPosition(unit, annotationTree);
+        final var identifierEnd = positions.getEndPosition(unit, annotationTree.getAnnotationType());
+        return annotationEnd != Diagnostic.NOPOS
+            && identifierEnd != Diagnostic.NOPOS
+            && annotationEnd > identifierEnd;
     }
 
     // --- Type name resolution ---

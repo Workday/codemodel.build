@@ -357,8 +357,8 @@ public class JdkInitializer
             final var javacTask = (JavacTask) task;
             final var compilationUnits = javacTask.parse();
             javacTask.analyze();
-            this.resolver = new TypeMirrorResolver(codeModel, javacTask.getElements(), null);
             this.trees = DocTrees.instance(javacTask);
+            this.resolver = new TypeMirrorResolver(codeModel, javacTask.getElements(), this.trees, null);
             this.exprConverter = new JdkExpressionConverter(codeModel);
             this.stmtConverter = new JdkStatementConverter(codeModel, this.exprConverter);
             this.exprConverter.setStmtConverter(this.stmtConverter);
