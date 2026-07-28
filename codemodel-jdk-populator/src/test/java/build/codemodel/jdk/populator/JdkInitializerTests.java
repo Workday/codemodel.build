@@ -12,6 +12,7 @@ import build.codemodel.foundation.usage.TypeUsage;
 import build.codemodel.foundation.usage.UnknownTypeUsage;
 import build.codemodel.jdk.JDKCodeModel;
 import build.codemodel.jdk.expression.NewObject;
+import build.codemodel.jdk.populator.descriptor.SourceLocation;
 import build.codemodel.jdk.statement.LocalVariableDeclaration;
 import build.codemodel.objectoriented.descriptor.AccessModifier;
 import build.codemodel.objectoriented.descriptor.Classification;
@@ -609,5 +610,56 @@ class JdkInitializerTests {
             .map(av -> av.value().toString())
             .toList();
         assertThat(tagValues).containsExactlyInAnyOrder("foo", "bar");
+    }
+
+    /**
+     * A record with no explicit canonical/compact constructor still gets a synthesized
+     * {@code MethodTree} for it once attribution runs, stamped with a real {@code start} (the
+     * record name's own position) but no {@code end} at all — it was never actually written. That
+     * used to leak through as a spurious constructor position duplicating the record's own (e.g. in
+     * {@code documentSymbol}); it should now be dropped instead of stamped.
+     */
+    @Test
+    void shouldNotStampPositionOnImplicitRecordConstructor() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Config",
+            """
+                package com.example;
+                public record Config(boolean http, java.util.List<String> roots) {
+                }
+                """);
+        final var codeModel = runInternal(new JdkInitializer(List.of(), List.of(), List.of(source)));
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Config");
+        final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
+        final var ctor = descriptor.traits(ConstructorDescriptor.class).findFirst().orElseThrow();
+
+        assertThat(ctor.getTrait(SourceLocation.FilePosition.class))
+            .as("implicit canonical constructor has no real source extent")
+            .isEmpty();
+    }
+
+    /**
+     * An explicit compact constructor, by contrast, was actually written and has a real body —
+     * it must still get a proper position.
+     */
+    @Test
+    void shouldStampPositionOnExplicitCompactConstructor() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Config",
+            """
+                package com.example;
+                public record Config(boolean http) {
+                    public Config {
+                    }
+                }
+                """);
+        final var codeModel = runInternal(new JdkInitializer(List.of(), List.of(), List.of(source)));
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Config");
+        final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
+        final var ctor = descriptor.traits(ConstructorDescriptor.class).findFirst().orElseThrow();
+
+        assertThat(ctor.getTrait(SourceLocation.FilePosition.class))
+            .as("explicit compact constructor has a real, written source extent")
+            .isPresent();
     }
 }

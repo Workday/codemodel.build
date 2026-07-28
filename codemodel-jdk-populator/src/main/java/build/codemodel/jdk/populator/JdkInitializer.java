@@ -704,13 +704,18 @@ public class JdkInitializer
         }
     }
 
+    /**
+     * A synthesized tree node can carry a real {@code start} with no {@code end} at all
+     * ({@link Diagnostic#NOPOS}) — it was never actually written, so it has no source extent.
+     * Skipping those avoids attaching a misleading position.
+     */
     private void addSourceLocation(final CompilationUnitTree cut,
                                    final Tree tree,
                                    final Traitable traitable) {
         final var srcPositions = trees.getSourcePositions();
         final var start = srcPositions.getStartPosition(cut, tree);
         final var end = srcPositions.getEndPosition(cut, tree);
-        if (start != Diagnostic.NOPOS) {
+        if (start != Diagnostic.NOPOS && end != Diagnostic.NOPOS) {
             traitable.addTrait(SourceLocation.filePosition(cut.getSourceFile().toUri(), start, end));
         }
     }
