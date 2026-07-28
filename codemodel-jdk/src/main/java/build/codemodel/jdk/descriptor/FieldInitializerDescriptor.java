@@ -23,6 +23,7 @@ package build.codemodel.jdk.descriptor;
 import build.base.foundation.iterator.Iterators;
 import build.base.mereology.Composite;
 import build.codemodel.expression.Expression;
+import build.codemodel.foundation.descriptor.Singular;
 import build.codemodel.foundation.descriptor.Trait;
 
 import java.util.Iterator;
@@ -34,6 +35,7 @@ import java.util.Objects;
  * @author reed.vonredwitz
  * @since Mar-2026
  */
+@Singular
 public final class FieldInitializerDescriptor
     implements Composite, Trait {
 

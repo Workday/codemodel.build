@@ -28,6 +28,7 @@ import build.base.marshalling.Marshalling;
 import build.base.marshalling.Out;
 import build.base.marshalling.Unmarshal;
 import build.base.mereology.Composite;
+import build.codemodel.foundation.descriptor.Singular;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.usage.TypeUsage;
 
@@ -42,6 +43,7 @@ import java.util.Objects;
  * @author reed.vonredwitz
  * @since Mar-2026
  */
+@Singular
 public final class ExpressionType implements Trait, Composite {
 
     /**

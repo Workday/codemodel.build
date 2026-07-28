@@ -21,6 +21,7 @@ package build.codemodel.objectoriented.descriptor;
  */
 
 import build.base.marshalling.Marshalling;
+import build.codemodel.foundation.descriptor.Singular;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.descriptor.Traitable;
 
@@ -30,6 +31,7 @@ import build.codemodel.foundation.descriptor.Traitable;
  * @author brian.oliver
  * @since Oct-2024
  */
+@Singular
 public enum Classification
     implements Trait {
 

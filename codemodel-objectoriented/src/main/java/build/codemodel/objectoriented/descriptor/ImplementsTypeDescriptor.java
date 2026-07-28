@@ -28,6 +28,7 @@ import build.base.marshalling.Marshalling;
 import build.base.marshalling.Out;
 import build.base.marshalling.Unmarshal;
 import build.codemodel.foundation.CodeModel;
+import build.codemodel.foundation.descriptor.NonSingular;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.descriptor.TypeDescriptor;
 import build.codemodel.foundation.usage.NamedTypeUsage;
@@ -42,6 +43,7 @@ import java.util.stream.Stream;
  * @author brian.oliver
  * @since May-2024
  */
+@NonSingular
 public final class ImplementsTypeDescriptor
     extends AbstractParentTypeDescriptor {
 

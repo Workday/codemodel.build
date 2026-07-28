@@ -30,6 +30,7 @@ import build.base.marshalling.Unmarshal;
 import build.base.mereology.Composite;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.AbstractTraitable;
+import build.codemodel.foundation.descriptor.NonSingular;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.descriptor.Traitable;
 import build.codemodel.foundation.descriptor.TypeDescriptor;
@@ -47,6 +48,7 @@ import java.util.stream.Stream;
  * @see TypeDescriptor
  * @since Mar-2024
  */
+@NonSingular
 public final class FieldDescriptor
     extends AbstractTraitable
     implements Trait, Traitable {

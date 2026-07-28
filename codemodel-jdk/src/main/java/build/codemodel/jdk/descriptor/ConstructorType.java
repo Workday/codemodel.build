@@ -20,6 +20,7 @@ package build.codemodel.jdk.descriptor;
  * #L%
  */
 
+import build.codemodel.foundation.descriptor.Singular;
 import build.codemodel.foundation.descriptor.Trait;
 
 import java.lang.reflect.Constructor;
@@ -32,6 +33,7 @@ import java.util.Objects;
  * @author brian.oliver
  * @since Oct-2024
  */
+@Singular
 public record ConstructorType(Constructor<?> constructor)
     implements Trait {
 

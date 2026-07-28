@@ -22,6 +22,7 @@ package build.codemodel.jdk.descriptor;
 
 import build.base.foundation.iterator.Iterators;
 import build.base.mereology.Composite;
+import build.codemodel.foundation.descriptor.NonSingular;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.imperative.Block;
 
@@ -34,6 +35,7 @@ import java.util.Objects;
  * @author reed.vonredwitz
  * @since May-2026
  */
+@NonSingular
 public final class InitializerBlockDescriptor
     implements Composite, Trait {
 

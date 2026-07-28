@@ -29,6 +29,7 @@ import build.base.marshalling.Out;
 import build.base.marshalling.Unmarshal;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.AbstractTraitable;
+import build.codemodel.foundation.descriptor.NonSingular;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.descriptor.Traitable;
 import build.codemodel.foundation.naming.IrreducibleName;
@@ -43,6 +44,7 @@ import java.util.stream.Stream;
  * @author reed.vonredwitz
  * @since Mar-2026
  */
+@NonSingular
 public final class EnumConstantDescriptor
     extends AbstractTraitable
     implements Trait, Traitable {

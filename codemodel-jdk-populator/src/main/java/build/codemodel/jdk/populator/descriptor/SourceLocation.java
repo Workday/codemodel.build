@@ -22,6 +22,7 @@ package build.codemodel.jdk.populator.descriptor;
 
 import build.base.foundation.UniformResource;
 import build.base.telemetry.Location;
+import build.codemodel.foundation.descriptor.Singular;
 import build.codemodel.foundation.descriptor.Trait;
 
 import java.net.URI;
@@ -47,12 +48,14 @@ public sealed interface SourceLocation extends Location, Trait {
 
     // --- Variants ---
 
+    @Singular
     record FilePosition(URI uri, long startPosition, long endPosition) implements SourceLocation {
         public static FilePosition of(final URI uri, final long startPosition, final long endPosition) {
             return new FilePosition(uri, startPosition, endPosition);
         }
     }
 
+    @Singular
     record ElementRef(Element element) implements SourceLocation {
         @Override
         public URI uri() {
@@ -72,6 +75,7 @@ public sealed interface SourceLocation extends Location, Trait {
         }
     }
 
+    @Singular
     record AnnotationRef(Element element, AnnotationMirror mirror) implements SourceLocation {
         @Override
         public URI uri() {
@@ -94,6 +98,7 @@ public sealed interface SourceLocation extends Location, Trait {
         }
     }
 
+    @Singular
     record AnnotationValueRef(Element element, AnnotationMirror mirror, AnnotationValue value)
         implements SourceLocation {
 

@@ -20,6 +20,7 @@ package build.codemodel.jdk.descriptor;
  * #L%
  */
 
+import build.codemodel.foundation.descriptor.Singular;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.naming.TypeName;
 
@@ -31,6 +32,7 @@ import java.util.Objects;
  * @author reed.vonredwitz
  * @since Mar-2026
  */
+@Singular
 public final class EnclosingTypeDescriptor implements Trait {
 
     /**

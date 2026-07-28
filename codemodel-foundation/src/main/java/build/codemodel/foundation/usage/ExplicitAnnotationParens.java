@@ -21,6 +21,7 @@ package build.codemodel.foundation.usage;
  */
 
 import build.base.marshalling.Marshalling;
+import build.codemodel.foundation.descriptor.Singular;
 import build.codemodel.foundation.descriptor.Trait;
 
 /**
@@ -36,6 +37,7 @@ import build.codemodel.foundation.descriptor.Trait;
  * @author reed.vonredwitz
  * @since Jul-2026
  */
+@Singular
 public enum ExplicitAnnotationParens
     implements Trait {
 
