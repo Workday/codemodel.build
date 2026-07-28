@@ -41,6 +41,7 @@ import build.codemodel.jdk.descriptor.OpenModule;
 import build.codemodel.jdk.descriptor.RecordComponentDescriptor;
 import build.codemodel.jdk.populator.descriptor.SourceLocation;
 import build.codemodel.objectoriented.descriptor.ConstructorDescriptor;
+import build.codemodel.objectoriented.descriptor.DeclarationOrder;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
 import build.codemodel.objectoriented.descriptor.ParameterizedTypeDescriptor;
 import com.sun.source.tree.AnnotationTree;
@@ -578,12 +579,13 @@ public class JdkInitializer
             .sorted(java.util.Comparator.comparingLong(m -> srcPositions.getStartPosition(cut, m)))
             .toList();
         int enumConstantOrder = 0;
+        int memberOrder = 0;
         for (final var member : sortedMembers) {
             final var path = new TreePath(classPath, member);
             final var elem = trees.getElement(path);
             if (member instanceof VariableTree vt && elem instanceof VariableElement ve) {
                 if (ve.getKind() == ElementKind.FIELD) {
-                    processField(typeDescriptor, ve, vt, cut, bodyTasks);
+                    processField(typeDescriptor, ve, vt, cut, bodyTasks, memberOrder++);
                 } else if (ve.getKind() == ElementKind.ENUM_CONSTANT) {
                     final var name = nameProvider.getIrreducibleName(ve.getSimpleName());
                     final var enumConstantDescriptor = EnumConstantDescriptor.of(codeModel, name, enumConstantOrder++);
@@ -592,9 +594,9 @@ public class JdkInitializer
                 }
             } else if (member instanceof MethodTree mt && elem instanceof ExecutableElement ee) {
                 if (ee.getKind() == ElementKind.CONSTRUCTOR) {
-                    processConstructor(typeDescriptor, ee, mt, cut, bodyTasks);
+                    processConstructor(typeDescriptor, ee, mt, cut, bodyTasks, memberOrder++);
                 } else if (ee.getKind() == ElementKind.METHOD) {
-                    processMethod(typeDescriptor, ee, mt, cut, bodyTasks);
+                    processMethod(typeDescriptor, ee, mt, cut, bodyTasks, memberOrder++);
                 }
             } else if (member instanceof BlockTree bt) {
                 bodyTasks.add(() -> typeDescriptor.addTrait(
@@ -607,13 +609,15 @@ public class JdkInitializer
                               final VariableElement fieldElement,
                               final VariableTree varTree,
                               final CompilationUnitTree cut,
-                              final List<Runnable> bodyTasks) {
+                              final List<Runnable> bodyTasks,
+                              final int order) {
         final var fieldDescriptor = resolver.createFieldDescriptor(fieldElement);
         addSourceLocation(cut, varTree, fieldDescriptor);
         if (varTree.getType() != null) {
             addSourceLocation(cut, varTree.getType(), fieldDescriptor.type());
         }
 
+        fieldDescriptor.addTrait(new DeclarationOrder(order));
         typeDescriptor.addTrait(fieldDescriptor);
 
         if (varTree.getInitializer() != null) {
@@ -626,7 +630,8 @@ public class JdkInitializer
                                     final ExecutableElement methodElement,
                                     final MethodTree ctorTree,
                                     final CompilationUnitTree cut,
-                                    final List<Runnable> bodyTasks) {
+                                    final List<Runnable> bodyTasks,
+                                    final int order) {
         final var formalParameters = getFormalParameters(methodElement, ctorTree, cut);
 
         final var constructorDescriptor = ConstructorDescriptor.of(typeDescriptor, formalParameters);
@@ -636,6 +641,7 @@ public class JdkInitializer
         addThrowsSourceLocations(constructorDescriptor, ctorTree.getThrows(), cut);
         addTypeParameterBoundSourceLocations(constructorDescriptor, ctorTree.getTypeParameters(), cut);
 
+        constructorDescriptor.addTrait(new DeclarationOrder(order));
         typeDescriptor.addTrait(constructorDescriptor);
 
         if (ctorTree.getBody() != null) {
@@ -672,7 +678,8 @@ public class JdkInitializer
                                final ExecutableElement methodElement,
                                final MethodTree methodTree,
                                final CompilationUnitTree cut,
-                               final List<Runnable> bodyTasks) {
+                               final List<Runnable> bodyTasks,
+                               final int order) {
         final var returnType = resolver.resolve(methodElement.getReturnType(), methodElement);
         final var methodName = resolver.methodName(typeDescriptor, methodElement);
 
@@ -688,6 +695,7 @@ public class JdkInitializer
         addThrowsSourceLocations(methodDescriptor, methodTree.getThrows(), cut);
         addTypeParameterBoundSourceLocations(methodDescriptor, methodTree.getTypeParameters(), cut);
 
+        methodDescriptor.addTrait(new DeclarationOrder(order));
         typeDescriptor.addTrait(methodDescriptor);
 
         if (methodTree.getBody() != null) {

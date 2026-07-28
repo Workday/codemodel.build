@@ -52,6 +52,7 @@ import build.codemodel.jdk.descriptor.JDKTypeDescriptor;
 import build.codemodel.jdk.populator.TypeMirrorResolver;
 import build.codemodel.jdk.populator.descriptor.SourceLocation;
 import build.codemodel.objectoriented.descriptor.ConstructorDescriptor;
+import build.codemodel.objectoriented.descriptor.DeclarationOrder;
 import build.codemodel.objectoriented.descriptor.ExtendsTypeDescriptor;
 import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 import build.codemodel.objectoriented.descriptor.ImplementsTypeDescriptor;
@@ -66,6 +67,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -79,7 +81,6 @@ import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.SupportedSourceVersion;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
-import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
@@ -444,9 +445,11 @@ public class AnnotationProcessor
     private FieldDescriptor createFieldDescriptor(final CodeModel codeModel,
                                                   final TypeDescriptor typeDescriptor,
                                                   final VariableElement fieldElement,
-                                                  final LinkedHashMap<TypeName, TypeElement> pending) {
+                                                  final LinkedHashMap<TypeName, TypeElement> pending,
+                                                  final int order) {
         final var fieldDescriptor = resolver().createFieldDescriptor(fieldElement);
         fieldDescriptor.addTrait(SourceLocation.elementRef(fieldElement));
+        fieldDescriptor.addTrait(new DeclarationOrder(order));
 
         typeDescriptor.addTrait(fieldDescriptor);
 
@@ -469,7 +472,8 @@ public class AnnotationProcessor
     private ConstructorDescriptor createConstructorDescriptor(final CodeModel codeModel,
                                                               final JDKTypeDescriptor typeDescriptor,
                                                               final ExecutableElement constructorElement,
-                                                              final LinkedHashMap<TypeName, TypeElement> pending) {
+                                                              final LinkedHashMap<TypeName, TypeElement> pending,
+                                                              final int order) {
         final var formalParameters = resolver().getFormalParameters(constructorElement,
             (variable, pd) -> pd.addTrait(SourceLocation.elementRef(variable)));
 
@@ -477,6 +481,7 @@ public class AnnotationProcessor
         resolver().modifyConstructor(constructorDescriptor, constructorElement);
 
         constructorDescriptor.addTrait(SourceLocation.elementRef(constructorElement));
+        constructorDescriptor.addTrait(new DeclarationOrder(order));
 
         typeDescriptor.addTrait(constructorDescriptor);
 
@@ -498,7 +503,8 @@ public class AnnotationProcessor
     private MethodDescriptor createMethodDescriptor(final CodeModel codeModel,
                                                     final JDKTypeDescriptor typeDescriptor,
                                                     final ExecutableElement methodElement,
-                                                    final LinkedHashMap<TypeName, TypeElement> pending) {
+                                                    final LinkedHashMap<TypeName, TypeElement> pending,
+                                                    final int order) {
         final var returnType = resolver().resolve(methodElement.getReturnType(), methodElement);
         final var methodName = resolver().methodName(typeDescriptor, methodElement);
 
@@ -509,6 +515,7 @@ public class AnnotationProcessor
         resolver().modifyMethod(methodDescriptor, methodElement);
 
         methodDescriptor.addTrait(SourceLocation.elementRef(methodElement));
+        methodDescriptor.addTrait(new DeclarationOrder(order));
 
 
         // include the MethodDescriptor in the TypeDescriptor
@@ -551,23 +558,26 @@ public class AnnotationProcessor
 
             messager.printNote("Discovered TypeName [" + typeName + "]", typeElement);
 
-            // discover the FieldDescriptors
-            typeElement.getEnclosedElements().stream()
-                .filter(enclosing -> enclosing.getKind() == ElementKind.FIELD)
-                .map(VariableElement.class::cast)
-                .forEach(enclosing -> createFieldDescriptor(codeModel, typeDescriptor, enclosing, pending));
-
-            // discover the ConstructorDescriptors
-            typeElement.getEnclosedElements().stream()
-                .filter(enclosing -> enclosing.getKind() == ElementKind.CONSTRUCTOR)
-                .map(ExecutableElement.class::cast)
-                .forEach(enclosing -> createConstructorDescriptor(codeModel, typeDescriptor, enclosing, pending));
-
-            // discover the MethodDescriptors
-            typeElement.getEnclosedElements().stream()
-                .filter(enclosing -> enclosing.getKind() == ElementKind.METHOD)
-                .map(ExecutableElement.class::cast)
-                .forEach(enclosing -> createMethodDescriptor(codeModel, typeDescriptor, enclosing, pending));
+            // discover the FieldDescriptors, ConstructorDescriptors, and MethodDescriptors, sharing a single
+            // DeclarationOrder counter across all three kinds (assigned in enclosedElements order, i.e. source
+            // declaration order) so the trait reflects each member's position among all members, not just
+            // among its own kind
+            final var memberOrder = new AtomicInteger();
+            for (final var enclosing : typeElement.getEnclosedElements()) {
+                switch (enclosing.getKind()) {
+                    case FIELD -> createFieldDescriptor(
+                        codeModel, typeDescriptor, (VariableElement) enclosing, pending,
+                        memberOrder.getAndIncrement());
+                    case CONSTRUCTOR -> createConstructorDescriptor(
+                        codeModel, typeDescriptor, (ExecutableElement) enclosing, pending,
+                        memberOrder.getAndIncrement());
+                    case METHOD -> createMethodDescriptor(
+                        codeModel, typeDescriptor, (ExecutableElement) enclosing, pending,
+                        memberOrder.getAndIncrement());
+                    default -> {
+                    }
+                }
+            }
 
             // ensure the discovery of types used by the TypePrototype
             typeDescriptor.composition(TypeUsage.class)

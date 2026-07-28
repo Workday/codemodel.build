@@ -21,7 +21,8 @@ package build.codemodel.jdk.populator;
  */
 
 import build.base.compile.testing.JavaFileObjects;
-import build.codemodel.jdk.populator.descriptor.SourceLocation;
+import build.codemodel.objectoriented.descriptor.ConstructorDescriptor;
+import build.codemodel.objectoriented.descriptor.DeclarationOrder;
 import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
 import org.junit.jupiter.api.Test;
@@ -32,7 +33,12 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests that member declaration order matches source order via {@link JdkInitializer}.
+ * Tests that member declaration order matches source order via {@link JdkInitializer}, as recorded by the
+ * {@link DeclarationOrder} trait each member is stamped with.
+ *
+ * <p>Assertions sort by {@link DeclarationOrder#order()} specifically (not by
+ * {@code SourceLocation.FilePosition}, which every member also carries) so that a regression in the trait
+ * itself — rather than just a regression in source-position tracking — fails these tests.
  *
  * @author reed.vonredwitz
  * @since May-2026
@@ -59,7 +65,7 @@ class MemberOrderTests {
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
 
         final var fieldNames = descriptor.traits(FieldDescriptor.class)
-            .sorted(Comparator.comparingLong(f -> f.trait(SourceLocation.FilePosition.class).startPosition()))
+            .sorted(Comparator.comparingInt(f -> f.trait(DeclarationOrder.class).order()))
             .map(f -> f.fieldName().toString())
             .toList();
 
@@ -85,10 +91,36 @@ class MemberOrderTests {
         final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
 
         final var methodNames = descriptor.traits(MethodDescriptor.class)
-            .sorted(Comparator.comparingLong(m -> m.trait(SourceLocation.FilePosition.class).startPosition()))
+            .sorted(Comparator.comparingInt(m -> m.trait(DeclarationOrder.class).order()))
             .map(m -> m.methodName().name().toString())
             .toList();
 
         assertThat(methodNames).containsExactly("first", "second", "third");
+    }
+
+    @Test
+    void constructorsShouldBeReturnedInSourceDeclarationOrder() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Ordered", """
+                package com.example;
+                public class Ordered {
+                    public Ordered() {}
+                    public Ordered(int a) {}
+                    public Ordered(int a, int b) {}
+                }
+                """);
+
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Ordered");
+        final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
+
+        final var constructorParameterCounts = descriptor.traits(ConstructorDescriptor.class)
+            .sorted(Comparator.comparingInt(c -> c.trait(DeclarationOrder.class).order()))
+            .map(ConstructorDescriptor::getFormalParameterCount)
+            .toList();
+
+        assertThat(constructorParameterCounts).containsExactly(0, 1, 2);
     }
 }
