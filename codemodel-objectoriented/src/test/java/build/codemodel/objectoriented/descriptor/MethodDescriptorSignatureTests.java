@@ -47,16 +47,18 @@ import java.util.stream.Stream;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Locks down the contract of {@link MethodDescriptor#signature()}, which is the key used by
- * {@code InjectionFramework} to detect method overrides and deduplicate injection points as it walks the
- * type hierarchy from leaf to root.
+ * Locks down the contract of {@link MethodDescriptor#signature()}, the human-readable Java-like rendering of a
+ * method (e.g. {@code "void doWork(java.lang.String)"}).
  *
- * <p>The signature format depends on the {@link AccessModifier} trait and the method's namespace:
+ * <p>Unlike {@link MethodDescriptor#overrideKey()} (see {@link MethodDescriptorOverrideKeyTests}),
+ * {@code signature()} never includes the declaring type's namespace and ignores the {@link AccessModifier}
+ * trait entirely — it exists purely for display.
+ *
  * <ul>
- *   <li>PUBLIC / PROTECTED — {@code "<returnType> <name>(<paramTypes>)"}</li>
- *   <li>package-private (no modifier) with namespace — {@code "<namespace> <returnType> <name>(<paramTypes>)"}</li>
- *   <li>PRIVATE with namespace — {@code "<namespace>.<returnType> <name>(<paramTypes>)"}</li>
- *   <li>all return types — always present via {@link TypeUsage#canonicalName()}, module qualifier stripped</li>
+ *   <li>format — {@code "<returnType> <name>(<paramTypes>)"}</li>
+ *   <li>all return types — always present via {@link TypeUsage#canonicalName()}, module qualifier stripped,
+ *       and the synthetic {@code java.lang} namespace stripped from primitives (e.g. {@code void}, not
+ *       {@code java.lang.void})</li>
  *   <li>multiple parameters — comma-separated via {@link TypeUsage#canonicalName()}</li>
  * </ul>
  *
@@ -68,7 +70,6 @@ class MethodDescriptorSignatureTests {
     private NonCachingNameProvider naming;
     private ObjectOrientedCodeModel codeModel;
     private ClassTypeDescriptor declaringType;
-    private Optional<Namespace> classNamespace;
 
     @BeforeEach
     void setUp() {
@@ -76,7 +77,6 @@ class MethodDescriptorSignatureTests {
         codeModel = new ObjectOrientedCodeModel(naming);
         declaringType = ClassTypeDescriptor.of(codeModel,
             naming.getEmptyModuleTypeName("com.example.MyService"));
-        classNamespace = Namespace.of(IrreducibleName.of("com.example.MyService"));
     }
 
     private TypeUsage specific(final String qualifiedName) {
@@ -100,37 +100,20 @@ class MethodDescriptorSignatureTests {
         return MethodDescriptor.of(declaringType, methodName, returnType, Stream.of(params));
     }
 
-    private MethodDescriptor withModifier(final MethodDescriptor descriptor, final AccessModifier modifier) {
-        descriptor.addTrait(modifier);
-        return descriptor;
-    }
-
-    // --- PUBLIC and PROTECTED: no namespace prefix ---
+    // --- Access modifier and namespace are irrelevant to signature() ---
 
     @Test
-    void publicMethod_namedReturn_noParams() {
-        final var descriptor = withModifier(
-            method("getValue", specific("java.lang.String"), Optional.empty()),
-            AccessModifier.PUBLIC);
+    void namedReturn_noParams() {
+        final var descriptor = method("getValue", specific("java.lang.String"), Optional.empty());
 
         assertThat(descriptor.signature()).isEqualTo("java.lang.String getValue()");
     }
 
     @Test
-    void protectedMethod_producesIdenticalFormatToPublic() {
-        final var descriptor = withModifier(
-            method("getValue", specific("java.lang.String"), Optional.empty()),
-            AccessModifier.PROTECTED);
-
-        assertThat(descriptor.signature()).isEqualTo("java.lang.String getValue()");
-    }
-
-    @Test
-    void publicMethod_namespaceIsIgnored() {
-        // namespace on the MethodName is only used for private / package-private methods
-        final var descriptor = withModifier(
-            method("getValue", specific("java.lang.String"), classNamespace),
-            AccessModifier.PUBLIC);
+    void namespaceIsIgnored() {
+        // namespace on the MethodName only affects overrideKey(), never signature()
+        final var classNamespace = Namespace.of(IrreducibleName.of("com.example.MyService"));
+        final var descriptor = method("getValue", specific("java.lang.String"), classNamespace);
 
         assertThat(descriptor.signature()).isEqualTo("java.lang.String getValue()");
     }
@@ -138,14 +121,29 @@ class MethodDescriptorSignatureTests {
     // --- Return type variations ---
 
     @Test
-    void voidTypeUsage_appearsAsJavaLangVoidInSignature() {
-        // VoidTypeUsage IS a NamedTypeUsage; its canonical name is "java.lang.void".
-        // The return type is therefore included in the signature — it is not omitted.
-        final var descriptor = withModifier(
-            method("init", VoidTypeUsage.create(codeModel), Optional.empty()),
-            AccessModifier.PUBLIC);
+    void voidTypeUsage_stripsSyntheticJavaLangNamespace() {
+        // VoidTypeUsage IS a NamedTypeUsage; its canonical name is "java.lang.void" internally, but
+        // primitives don't actually live in java.lang, so the synthetic namespace is stripped for display.
+        final var descriptor = method("init", VoidTypeUsage.create(codeModel), Optional.empty());
 
-        assertThat(descriptor.signature()).isEqualTo("java.lang.void init()");
+        assertThat(descriptor.signature()).isEqualTo("void init()");
+    }
+
+    @Test
+    void intReturnType_stripsSyntheticJavaLangNamespace() {
+        // Non-void primitives are also (mis)represented internally under the synthetic java.lang
+        // namespace (e.g. "java.lang.int"); confirm the stripping isn't void-specific.
+        final var descriptor = method("size", specific("java.lang.int"), Optional.empty());
+
+        assertThat(descriptor.signature()).isEqualTo("int size()");
+    }
+
+    @Test
+    void booleanParamType_stripsSyntheticJavaLangNamespace() {
+        final var descriptor = method("setEnabled", VoidTypeUsage.create(codeModel), Optional.empty(),
+            param(specific("java.lang.boolean")));
+
+        assertThat(descriptor.signature()).isEqualTo("void setEnabled(boolean)");
     }
 
     @Test
@@ -154,18 +152,14 @@ class MethodDescriptorSignatureTests {
         final var stringUsage = specific("java.lang.String");
         final var listOfString = GenericTypeUsage.of(codeModel, listName, (TypeUsage) stringUsage);
 
-        final var descriptor = withModifier(
-            method("items", listOfString, Optional.empty()),
-            AccessModifier.PUBLIC);
+        final var descriptor = method("items", listOfString, Optional.empty());
 
         assertThat(descriptor.signature()).isEqualTo("java.util.List<java.lang.String> items()");
     }
 
     @Test
     void moduleQualifiedReturnType_canonicalNameStripsModule() {
-        final var descriptor = withModifier(
-            method("getValue", specificWithModule("java.base", "java.lang.String"), Optional.empty()),
-            AccessModifier.PUBLIC);
+        final var descriptor = method("getValue", specificWithModule("java.base", "java.lang.String"), Optional.empty());
 
         assertThat(descriptor.signature()).isEqualTo("java.lang.String getValue()");
     }
@@ -176,9 +170,7 @@ class MethodDescriptorSignatureTests {
         // the return type was silently omitted from the signature entirely. This test locks down
         // that canonicalName() is called unconditionally so array returns are never dropped.
         final var stringArray = ArrayTypeUsage.of(codeModel, Lazy.of(specific("java.lang.String")));
-        final var descriptor = withModifier(
-            method("getItems", stringArray, Optional.empty()),
-            AccessModifier.PUBLIC);
+        final var descriptor = method("getItems", stringArray, Optional.empty());
 
         assertThat(descriptor.signature()).isEqualTo("java.lang.String[] getItems()");
     }
@@ -188,12 +180,10 @@ class MethodDescriptorSignatureTests {
         // This is the critical regression case: if signature() ever reverts to toString()
         // or uses TypeName#toString() instead of TypeUsage#canonicalName(), the module
         // qualifier bleeds in and the super/sub signatures diverge, silently breaking DI
-        // override detection.
+        // override detection (see MethodDescriptorOverrideKeyTests).
         final var stringArray = ArrayTypeUsage.of(codeModel,
             Lazy.of(specificWithModule("java.base", "java.lang.String")));
-        final var descriptor = withModifier(
-            method("getItems", stringArray, Optional.empty()),
-            AccessModifier.PUBLIC);
+        final var descriptor = method("getItems", stringArray, Optional.empty());
 
         assertThat(descriptor.signature()).isEqualTo("java.lang.String[] getItems()");
     }
@@ -202,9 +192,7 @@ class MethodDescriptorSignatureTests {
     void annotationReturnType_noValues_noModule() {
         final var annotation = AnnotationTypeUsage.of(codeModel,
             naming.getEmptyModuleTypeName("com.example.Qualifier"));
-        final var descriptor = withModifier(
-            method("getQualifier", annotation, Optional.empty()),
-            AccessModifier.PUBLIC);
+        final var descriptor = method("getQualifier", annotation, Optional.empty());
 
         assertThat(descriptor.signature()).isEqualTo("@com.example.Qualifier() getQualifier()");
     }
@@ -213,9 +201,7 @@ class MethodDescriptorSignatureTests {
     void annotationReturnType_withModule_canonicalNameStripsModule() {
         final var annotation = AnnotationTypeUsage.of(codeModel,
             naming.getTypeName(naming.getModuleName("java.base"), "java.lang.annotation.Retention"));
-        final var descriptor = withModifier(
-            method("getRetention", annotation, Optional.empty()),
-            AccessModifier.PUBLIC);
+        final var descriptor = method("getRetention", annotation, Optional.empty());
 
         assertThat(descriptor.signature()).isEqualTo("@java.lang.annotation.Retention() getRetention()");
     }
@@ -225,9 +211,7 @@ class MethodDescriptorSignatureTests {
         final var annotation = AnnotationTypeUsage.of(codeModel,
             naming.getEmptyModuleTypeName("com.example.Named"),
             AnnotationValue.of(codeModel, "value", "foo"));
-        final var descriptor = withModifier(
-            method("getNamed", annotation, Optional.empty()),
-            AccessModifier.PUBLIC);
+        final var descriptor = method("getNamed", annotation, Optional.empty());
 
         assertThat(descriptor.signature()).isEqualTo("@com.example.Named(foo) getNamed()");
     }
@@ -236,9 +220,7 @@ class MethodDescriptorSignatureTests {
     void typeVariableReturnType_unbounded() {
         final var tName = naming.getEmptyModuleTypeName("T");
         final var tUsage = TypeVariableUsage.of(codeModel, tName, Optional.empty(), Optional.empty());
-        final var descriptor = withModifier(
-            method("getItem", tUsage, Optional.empty()),
-            AccessModifier.PUBLIC);
+        final var descriptor = method("getItem", tUsage, Optional.empty());
 
         assertThat(descriptor.signature()).isEqualTo("T getItem()");
     }
@@ -249,18 +231,14 @@ class MethodDescriptorSignatureTests {
         final var numberUsage = specificWithModule("java.base", "java.lang.Number");
         final var tUsage = TypeVariableUsage.of(codeModel, tName, Optional.empty(),
             Optional.of(Lazy.of(numberUsage)));
-        final var descriptor = withModifier(
-            method("getNumber", tUsage, Optional.empty()),
-            AccessModifier.PUBLIC);
+        final var descriptor = method("getNumber", tUsage, Optional.empty());
 
         assertThat(descriptor.signature()).isEqualTo("T extends java.lang.Number getNumber()");
     }
 
     @Test
     void unknownTypeReturnType_appearsAsNull() {
-        final var descriptor = withModifier(
-            method("getUnresolved", UnknownTypeUsage.create(codeModel), Optional.empty()),
-            AccessModifier.PUBLIC);
+        final var descriptor = method("getUnresolved", UnknownTypeUsage.create(codeModel), Optional.empty());
 
         assertThat(descriptor.signature()).isEqualTo("null getUnresolved()");
     }
@@ -274,9 +252,7 @@ class MethodDescriptorSignatureTests {
         final var union = UnionTypeUsage.of(codeModel,
             specific("java.lang.Exception"),
             specific("java.io.IOException"));
-        final var descriptor = withModifier(
-            method("doThrow", union, Optional.empty()),
-            AccessModifier.PUBLIC);
+        final var descriptor = method("doThrow", union, Optional.empty());
 
         assertThat(descriptor.signature()).isEqualTo(" java.lang.Exception | java.io.IOException doThrow()");
     }
@@ -286,9 +262,7 @@ class MethodDescriptorSignatureTests {
         final var union = UnionTypeUsage.of(codeModel,
             specificWithModule("java.base", "java.lang.Exception"),
             specificWithModule("java.base", "java.io.IOException"));
-        final var descriptor = withModifier(
-            method("doThrow", union, Optional.empty()),
-            AccessModifier.PUBLIC);
+        final var descriptor = method("doThrow", union, Optional.empty());
 
         assertThat(descriptor.signature()).isEqualTo(" java.lang.Exception | java.io.IOException doThrow()");
     }
@@ -298,9 +272,7 @@ class MethodDescriptorSignatureTests {
         final var intersection = IntersectionTypeUsage.of(codeModel,
             specific("java.io.Serializable"),
             specific("java.lang.Comparable"));
-        final var descriptor = withModifier(
-            method("get", intersection, Optional.empty()),
-            AccessModifier.PUBLIC);
+        final var descriptor = method("get", intersection, Optional.empty());
 
         assertThat(descriptor.signature()).isEqualTo(" java.io.Serializable & java.lang.Comparable get()");
     }
@@ -310,9 +282,7 @@ class MethodDescriptorSignatureTests {
         final var intersection = IntersectionTypeUsage.of(codeModel,
             specificWithModule("java.base", "java.io.Serializable"),
             specificWithModule("java.base", "java.lang.Comparable"));
-        final var descriptor = withModifier(
-            method("get", intersection, Optional.empty()),
-            AccessModifier.PUBLIC);
+        final var descriptor = method("get", intersection, Optional.empty());
 
         assertThat(descriptor.signature()).isEqualTo(" java.io.Serializable & java.lang.Comparable get()");
     }
@@ -320,34 +290,28 @@ class MethodDescriptorSignatureTests {
     // --- Parameter variations ---
 
     @Test
-    void publicMethod_oneNamedParam() {
-        final var descriptor = withModifier(
-            method("transform", specific("java.lang.String"), Optional.empty(),
-                param(specific("java.lang.String"))),
-            AccessModifier.PUBLIC);
+    void oneNamedParam() {
+        final var descriptor = method("transform", specific("java.lang.String"), Optional.empty(),
+            param(specific("java.lang.String")));
 
         assertThat(descriptor.signature()).isEqualTo("java.lang.String transform(java.lang.String)");
     }
 
     @Test
-    void publicMethod_twoParams_commaSeparated() {
-        final var descriptor = withModifier(
-            method("set", VoidTypeUsage.create(codeModel), Optional.empty(),
-                param(specific("java.lang.String")),
-                param(specific("java.lang.Integer"))),
-            AccessModifier.PUBLIC);
+    void twoParams_commaSeparated() {
+        final var descriptor = method("set", VoidTypeUsage.create(codeModel), Optional.empty(),
+            param(specific("java.lang.String")),
+            param(specific("java.lang.Integer")));
 
-        assertThat(descriptor.signature()).isEqualTo("java.lang.void set(java.lang.String, java.lang.Integer)");
+        assertThat(descriptor.signature()).isEqualTo("void set(java.lang.String, java.lang.Integer)");
     }
 
     @Test
     void moduleQualifiedParamType_canonicalNameStripsModule() {
-        final var descriptor = withModifier(
-            method("set", VoidTypeUsage.create(codeModel), Optional.empty(),
-                param(specificWithModule("java.base", "java.lang.String"))),
-            AccessModifier.PUBLIC);
+        final var descriptor = method("set", VoidTypeUsage.create(codeModel), Optional.empty(),
+            param(specificWithModule("java.base", "java.lang.String")));
 
-        assertThat(descriptor.signature()).isEqualTo("java.lang.void set(java.lang.String)");
+        assertThat(descriptor.signature()).isEqualTo("void set(java.lang.String)");
     }
 
     @Test
@@ -355,127 +319,9 @@ class MethodDescriptorSignatureTests {
         // ArrayTypeUsage is NOT a NamedTypeUsage, so the signature falls back to type.toString()
         // for the parameter — unlike SpecificTypeUsage, which uses typeName().canonicalName().
         final var stringArray = ArrayTypeUsage.of(codeModel, Lazy.of(specific("java.lang.String")));
-        final var descriptor = withModifier(
-            method("setItems", specific("java.lang.String"), Optional.empty(),
-                param(stringArray)),
-            AccessModifier.PUBLIC);
+        final var descriptor = method("setItems", specific("java.lang.String"), Optional.empty(),
+            param(stringArray));
 
         assertThat(descriptor.signature()).isEqualTo("java.lang.String setItems(" + stringArray + ")");
-    }
-
-    // --- Package-private (null modifier): namespace prepended with space ---
-
-    @Test
-    void packagePrivate_withNamespace_prependsNamespaceWithSpace() {
-        final var descriptor = method("doWork", specific("java.lang.String"), classNamespace);
-        // no addTrait call → AccessModifier stays null
-
-        assertThat(descriptor.signature()).isEqualTo("com.example.MyService java.lang.String doWork()");
-    }
-
-    @Test
-    void packagePrivate_noNamespace_noPrefix() {
-        final var descriptor = method("doWork", specific("java.lang.String"), Optional.empty());
-
-        assertThat(descriptor.signature()).isEqualTo("java.lang.String doWork()");
-    }
-
-    @Test
-    void packagePrivate_voidReturn_withNamespace() {
-        final var descriptor = method("doWork", VoidTypeUsage.create(codeModel), classNamespace);
-
-        assertThat(descriptor.signature()).isEqualTo("com.example.MyService java.lang.void doWork()");
-    }
-
-    // --- PRIVATE: namespace prepended with dot ---
-
-    @Test
-    void private_withNamespace_prependsNamespaceWithDot() {
-        final var descriptor = withModifier(
-            method("doSecret", specific("java.lang.String"), classNamespace),
-            AccessModifier.PRIVATE);
-
-        assertThat(descriptor.signature()).isEqualTo("com.example.MyService.java.lang.String doSecret()");
-    }
-
-    @Test
-    void private_noNamespace_noPrefix() {
-        final var descriptor = withModifier(
-            method("doSecret", specific("java.lang.String"), Optional.empty()),
-            AccessModifier.PRIVATE);
-
-        assertThat(descriptor.signature()).isEqualTo("java.lang.String doSecret()");
-    }
-
-    // --- DI-critical: override detection ---
-
-    @Test
-    void overridingMethod_producesIdenticalSignature_enablingInjectionPointDeduplication() {
-        // InjectionFramework walks the hierarchy from leaf → root. For each method it calls
-        // injectionPoints.remove(signature) then conditionally puts the current one back.
-        // Override detection only works if super and sub produce the same signature string.
-
-        final var superType = ClassTypeDescriptor.of(codeModel,
-            naming.getEmptyModuleTypeName("com.example.SuperService"));
-        final var subType = ClassTypeDescriptor.of(codeModel,
-            naming.getEmptyModuleTypeName("com.example.ConcreteService"));
-
-        final var methodName = IrreducibleName.of("setFoo");
-        final var fooType = specific("com.example.Foo");
-
-        final var superMethod = withModifier(
-            MethodDescriptor.of(superType,
-                MethodName.of(Optional.empty(), Optional.empty(), Optional.empty(), methodName),
-                VoidTypeUsage.create(codeModel),
-                Stream.of(param(fooType))),
-            AccessModifier.PUBLIC);
-
-        final var subMethod = withModifier(
-            MethodDescriptor.of(subType,
-                MethodName.of(Optional.empty(), Optional.empty(), Optional.empty(), methodName),
-                VoidTypeUsage.create(codeModel),
-                Stream.of(param(fooType))),
-            AccessModifier.PUBLIC);
-
-        assertThat(superMethod.signature())
-            .isEqualTo(subMethod.signature())
-            .isEqualTo("java.lang.void setFoo(com.example.Foo)");
-    }
-
-    @Test
-    void privateOverride_differentSignatures_notDeduplicatedByDI() {
-        // PRIVATE methods are not polymorphic — each class keeps its own copy.
-        // InjectionFramework relies on them having distinct signatures so that
-        // the subclass's private @Inject method doesn't accidentally remove the
-        // superclass's private @Inject method from the injection point map.
-
-        final var superNamespace = Namespace.of(IrreducibleName.of("com.example.SuperService"));
-        final var subNamespace = Namespace.of(IrreducibleName.of("com.example.ConcreteService"));
-
-        final var superType = ClassTypeDescriptor.of(codeModel,
-            naming.getEmptyModuleTypeName("com.example.SuperService"));
-        final var subType = ClassTypeDescriptor.of(codeModel,
-            naming.getEmptyModuleTypeName("com.example.ConcreteService"));
-
-        final var methodName = IrreducibleName.of("injectInternal");
-        final var fooType = specific("com.example.Foo");
-
-        final var superMethod = withModifier(
-            MethodDescriptor.of(superType,
-                MethodName.of(Optional.empty(), superNamespace, Optional.empty(), methodName),
-                VoidTypeUsage.create(codeModel),
-                Stream.of(param(fooType))),
-            AccessModifier.PRIVATE);
-
-        final var subMethod = withModifier(
-            MethodDescriptor.of(subType,
-                MethodName.of(Optional.empty(), subNamespace, Optional.empty(), methodName),
-                VoidTypeUsage.create(codeModel),
-                Stream.of(param(fooType))),
-            AccessModifier.PRIVATE);
-
-        assertThat(superMethod.signature()).isEqualTo("com.example.SuperService.java.lang.void injectInternal(com.example.Foo)");
-        assertThat(subMethod.signature()).isEqualTo("com.example.ConcreteService.java.lang.void injectInternal(com.example.Foo)");
-        assertThat(superMethod.signature()).isNotEqualTo(subMethod.signature());
     }
 }

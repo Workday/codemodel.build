@@ -201,17 +201,17 @@ public class InjectionFramework {
             // (removing those that are overridden)
             currentTypeDescriptor.declaredMethods()
                 .forEach(methodDescriptor -> {
-                    final var signature = methodDescriptor.signature();
+                    final var overrideKey = methodDescriptor.overrideKey();
 
-                    // remove any previous MethodInjectionPoint with the same signature
+                    // remove any previous MethodInjectionPoint with the same overrideKey
                     // (as the current class is overriding it)
-                    injectionPoints.remove(signature);
+                    injectionPoints.remove(overrideKey);
 
                     if (isInjectionPoint(methodDescriptor)) {
                         final var methodInjectionPoint = MethodInjectionPoint
                             .of(currentTypeDescriptor, methodDescriptor, this::getQualifierAnnotationTypes);
 
-                        injectionPoints.put(signature, methodInjectionPoint);
+                        injectionPoints.put(overrideKey, methodInjectionPoint);
                     }
 
                     // include the MethodDescriptor as a @PostInject
