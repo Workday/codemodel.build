@@ -385,6 +385,47 @@ class ReferencesToTests {
     }
 
     @Test
+    void shouldNotFindMethodBodyReferenceThroughResolvedMethodParameterType() {
+        // Regression: `Other.take(null)` attaches a ResolvedMethod trait to the MethodInvocation,
+        // which resolves live to Other's MethodDescriptor (formal parameter type Target). Neither
+        // the invocation itself (void return) nor the `null` argument carries a Target type of its
+        // own, so traversing into that resolved descriptor's formal parameters is the only way
+        // Target could surface here. It must not, since Target never appears literally in
+        // Caller's source.
+        final var caller = JavaFileObjects.forSourceString(
+            "com.example.Caller", """
+                package com.example;
+                public class Caller {
+                    public void run() {
+                        Other.take(null);
+                    }
+                }
+                """);
+        final var other = JavaFileObjects.forSourceString(
+            "com.example.Other", """
+                package com.example;
+                public class Other {
+                    public static void take(Target t) {}
+                }
+                """);
+        final var target = JavaFileObjects.forSourceString(
+            "com.example.Target", """
+                package com.example;
+                public class Target {}
+                """);
+
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(caller, other, target)));
+
+        final var targetName = codeModel.getEmptyModuleTypeName("com.example.Target");
+        final var refs = codeModel.referencesTo(targetName, ReferenceKind.METHOD_BODY)
+            .filter(r -> r.owner().typeName().toString().contains("Caller"))
+            .toList();
+
+        assertThat(refs).isEmpty();
+    }
+
+    @Test
     void shouldFindParameterizedTypeReference() {
         final var source = JavaFileObjects.forSourceString(
             "com.example.Holder", """
