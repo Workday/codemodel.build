@@ -22,6 +22,7 @@ package build.codemodel.foundation.usage;
 
 import build.base.foundation.Lazy;
 import build.codemodel.foundation.ConceptualCodeModel;
+import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.naming.ModuleName;
 import build.codemodel.foundation.naming.NonCachingNameProvider;
 import org.junit.jupiter.api.Test;
@@ -34,8 +35,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Tests for {@link TypeUsage#canonicalName()}, covering all four primary branches and contrasting with {@link Object#toString()}.
- * The key difference: {@code canonicalName()} always returns canonical (module-free) names, while {@code toString()} preserves
- * module-qualified names as stored in the {@link build.codemodel.foundation.CodeModel}.
+ * Two differences, both deliberate:
+ * <ul>
+ *   <li>{@code canonicalName()} always returns canonical (module-free) names, while {@code toString()} preserves
+ *       module-qualified names as stored in the {@link build.codemodel.foundation.CodeModel}.</li>
+ *   <li>{@code toString()} also appends any {@link build.codemodel.foundation.descriptor.Trait}s attached to the
+ *       usage (e.g. {@code SourceLocation} on javac-populated usages) — see
+ *       {@link #toString_includesAttachedTraits_evenThoughTheyAreNotPartOfTheTypeName()}. {@code canonicalName()}
+ *       never does. Do not use {@code toString()} where a stable, trait-free name is required (equality checks,
+ *       map keys, snapshot assertions) — use {@code canonicalName()} for that instead.</li>
+ * </ul>
  *
  * @author reed.vonredwitz
  * @since May-2026
@@ -212,5 +221,29 @@ class TypeUsageFormatTests {
 
         assertThat(usage.toString()).isEqualTo("java.base/java.lang.String[]");
         assertThat(usage.canonicalName()).isEqualTo("java.lang.String[]");
+    }
+
+    // --- toString() with attached Traits ---
+
+    /**
+     * {@link AbstractTypeUsage#toString()} appends {@code Traitable.toString(this)}, which dumps every
+     * {@link Trait} attached to the usage. In practice, {@code codemodel-jdk-populator} attaches a
+     * {@code SourceLocation} trait to {@link TypeUsage}s built from source (extends/implements clauses,
+     * field/parameter/return types, catch clauses, etc. — see {@code SourceLocationTests}). This test pins
+     * down that behavior with a stand-in {@link Trait} so any change to it is a deliberate, visible decision
+     * rather than an untested side effect.
+     */
+    @Test
+    void toString_includesAttachedTraits_evenThoughTheyAreNotPartOfTheTypeName() {
+        final var name = naming.getEmptyModuleTypeName("java.lang.String");
+        final var usage = SpecificTypeUsage.of(codeModel, name);
+
+        usage.addTrait(new StandInTrait("startPosition=12, endPosition=18"));
+
+        assertThat(usage.toString()).isEqualTo("java.lang.String [StandInTrait[detail=startPosition=12, endPosition=18]]");
+        assertThat(usage.canonicalName()).isEqualTo("java.lang.String");
+    }
+
+    private record StandInTrait(String detail) implements Trait {
     }
 }
