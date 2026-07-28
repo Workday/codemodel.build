@@ -41,6 +41,7 @@ import build.codemodel.objectoriented.naming.MethodName;
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -198,11 +199,33 @@ public final class MethodDescriptor
     }
 
     /**
-     * Obtains a unique signature of the {@link MethodDescriptor} with in the {@link CodeModel}.
+     * Obtains a human-readable Java-like signature of the {@link MethodDescriptor}, e.g.
+     * {@code "void doWork(java.lang.String)"}.
      *
-     * @return a unique signature with in the {@link CodeModel}
+     * <p>This is for display purposes only; it is not guaranteed to be unique within the {@link CodeModel}
+     * (private methods of the same name and parameter types in different declaring classes render identically).
+     * For a key that uniquely identifies the method for override-detection purposes, see {@link #overrideKey()}.
+     *
+     * @return a human-readable signature
      */
     public String signature() {
+        return renderTypeName(returnType()) + " " + methodName().name() + "("
+            + formalParameters()
+            .map(p -> renderTypeName(p.type()))
+            .collect(Collectors.joining(", "))
+            + ")";
+    }
+
+    /**
+     * Obtains a key that uniquely identifies the {@link MethodDescriptor} with in the {@link CodeModel}, for use
+     * by consumers (such as {@code InjectionFramework}) that need to detect when one method overrides another
+     * while walking a type hierarchy. This is <strong>not</strong> a human-readable signature — for that, see
+     * {@link #signature()}. The declaring type's namespace is folded in so that {@link AccessModifier#PRIVATE}
+     * methods (which are not polymorphic) never collide across declaring classes.
+     *
+     * @return a key uniquely identifying the {@link MethodDescriptor} with in the {@link CodeModel}
+     */
+    public String overrideKey() {
 
         final StringBuilder builder = new StringBuilder();
 
@@ -222,7 +245,7 @@ public final class MethodDescriptor
         }
 
         // include the return type
-        builder.append(returnType().canonicalName());
+        builder.append(renderTypeName(returnType()));
         builder.append(' ');
 
         // include the method name
@@ -231,11 +254,33 @@ public final class MethodDescriptor
         // include the method formal parameter types
         builder.append('(');
         builder.append(formalParameters()
-            .map(p -> p.type().canonicalName())
+            .map(p -> renderTypeName(p.type()))
             .collect(Collectors.joining(", ")));
         builder.append(')');
 
         return builder.toString();
+    }
+
+    /**
+     * The canonical names JDK primitive {@link TypeUsage}s are (mis)represented with internally, since
+     * primitives are modeled with a synthetic {@code java.lang} namespace despite not actually residing there.
+     */
+    private static final Set<String> PRIMITIVE_CANONICAL_NAMES = Set.of(
+        "java.lang.void", "java.lang.boolean", "java.lang.byte", "java.lang.short",
+        "java.lang.int", "java.lang.long", "java.lang.char", "java.lang.float", "java.lang.double");
+
+    /**
+     * Renders a {@link TypeUsage}'s name for inclusion in a {@link #signature()}, stripping the synthetic
+     * {@code java.lang} namespace primitives are internally represented with.
+     *
+     * @param typeUsage the {@link TypeUsage}
+     * @return the rendered type name
+     */
+    private static String renderTypeName(final TypeUsage typeUsage) {
+        final var canonical = typeUsage.canonicalName();
+        return PRIMITIVE_CANONICAL_NAMES.contains(canonical)
+            ? canonical.substring("java.lang.".length())
+            : canonical;
     }
 
     @Override
