@@ -180,8 +180,8 @@ class TypeUsageFormatTests {
         final var name = naming.getEmptyModuleTypeName("com.example.Qualifier");
         final var usage = AnnotationTypeUsage.of(codeModel, name);
 
-        assertThat(usage.toString()).isEqualTo("@com.example.Qualifier()");
-        assertThat(usage.canonicalName()).isEqualTo("@com.example.Qualifier()");
+        assertThat(usage.toString()).isEqualTo("@com.example.Qualifier");
+        assertThat(usage.canonicalName()).isEqualTo("@com.example.Qualifier");
     }
 
     @Test
@@ -189,8 +189,17 @@ class TypeUsageFormatTests {
         final var name = naming.getTypeName(javaBase, "java.lang.annotation.Retention");
         final var usage = AnnotationTypeUsage.of(codeModel, name);
 
-        assertThat(usage.toString()).isEqualTo("@java.base/java.lang.annotation.Retention()");
-        assertThat(usage.canonicalName()).isEqualTo("@java.lang.annotation.Retention()");
+        assertThat(usage.toString()).isEqualTo("@java.base/java.lang.annotation.Retention");
+        assertThat(usage.canonicalName()).isEqualTo("@java.lang.annotation.Retention");
+    }
+
+    @Test
+    void annotationTypeUsage_noValues_explicitParens() {
+        final var name = naming.getEmptyModuleTypeName("com.example.Qualifier");
+        final var usage = AnnotationTypeUsage.of(codeModel, name);
+        usage.addTrait(ExplicitAnnotationParens.EXPLICIT_ANNOTATION_PARENS);
+
+        assertThat(usage.canonicalName()).isEqualTo("@com.example.Qualifier()");
     }
 
     @Test

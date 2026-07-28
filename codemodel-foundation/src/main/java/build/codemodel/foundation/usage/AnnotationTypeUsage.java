@@ -142,8 +142,12 @@ public class AnnotationTypeUsage
     @Override
     protected String render(final Function<TypeName, String> nameRenderer,
                             final Function<TypeUsage, String> usageRenderer) {
-        return "@" + nameRenderer.apply(typeName())
-            + values()
+        final var name = "@" + nameRenderer.apply(typeName());
+        if (this.values.isEmpty()
+            && traits(ExplicitAnnotationParens.class).findAny().isEmpty()) {
+            return name;
+        }
+        return name + values()
             .map(Object::toString)
             .collect(Collectors.joining(",", "(", ")"));
     }

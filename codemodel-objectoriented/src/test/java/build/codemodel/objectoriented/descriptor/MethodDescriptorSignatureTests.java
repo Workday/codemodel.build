@@ -194,7 +194,7 @@ class MethodDescriptorSignatureTests {
             naming.getEmptyModuleTypeName("com.example.Qualifier"));
         final var descriptor = method("getQualifier", annotation, Optional.empty());
 
-        assertThat(descriptor.signature()).isEqualTo("@com.example.Qualifier() getQualifier()");
+        assertThat(descriptor.signature()).isEqualTo("@com.example.Qualifier getQualifier()");
     }
 
     @Test
@@ -203,7 +203,7 @@ class MethodDescriptorSignatureTests {
             naming.getTypeName(naming.getModuleName("java.base"), "java.lang.annotation.Retention"));
         final var descriptor = method("getRetention", annotation, Optional.empty());
 
-        assertThat(descriptor.signature()).isEqualTo("@java.lang.annotation.Retention() getRetention()");
+        assertThat(descriptor.signature()).isEqualTo("@java.lang.annotation.Retention getRetention()");
     }
 
     @Test

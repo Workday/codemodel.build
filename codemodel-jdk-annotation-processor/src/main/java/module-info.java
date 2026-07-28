@@ -38,6 +38,7 @@ import javax.annotation.processing.Processor;
  */
 module build.codemodel.jdk.annotation.processor {
     requires java.compiler;
+    requires jdk.compiler;
 
     requires build.codemodel.jdk.annotation.discovery;
 
