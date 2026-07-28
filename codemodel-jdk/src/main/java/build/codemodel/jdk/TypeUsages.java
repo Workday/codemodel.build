@@ -20,6 +20,7 @@ package build.codemodel.jdk;
  * #L%
  */
 
+import build.base.foundation.Introspection;
 import build.codemodel.foundation.naming.Namespace;
 import build.codemodel.foundation.naming.TypeName;
 import build.codemodel.foundation.usage.ArrayTypeUsage;
@@ -29,8 +30,10 @@ import build.codemodel.foundation.usage.SpecificTypeUsage;
 import build.codemodel.foundation.usage.TypeUsage;
 
 import java.lang.reflect.Type;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -42,10 +45,32 @@ import java.util.stream.Collectors;
 public final class TypeUsages {
 
     /**
+     * The JDK primitive {@link Class}es, keyed by the bare name (e.g. {@code "int"}) that a primitive
+     * {@link TypeName#name()} carries. Derived from {@link Introspection#primitives()} rather than hardcoded, so
+     * it can't drift from the JDK's actual set of primitive types.
+     */
+    private static final Map<String, Class<?>> PRIMITIVE_CLASSES_BY_NAME = Introspection.primitives()
+        .collect(Collectors.toUnmodifiableMap(Class::getName, Function.identity()));
+
+    /**
      * Prevent instantiation
      */
     private TypeUsages() {
         // prevent instantiation
+    }
+
+    /**
+     * Determines whether the specified {@link TypeName} represents one of the JDK primitive types, which are
+     * modeled with a synthetic {@code java.lang} namespace despite not actually residing there.
+     *
+     * @param typeName the {@link TypeName}
+     * @return {@code true} if the {@link TypeName} represents a primitive type, {@code false} otherwise
+     */
+    public static boolean isPrimitive(final TypeName typeName) {
+        return typeName.namespace()
+            .map(namespace -> "java.lang".equals(namespace.toString()))
+            .orElse(false)
+            && PRIMITIVE_CLASSES_BY_NAME.containsKey(typeName.name().toString());
     }
 
     /**
@@ -55,9 +80,13 @@ public final class TypeUsages {
      * @return {@code true} if a boolean {@link TypeUsage}, {@code false} otherwise
      */
     public static boolean isBoolean(final TypeUsage typeUsage) {
-        return typeUsage instanceof SpecificTypeUsage specificTypeUsage
-            && (specificTypeUsage.typeName().canonicalName().equals("java.lang.boolean")
-            || specificTypeUsage.typeName().canonicalName().equals("java.lang.Boolean"));
+        if (!(typeUsage instanceof SpecificTypeUsage specificTypeUsage)) {
+            return false;
+        }
+
+        final var typeName = specificTypeUsage.typeName();
+        return (isPrimitive(typeName) && typeName.name().toString().equals("boolean"))
+            || typeName.canonicalName().equals("java.lang.Boolean");
     }
 
     /**
@@ -155,30 +184,16 @@ public final class TypeUsages {
             return Optional.empty();
         }
 
-        final var className = namedTypeUsage.typeName()
-            .binaryName();
+        final var typeName = namedTypeUsage.typeName();
+
+        if (isPrimitive(typeName)) {
+            return Optional.ofNullable(PRIMITIVE_CLASSES_BY_NAME.get(typeName.name().toString()));
+        }
 
         try {
-            return Optional.ofNullable(classLoader.loadClass(className));
+            return Optional.ofNullable(classLoader.loadClass(typeName.binaryName()));
         } catch (final ClassNotFoundException e) {
-            // attempt to determine the Class of a primitive type
-            return Optional.ofNullable(switch (className) {
-                case "java.lang.int" -> int.class;
-                case "java.lang.long" -> long.class;
-                case "java.lang.short" -> short.class;
-                case "java.lang.char" -> char.class;
-                case "java.lang.byte" -> byte.class;
-
-                // Floating-point types
-                case "java.lang.float" -> float.class;
-                case "java.lang.double" -> double.class;
-
-                // Other types
-                case "java.lang.boolean" -> boolean.class;
-                case "java.lang.void" -> void.class;
-
-                default -> null;
-            });
+            return Optional.empty();
         }
     }
 

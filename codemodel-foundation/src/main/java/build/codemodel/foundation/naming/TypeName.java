@@ -20,8 +20,12 @@ package build.codemodel.foundation.naming;
  * #L%
  */
 
+import build.base.foundation.Introspection;
+
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * A representation for the name of a <i>Type</i>, optionally scoped by its {@link ModuleName} and {@link Namespace}.
@@ -125,15 +129,42 @@ public final class TypeName
     }
 
     /**
-     * Obtains the <i>canonical-name</i> (dot-separated, Java source form).
+     * The names of the JDK primitive types, used to detect the synthetic {@code java.lang} namespace primitives
+     * are internally represented with despite not actually residing there. Derived from
+     * {@link Introspection#primitives()} rather than hardcoded, so it can't drift from the JDK's actual set of
+     * primitive types.
+     */
+    private static final Set<String> PRIMITIVE_NAMES = Introspection.primitives()
+        .map(Class::getName)
+        .collect(Collectors.toUnmodifiableSet());
+
+    /**
+     * Obtains the <i>canonical-name</i> (dot-separated, Java source form), stripping the synthetic
+     * {@code java.lang} namespace primitives are internally represented with.
      *
      * @return the canonical name
      */
     public String canonicalName() {
-        return enclosingTypeName()
-            .map(e -> e.canonicalName() + ".")
-            .orElseGet(() -> namespace().map(ns -> ns + ".").orElse(""))
-            + name().toString();
+        return switch (enclosingTypeName().orElse(null)) {
+            case TypeName enclosing -> enclosing.canonicalName() + "." + name();
+            case null -> switch (namespace().orElse(null)) {
+                case Namespace _ when isPrimitive() -> name().toString();
+                case Namespace ns -> ns + "." + name().toString();
+                case null -> name().toString();
+            };
+        };
+    }
+
+    /**
+     * Determines whether this {@link TypeName} represents one of the JDK primitive types, modeled with a synthetic
+     * {@code java.lang} namespace despite not actually residing there. Kept private: this is JDK-specific knowledge
+     * needed only to make {@link #canonicalName()} correct, not something other modules should couple to. Callers
+     * outside this class that need the same determination should use {@code TypeUsages.isPrimitive(TypeName)} in
+     * {@code codemodel-jdk}, which is the appropriate layer for JDK-specific concerns.
+     */
+    private boolean isPrimitive() {
+        return namespace().map(ns -> "java.lang".equals(ns.toString())).orElse(false)
+            && PRIMITIVE_NAMES.contains(name().toString());
     }
 
     private static String binaryName(final Optional<Namespace> namespace,
