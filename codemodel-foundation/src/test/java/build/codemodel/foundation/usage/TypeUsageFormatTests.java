@@ -75,6 +75,41 @@ class TypeUsageFormatTests {
         assertThat(usage.canonicalName()).isEqualTo("java.lang.String");
     }
 
+    // --- primitives: java.lang is a synthetic namespace, not a real one ---
+
+    /**
+     * Primitives are internally modeled as {@link SpecificTypeUsage}s namespaced under the synthetic
+     * {@code java.lang} package (see {@code build.codemodel.jdk.TypeUsages}), despite not actually residing
+     * there. This pins down that {@link TypeUsage#canonicalName()} strips that synthetic prefix.
+     */
+    @Test
+    void primitiveTypeUsage_canonicalName_stripsSyntheticJavaLangNamespace() {
+        final var name = naming.getEmptyModuleTypeName("java.lang.int");
+        final var usage = SpecificTypeUsage.of(codeModel, name);
+
+        assertThat(usage.canonicalName()).isEqualTo("int");
+    }
+
+    @Test
+    void primitiveTypeUsage_canonicalName_stripsSyntheticJavaLangNamespace_forAllPrimitives() {
+        final var primitives = List.of("void", "boolean", "byte", "short", "int", "long", "char", "float", "double");
+
+        for (final var primitive : primitives) {
+            final var name = naming.getEmptyModuleTypeName("java.lang." + primitive);
+            final var usage = SpecificTypeUsage.of(codeModel, name);
+
+            assertThat(usage.canonicalName()).isEqualTo(primitive);
+        }
+    }
+
+    @Test
+    void primitiveArrayTypeUsage_canonicalName_stripsSyntheticJavaLangNamespaceFromComponent() {
+        final var intUsage = SpecificTypeUsage.of(codeModel, naming.getEmptyModuleTypeName("java.lang.int"));
+        final var usage = ArrayTypeUsage.of(codeModel, Lazy.of(intUsage));
+
+        assertThat(usage.canonicalName()).isEqualTo("int[]");
+    }
+
     // --- GenericTypeUsage ---
 
     @Test

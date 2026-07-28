@@ -21,7 +21,6 @@ package build.codemodel.jdk.annotation.processor;
  */
 
 import build.base.foundation.Capture;
-import build.base.foundation.Introspection;
 import build.base.foundation.Lazy;
 import build.base.telemetry.Error;
 import build.base.telemetry.TelemetryRecorder;
@@ -46,6 +45,7 @@ import build.codemodel.framework.completer.Completer;
 import build.codemodel.framework.initialization.Enricher;
 import build.codemodel.framework.initialization.Initializer;
 import build.codemodel.jdk.JDKCodeModel;
+import build.codemodel.jdk.TypeUsages;
 import build.codemodel.jdk.annotation.discovery.AnnotationDiscovery;
 import build.codemodel.jdk.annotation.discovery.Discoverable;
 import build.codemodel.jdk.descriptor.JDKTypeDescriptor;
@@ -395,7 +395,7 @@ public class AnnotationProcessor
 
                     if (typeElement == null) {
                         // warn when the type is not primitive
-                        if (!isPrimitive(typeName)) {
+                        if (!TypeUsages.isPrimitive(typeName)) {
                             messager.printWarning("Failed to determine TypeElement for " + typeName.canonicalName(),
                                 enclosingElement);
                         }
@@ -405,20 +405,6 @@ public class AnnotationProcessor
                 }
             }
         }
-    }
-
-    /**
-     * Determines if the specified {@link TypeName} represents a primitive type.
-     *
-     * @param typeName the {@link TypeName}
-     * @return {@code true} if the {@link TypeName} represents a primitive type, {@code false} otherwise
-     */
-    private boolean isPrimitive(final TypeName typeName) {
-        return typeName != null
-            && typeName.namespace()
-            .filter(namespace -> namespace.toString().equals("java.lang"))
-            .isPresent()
-            && Introspection.primitives().anyMatch(primitive -> typeName.name().toString().equals(primitive.getName()));
     }
 
     private TypeMirrorResolver resolver() {

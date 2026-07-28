@@ -42,7 +42,6 @@ import build.codemodel.objectoriented.naming.MethodName;
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.Objects;
-import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -211,9 +210,9 @@ public final class MethodDescriptor
      * @return a human-readable signature
      */
     public String signature() {
-        return renderTypeName(returnType()) + " " + methodName().name() + "("
+        return returnType().canonicalName() + " " + methodName().name() + "("
             + formalParameters()
-            .map(p -> renderTypeName(p.type()))
+            .map(p -> p.type().canonicalName())
             .collect(Collectors.joining(", "))
             + ")";
     }
@@ -247,7 +246,7 @@ public final class MethodDescriptor
         }
 
         // include the return type
-        builder.append(renderTypeName(returnType()));
+        builder.append(returnType().canonicalName());
         builder.append(' ');
 
         // include the method name
@@ -256,33 +255,11 @@ public final class MethodDescriptor
         // include the method formal parameter types
         builder.append('(');
         builder.append(formalParameters()
-            .map(p -> renderTypeName(p.type()))
+            .map(p -> p.type().canonicalName())
             .collect(Collectors.joining(", ")));
         builder.append(')');
 
         return builder.toString();
-    }
-
-    /**
-     * The canonical names JDK primitive {@link TypeUsage}s are (mis)represented with internally, since
-     * primitives are modeled with a synthetic {@code java.lang} namespace despite not actually residing there.
-     */
-    private static final Set<String> PRIMITIVE_CANONICAL_NAMES = Set.of(
-        "java.lang.void", "java.lang.boolean", "java.lang.byte", "java.lang.short",
-        "java.lang.int", "java.lang.long", "java.lang.char", "java.lang.float", "java.lang.double");
-
-    /**
-     * Renders a {@link TypeUsage}'s name for inclusion in a {@link #signature()}, stripping the synthetic
-     * {@code java.lang} namespace primitives are internally represented with.
-     *
-     * @param typeUsage the {@link TypeUsage}
-     * @return the rendered type name
-     */
-    private static String renderTypeName(final TypeUsage typeUsage) {
-        final var canonical = typeUsage.canonicalName();
-        return PRIMITIVE_CANONICAL_NAMES.contains(canonical)
-            ? canonical.substring("java.lang.".length())
-            : canonical;
     }
 
     @Override
