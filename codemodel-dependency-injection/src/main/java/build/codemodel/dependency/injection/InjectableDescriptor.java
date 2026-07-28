@@ -20,6 +20,7 @@ package build.codemodel.dependency.injection;
  * #L%
  */
 
+import build.codemodel.foundation.descriptor.Singular;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.jdk.descriptor.JDKTypeDescriptor;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
@@ -36,6 +37,7 @@ import java.util.stream.Stream;
  * @author brian.oliver
  * @since Oct-2024
  */
+@Singular
 public class InjectableDescriptor
     implements Trait {
 

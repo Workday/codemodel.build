@@ -33,6 +33,7 @@ import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.AbstractTraitable;
 import build.codemodel.foundation.descriptor.CallableDescriptor;
 import build.codemodel.foundation.descriptor.FormalParameterDescriptor;
+import build.codemodel.foundation.descriptor.NonSingular;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.descriptor.TypeDescriptor;
 import build.codemodel.foundation.usage.TypeUsage;
@@ -53,6 +54,7 @@ import java.util.stream.Stream;
  * @see TypeDescriptor
  * @since Jan-2024
  */
+@NonSingular
 public final class MethodDescriptor
     extends AbstractTraitable
     implements CallableDescriptor {

@@ -22,6 +22,7 @@ package build.codemodel.jdk.descriptor;
 
 import build.base.foundation.iterator.Iterators;
 import build.base.mereology.Composite;
+import build.codemodel.foundation.descriptor.NonSingular;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.naming.IrreducibleName;
 import build.codemodel.foundation.usage.TypeUsage;
@@ -35,6 +36,7 @@ import java.util.Objects;
  * @author reed.vonredwitz
  * @since Mar-2026
  */
+@NonSingular
 public final class RecordComponentDescriptor implements Composite, Trait {
 
     /**

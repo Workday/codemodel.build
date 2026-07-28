@@ -20,6 +20,7 @@ package build.codemodel.jdk.descriptor;
  * #L%
  */
 
+import build.codemodel.foundation.descriptor.Singular;
 import build.codemodel.foundation.descriptor.Trait;
 
 import java.util.Objects;
@@ -30,6 +31,7 @@ import java.util.Objects;
  * @author reed.vonredwitz
  * @since Mar-2026
  */
+@Singular
 public final class AnnotationMemberDefaultValue implements Trait {
 
     /**

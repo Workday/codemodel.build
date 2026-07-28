@@ -31,6 +31,7 @@ import build.base.marshalling.Out;
 import build.base.marshalling.Unmarshal;
 import build.base.mereology.Composite;
 import build.codemodel.foundation.CodeModel;
+import build.codemodel.foundation.descriptor.NonSingular;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.naming.TypeName;
 
@@ -47,6 +48,7 @@ import java.util.stream.Stream;
  * @author brian.oliver
  * @since Feb-2024
  */
+@NonSingular
 public class AnnotationTypeUsage
     extends AbstractNamedTypeUsage
     implements Trait, Comparable<AnnotationTypeUsage> {

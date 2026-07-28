@@ -22,6 +22,7 @@ package build.codemodel.jdk.descriptor;
 
 import build.base.foundation.iterator.Iterators;
 import build.base.mereology.Composite;
+import build.codemodel.foundation.descriptor.Singular;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
 
@@ -34,6 +35,7 @@ import java.util.Objects;
  * @author brian.oliver
  * @since May-2024
  */
+@Singular
 public class MethodImplementationDescriptor
     implements Trait, Composite {
 

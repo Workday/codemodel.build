@@ -30,6 +30,7 @@ import build.base.marshalling.Unmarshal;
 import build.base.mereology.Composite;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.AbstractTraitable;
+import build.codemodel.foundation.descriptor.Singular;
 import build.codemodel.foundation.descriptor.Trait;
 import build.codemodel.foundation.descriptor.Traitable;
 import build.codemodel.foundation.descriptor.TypeDescriptor;
@@ -47,6 +48,7 @@ import java.util.stream.Stream;
  * @author brian.oliver
  * @since May-2024
  */
+@Singular
 public final class ParameterizedTypeDescriptor
     extends AbstractTraitable
     implements Trait, Traitable {

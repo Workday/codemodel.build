@@ -21,6 +21,7 @@ package build.codemodel.jdk.descriptor;
  */
 
 import build.base.marshalling.Marshalling;
+import build.codemodel.foundation.descriptor.Singular;
 import build.codemodel.foundation.descriptor.Trait;
 
 /**
@@ -29,6 +30,7 @@ import build.codemodel.foundation.descriptor.Trait;
  * @author reed.vonredwitz
  * @since Mar-2026
  */
+@Singular
 public enum RecordType implements Trait {
 
     /**

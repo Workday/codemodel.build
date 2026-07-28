@@ -43,6 +43,7 @@ import java.util.stream.Stream;
  * @see CallableDescriptor
  * @since Sep-2024
  */
+@NonSingular
 public class ThrowableDescriptor
     extends AbstractTraitable
     implements Trait {
