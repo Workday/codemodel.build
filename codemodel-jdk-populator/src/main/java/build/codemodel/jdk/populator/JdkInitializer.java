@@ -70,8 +70,10 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -580,6 +582,7 @@ public class JdkInitializer
             .toList();
         int enumConstantOrder = 0;
         int memberOrder = 0;
+        final var writtenMethods = new HashSet<ExecutableElement>();
         for (final var member : sortedMembers) {
             final var path = new TreePath(classPath, member);
             final var elem = trees.getElement(path);
@@ -596,6 +599,7 @@ public class JdkInitializer
                 if (ee.getKind() == ElementKind.CONSTRUCTOR) {
                     processConstructor(typeDescriptor, ee, mt, cut, bodyTasks, memberOrder++);
                 } else if (ee.getKind() == ElementKind.METHOD) {
+                    writtenMethods.add(ee);
                     processMethod(typeDescriptor, ee, mt, cut, bodyTasks, memberOrder++);
                 }
             } else if (member instanceof BlockTree bt) {
@@ -603,6 +607,48 @@ public class JdkInitializer
                     new InitializerBlockDescriptor(bt.isStatic(), stmtConverter.convertStatements(bt.getStatements()))));
             }
         }
+
+        if (classTree.getKind() == Tree.Kind.RECORD) {
+            processImplicitRecordMethods(typeDescriptor, classPath, writtenMethods, memberOrder);
+        }
+    }
+
+    /**
+     * A record's component accessors and its overridden {@code toString}/{@code equals}/
+     * {@code hashCode} are synthesized directly onto the {@link TypeElement} without ever gaining
+     * a corresponding {@link MethodTree} — unlike the canonical constructor, which does get a
+     * synthetic tree. {@link #processMembers} only walks the {@link ClassTree}, so these methods
+     * are otherwise never modeled at all. This fills them in from {@code Elements} directly, with
+     * no source location or body since none was ever written.
+     */
+    private void processImplicitRecordMethods(final JDKTypeDescriptor typeDescriptor,
+                                              final TreePath classPath,
+                                              final Set<ExecutableElement> writtenMethods,
+                                              final int startOrder) {
+        final var typeElement = (TypeElement) trees.getElement(classPath);
+        var memberOrder = startOrder;
+        for (final var enclosed : typeElement.getEnclosedElements()) {
+            if (enclosed.getKind() == ElementKind.METHOD
+                && enclosed instanceof ExecutableElement ee
+                && !writtenMethods.contains(ee)) {
+                processImplicitMethod(typeDescriptor, ee, memberOrder++);
+            }
+        }
+    }
+
+    private void processImplicitMethod(final JDKTypeDescriptor typeDescriptor,
+                                       final ExecutableElement methodElement,
+                                       final int order) {
+        final var returnType = resolver.resolve(methodElement.getReturnType(), methodElement);
+        final var methodName = resolver.methodName(typeDescriptor, methodElement);
+        final var formalParameters = resolver.getFormalParameters(methodElement, (_, _) -> {
+        });
+
+        final var methodDescriptor = MethodDescriptor.of(typeDescriptor, methodName, returnType, formalParameters);
+        resolver.modifyMethod(methodDescriptor, methodElement);
+
+        methodDescriptor.addTrait(new DeclarationOrder(order));
+        typeDescriptor.addTrait(methodDescriptor);
     }
 
     private void processField(final JDKTypeDescriptor typeDescriptor,

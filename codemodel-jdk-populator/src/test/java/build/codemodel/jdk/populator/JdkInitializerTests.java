@@ -11,6 +11,7 @@ import build.codemodel.foundation.usage.SpecificTypeUsage;
 import build.codemodel.foundation.usage.TypeUsage;
 import build.codemodel.foundation.usage.UnknownTypeUsage;
 import build.codemodel.jdk.JDKCodeModel;
+import build.codemodel.jdk.descriptor.MethodBodyDescriptor;
 import build.codemodel.jdk.expression.NewObject;
 import build.codemodel.jdk.populator.descriptor.SourceLocation;
 import build.codemodel.jdk.statement.LocalVariableDeclaration;
@@ -661,5 +662,100 @@ class JdkInitializerTests {
         assertThat(ctor.getTrait(SourceLocation.FilePosition.class))
             .as("explicit compact constructor has a real, written source extent")
             .isPresent();
+    }
+
+    /**
+     * A record with no explicit members should still expose the compiler-synthesized accessor
+     * methods (one per component) and the overridden {@code toString}/{@code equals}/
+     * {@code hashCode} methods as {@link MethodDescriptor} traits. Currently these implicit
+     * members are missing entirely because {@code processMembers} only walks the source-level
+     * {@code ClassTree}, which never contains members the author didn't write.
+     */
+    @Test
+    void shouldExposeImplicitRecordMembers() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Point",
+            """
+                package com.example;
+                public record Point(int x, int y) {
+                }
+                """);
+        final var codeModel = runInternal(new JdkInitializer(List.of(), List.of(), List.of(source)));
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Point");
+        final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
+
+        final var methodNames = descriptor.traits(MethodDescriptor.class)
+            .map(m -> m.methodName().name().toString())
+            .toList();
+
+        assertThat(methodNames)
+            .as("implicit record accessors and Object overrides should be modeled as methods")
+            .contains("x", "y", "toString", "equals", "hashCode");
+    }
+
+    /**
+     * When a record author writes their own accessor or {@code Object} override, that method is
+     * already modeled from its {@code MethodTree} via the normal explicit-member path. The
+     * implicit-member pass must recognize it as already written (by {@link ExecutableElement}
+     * identity) and skip it, rather than adding a second, source-less {@link MethodDescriptor} for
+     * the same method.
+     */
+    @Test
+    void shouldNotDuplicateExplicitlyOverriddenRecordAccessor() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Point",
+            """
+                package com.example;
+                public record Point(int x, int y) {
+                    @Override
+                    public String toString() {
+                        return "(" + x + ", " + y + ")";
+                    }
+                }
+                """);
+        final var codeModel = runInternal(new JdkInitializer(List.of(), List.of(), List.of(source)));
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Point");
+        final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
+
+        final var toStringMethods = descriptor.traits(MethodDescriptor.class)
+            .filter(m -> m.methodName().name().toString().equals("toString"))
+            .toList();
+
+        assertThat(toStringMethods)
+            .as("an explicitly written toString should not also be modeled as an implicit member")
+            .hasSize(1);
+        assertThat(toStringMethods.getFirst().getTrait(SourceLocation.FilePosition.class))
+            .as("the surviving toString descriptor should be the explicit, source-backed one")
+            .isPresent();
+    }
+
+    /**
+     * Implicit record members were never written, so unlike explicit methods they must not carry a
+     * {@link SourceLocation.FilePosition} or a {@link MethodBodyDescriptor}.
+     */
+    @Test
+    void shouldNotStampSourceLocationOrBodyOnImplicitRecordMember() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Point",
+            """
+                package com.example;
+                public record Point(int x, int y) {
+                }
+                """);
+        final var codeModel = runInternal(new JdkInitializer(List.of(), List.of(), List.of(source)));
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Point");
+        final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
+
+        final var xAccessor = descriptor.traits(MethodDescriptor.class)
+            .filter(m -> m.methodName().name().toString().equals("x"))
+            .findFirst()
+            .orElseThrow();
+
+        assertThat(xAccessor.getTrait(SourceLocation.FilePosition.class))
+            .as("implicit accessor has no real source extent")
+            .isEmpty();
+        assertThat(xAccessor.getTrait(MethodBodyDescriptor.class))
+            .as("implicit accessor has no modeled body")
+            .isEmpty();
     }
 }
