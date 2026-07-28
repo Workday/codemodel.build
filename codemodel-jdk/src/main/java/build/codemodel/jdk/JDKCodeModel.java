@@ -67,6 +67,7 @@ import build.codemodel.objectoriented.ObjectOrientedCodeModel;
 import build.codemodel.objectoriented.descriptor.AccessModifier;
 import build.codemodel.objectoriented.descriptor.Classification;
 import build.codemodel.objectoriented.descriptor.ConstructorDescriptor;
+import build.codemodel.objectoriented.descriptor.DeclarationOrder;
 import build.codemodel.objectoriented.descriptor.ExtendsTypeDescriptor;
 import build.codemodel.objectoriented.descriptor.FieldDescriptor;
 import build.codemodel.objectoriented.descriptor.ImplementsTypeDescriptor;
@@ -106,6 +107,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Queue;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
@@ -563,26 +565,33 @@ public class JDKCodeModel
                 }
             });
 
+        // include ConstructorDescriptor, MethodDescriptor, and FieldDescriptor for the declared members,
+        // sharing a single DeclarationOrder counter across all three kinds so the trait reflects each
+        // member's position among all members, not just among its own kind
+        final var memberOrder = new AtomicInteger();
+
         // include ConstructorDescriptor for the declared Constructors
         Streams.of(classType.getDeclaredConstructors())
-            .forEach(constructor -> populateConstructor(typeDescriptor, constructor));
+            .forEach(constructor -> populateConstructor(typeDescriptor, constructor, memberOrder.getAndIncrement()));
 
         // include MethodDescriptors for the declared Methods
         Streams.of(classType.getDeclaredMethods())
-            .forEach(method -> populateMethod(typeDescriptor, typeName, method));
+            .forEach(method -> populateMethod(typeDescriptor, typeName, method, memberOrder.getAndIncrement()));
 
         // include FieldDescriptors for the declared Fields
         Streams.of(classType.getDeclaredFields())
-            .forEach(field -> populateField(typeDescriptor, field));
+            .forEach(field -> populateField(typeDescriptor, field, memberOrder.getAndIncrement()));
 
         // include the annotations on the TypeDescriptor (from the Class Type)
         getAnnotations(classType)
             .forEach(typeDescriptor::addTrait);
     }
 
-    private void populateConstructor(final JDKTypeDescriptor typeDescriptor, final Constructor<?> constructor) {
+    private void populateConstructor(final JDKTypeDescriptor typeDescriptor, final Constructor<?> constructor,
+                                     final int order) {
         final var formalParameters = getFormalParameters(constructor.getParameters());
         final var constructorDescriptor = ConstructorDescriptor.of(typeDescriptor, formalParameters);
+        constructorDescriptor.addTrait(new DeclarationOrder(order));
 
         // include the annotations on the ConstructorDescriptor
         getAnnotations(constructor)
@@ -609,7 +618,7 @@ public class JDKCodeModel
     }
 
     private void populateMethod(final JDKTypeDescriptor typeDescriptor, final TypeName typeName,
-                                final Method method) {
+                                final Method method, final int order) {
         final var nameProvider = getNameProvider();
         final var methodName = MethodName.of(
             typeName.moduleName(),
@@ -654,10 +663,13 @@ public class JDKCodeModel
         // include the MethodType
         methodDescriptor.addTrait(new MethodType(method));
 
+        // include the DeclarationOrder
+        methodDescriptor.addTrait(new DeclarationOrder(order));
+
         typeDescriptor.addTrait(methodDescriptor);
     }
 
-    private void populateField(final JDKTypeDescriptor typeDescriptor, final Field field) {
+    private void populateField(final JDKTypeDescriptor typeDescriptor, final Field field, final int order) {
         final var nameProvider = getNameProvider();
         final var fieldName = nameProvider.getIrreducibleName(field.getName());
 
@@ -689,6 +701,9 @@ public class JDKCodeModel
 
         // include the FieldType
         fieldDescriptor.addTrait(new FieldType(field));
+
+        // include the DeclarationOrder
+        fieldDescriptor.addTrait(new DeclarationOrder(order));
 
         typeDescriptor.addTrait(fieldDescriptor);
     }
