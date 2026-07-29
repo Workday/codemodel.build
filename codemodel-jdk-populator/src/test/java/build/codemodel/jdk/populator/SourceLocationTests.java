@@ -26,6 +26,7 @@ import build.codemodel.expression.Expression;
 import build.codemodel.foundation.descriptor.ThrowableDescriptor;
 import build.codemodel.imperative.Return;
 import build.codemodel.jdk.descriptor.EnumConstantDescriptor;
+import build.codemodel.jdk.descriptor.InitializerBlockDescriptor;
 import build.codemodel.jdk.descriptor.JDKTypeDescriptor;
 import build.codemodel.jdk.descriptor.MethodBodyDescriptor;
 import build.codemodel.jdk.descriptor.RecordComponentDescriptor;
@@ -292,6 +293,32 @@ class SourceLocationTests {
 
         final var greenLocation = green.getTrait(SourceLocation.FilePosition.class).orElseThrow();
         assertThat(greenLocation.startPosition()).isGreaterThan(redLocation.startPosition());
+    }
+
+    @Test
+    void initializerBlockShouldCarrySourceLocation() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Singleton", """
+                package com.example;
+                public class Singleton {
+                    private static final int VALUE;
+                    static {
+                        VALUE = 42;
+                    }
+                }
+                """);
+
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Singleton");
+        final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
+        final var initBlock = descriptor.traits(InitializerBlockDescriptor.class).findFirst().orElseThrow();
+
+        assertThat(initBlock.getTrait(SourceLocation.FilePosition.class)).isPresent();
+        final var location = initBlock.getTrait(SourceLocation.FilePosition.class).orElseThrow();
+        assertThat(location.startPosition()).isGreaterThanOrEqualTo(0);
+        assertThat(location.endPosition()).isGreaterThan(location.startPosition());
     }
 
     @Test

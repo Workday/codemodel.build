@@ -603,8 +603,12 @@ public class JdkInitializer
                     processMethod(typeDescriptor, ee, mt, cut, bodyTasks, memberOrder++);
                 }
             } else if (member instanceof BlockTree bt) {
-                bodyTasks.add(() -> typeDescriptor.addTrait(
-                    new InitializerBlockDescriptor(bt.isStatic(), stmtConverter.convertStatements(bt.getStatements()))));
+                bodyTasks.add(() -> {
+                    final var initializerBlockDescriptor =
+                        new InitializerBlockDescriptor(codeModel, bt.isStatic(), stmtConverter.convertStatements(bt.getStatements()));
+                    addSourceLocation(cut, bt, initializerBlockDescriptor);
+                    typeDescriptor.addTrait(initializerBlockDescriptor);
+                });
             }
         }
 
