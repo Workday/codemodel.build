@@ -396,7 +396,7 @@ public class JdkInitializer
                         nameProvider.getModuleName(moduleTree.getName().toString()).ifPresent(moduleName -> {
                             final var descriptor = codeModel.createModuleDescriptor(
                                 moduleName, JDKModuleDescriptor::of);
-                            populateModuleDescriptor(descriptor, moduleTree, ann -> {
+                            populateModuleDescriptor(descriptor, moduleTree, moduleCut, ann -> {
                                 final var annotationPath = new TreePath(modulePath, ann.getAnnotationType());
                                 final var element = trees.getElement(annotationPath);
                                 return element instanceof TypeElement typeElement
@@ -771,13 +771,16 @@ public class JdkInitializer
      *
      * @param descriptor                 the {@link JDKModuleDescriptor} to populate
      * @param moduleTree                 the {@link ModuleTree} produced by javac
+     * @param cut                        the enclosing {@link CompilationUnitTree}, used to derive each
+     *                                   directive's {@link SourceLocation.FilePosition}
      * @param annotationTypeNameResolver resolves an annotation's {@link AnnotationTree} to the
      *                                   module-qualified {@link TypeName} of its declaring type,
      *                                   matching how that type's descriptor was registered
      */
-    private static void populateModuleDescriptor(final JDKModuleDescriptor descriptor,
-                                                 final ModuleTree moduleTree,
-                                                 final Function<AnnotationTree, TypeName> annotationTypeNameResolver) {
+    private void populateModuleDescriptor(final JDKModuleDescriptor descriptor,
+                                          final ModuleTree moduleTree,
+                                          final CompilationUnitTree cut,
+                                          final Function<AnnotationTree, TypeName> annotationTypeNameResolver) {
 
         if (moduleTree.getModuleType() == ModuleTree.ModuleKind.OPEN) {
             descriptor.addTrait(OpenModule.OPEN);
@@ -794,7 +797,8 @@ public class JdkInitializer
                 case REQUIRES -> {
                     final var req = (RequiresTree) directive;
                     descriptor.addRequires(req.getModuleName().toString(), req.isTransitive(), req.isStatic(),
-                        false, false, Optional.empty());
+                        false, false, Optional.empty())
+                        .ifPresent(reqDescriptor -> addSourceLocation(cut, directive, reqDescriptor));
                 }
                 case EXPORTS -> {
                     final var exp = (ExportsTree) directive;
@@ -802,7 +806,8 @@ public class JdkInitializer
                         exp.getModuleNames() == null
                             ? Stream.empty()
                             : exp.getModuleNames().stream().map(Object::toString),
-                        Optional.empty());
+                        Optional.empty())
+                        .ifPresent(expDescriptor -> addSourceLocation(cut, directive, expDescriptor));
                 }
                 case OPENS -> {
                     final var op = (OpensTree) directive;
@@ -810,16 +815,19 @@ public class JdkInitializer
                         op.getModuleNames() == null
                             ? Stream.empty()
                             : op.getModuleNames().stream().map(Object::toString),
-                        Optional.empty());
+                        Optional.empty())
+                        .ifPresent(opDescriptor -> addSourceLocation(cut, directive, opDescriptor));
                 }
                 case PROVIDES -> {
                     final var prov = (ProvidesTree) directive;
-                    descriptor.addProvides(prov.getServiceName().toString(),
+                    final var provDescriptor = descriptor.addProvides(prov.getServiceName().toString(),
                         prov.getImplementationNames().stream().map(Object::toString));
+                    addSourceLocation(cut, directive, provDescriptor);
                 }
                 case USES -> {
                     final var uses = (UsesTree) directive;
-                    descriptor.addUses(uses.getServiceName().toString());
+                    final var usesDescriptor = descriptor.addUses(uses.getServiceName().toString());
+                    addSourceLocation(cut, directive, usesDescriptor);
                 }
                 default -> { /* version directive — not modelled */ }
             }

@@ -20,41 +20,117 @@ package build.codemodel.jdk.descriptor;
  * #L%
  */
 
-import build.base.foundation.iterator.Iterators;
+import build.base.marshalling.Bound;
+import build.base.marshalling.Marshal;
+import build.base.marshalling.Marshalled;
+import build.base.marshalling.Marshaller;
+import build.base.marshalling.Marshalling;
+import build.base.marshalling.Out;
+import build.base.marshalling.Unmarshal;
 import build.base.mereology.Composite;
+import build.codemodel.foundation.CodeModel;
+import build.codemodel.foundation.descriptor.AbstractTraitable;
 import build.codemodel.foundation.descriptor.NonSingular;
 import build.codemodel.foundation.descriptor.Trait;
+import build.codemodel.foundation.descriptor.Traitable;
 import build.codemodel.foundation.usage.TypeUsage;
 
-import java.util.Iterator;
+import java.lang.invoke.MethodHandles;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Stream;
 
 /**
  * A {@link Trait} representing a {@code provides} directive in a {@code module-info.java}.
  *
- * @param serviceType         the service type provided by this module
- * @param implementationTypes the implementation types
  * @author reed.vonredwitz
  * @since Apr-2026
  */
 @NonSingular
-public record ProvidesDescriptor(TypeUsage serviceType, List<TypeUsage> implementationTypes)
-    implements Composite, Trait {
+public final class ProvidesDescriptor
+    extends AbstractTraitable
+    implements Trait, Traitable {
 
-    public ProvidesDescriptor {
-        implementationTypes = List.copyOf(implementationTypes);
+    private final TypeUsage serviceType;
+    private final List<TypeUsage> implementationTypes;
+
+    private ProvidesDescriptor(final CodeModel codeModel,
+                               final TypeUsage serviceType,
+                               final List<TypeUsage> implementationTypes) {
+
+        super(codeModel);
+        this.serviceType = Objects.requireNonNull(serviceType, "serviceType");
+        this.implementationTypes = List.copyOf(implementationTypes);
+    }
+
+    /**
+     * {@link Unmarshal} a {@link ProvidesDescriptor}.
+     */
+    @Unmarshal
+    public ProvidesDescriptor(@Bound final CodeModel codeModel,
+                              final Marshaller marshaller,
+                              final Stream<Marshalled<Trait>> traits,
+                              final TypeUsage serviceType,
+                              final List<TypeUsage> implementationTypes) {
+
+        super(codeModel, marshaller, traits);
+        this.serviceType = serviceType;
+        this.implementationTypes = List.copyOf(implementationTypes);
+    }
+
+    /**
+     * {@link Marshal} a {@link ProvidesDescriptor}.
+     */
+    @Marshal
+    public void destructor(final Marshaller marshaller,
+                           final Out<Stream<Marshalled<Trait>>> traits,
+                           final Out<TypeUsage> serviceType,
+                           final Out<List<TypeUsage>> implementationTypes) {
+
+        super.destructor(marshaller, traits);
+        serviceType.set(this.serviceType);
+        implementationTypes.set(this.implementationTypes);
+    }
+
+    public TypeUsage serviceType() {
+        return serviceType;
+    }
+
+    public List<TypeUsage> implementationTypes() {
+        return implementationTypes;
     }
 
     @Override
-    public <T> Iterator<T> iterator(final Class<T> type) {
-        return Iterators.concat(type,
-            type.isInstance(serviceType) ? Iterators.of(type.cast(serviceType)) : Iterators.empty(),
-            implementationTypes.stream().filter(type::isInstance).map(type::cast).iterator());
+    protected Stream<? extends Composite> compositeChildren() {
+        return Stream.concat(Stream.of(serviceType), implementationTypes.stream());
     }
 
-    public static ProvidesDescriptor of(final TypeUsage serviceType,
+    public static ProvidesDescriptor of(final CodeModel codeModel,
+                                        final TypeUsage serviceType,
                                         final Stream<TypeUsage> implementationTypes) {
-        return new ProvidesDescriptor(serviceType, implementationTypes.toList());
+        return new ProvidesDescriptor(codeModel, serviceType, implementationTypes.toList());
+    }
+
+    @Override
+    public boolean equals(final Object object) {
+        if (this == object) {
+            return true;
+        }
+        if (object == null || getClass() != object.getClass()) {
+            return false;
+        }
+        return object instanceof ProvidesDescriptor other
+            && Objects.equals(this.serviceType, other.serviceType)
+            && Objects.equals(this.implementationTypes, other.implementationTypes)
+            && super.equals(other);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(this.serviceType, this.implementationTypes, super.hashCode());
+    }
+
+    static {
+        Marshalling.register(ProvidesDescriptor.class, MethodHandles.lookup());
     }
 }

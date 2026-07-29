@@ -590,17 +590,18 @@ public final class JDKModuleDescriptor
         return targets;
     }
 
-    public void addRequires(final String rawName,
-                            final boolean isTransitive,
-                            final boolean isStatic,
-                            final boolean isSynthetic,
-                            final boolean isMandated,
-                            final Optional<Version> version) {
+    public Optional<RequiresModuleDescriptor> addRequires(final String rawName,
+                                                          final boolean isTransitive,
+                                                          final boolean isStatic,
+                                                          final boolean isSynthetic,
+                                                          final boolean isMandated,
+                                                          final Optional<Version> version) {
 
-        codeModel().getNameProvider().getModuleName(rawName).ifPresent(reqName -> {
+        return codeModel().getNameProvider().getModuleName(rawName).map(reqName -> {
             // idempotent: skip if this module is already in the requires list
-            if (requiresClauses().anyMatch(r -> r.requiresModuleName().equals(reqName))) {
-                return;
+            final var existing = requiresClauses().filter(r -> r.requiresModuleName().equals(reqName)).findFirst();
+            if (existing.isPresent()) {
+                return existing.get();
             }
             final var reqDescriptor = RequiresModuleDescriptor.of(codeModel(), reqName);
             if (isTransitive) {
@@ -617,53 +618,66 @@ public final class JDKModuleDescriptor
             }
             version.ifPresent(v -> reqDescriptor.addTrait(RequiresVersionTrait.of(v)));
             addTrait(reqDescriptor);
+            return reqDescriptor;
         });
     }
 
-    public void addExports(final String rawPkg,
-                           final Stream<String> rawTargets,
-                           final Optional<PackageDirectiveModifier> modifier) {
+    public Optional<ExportsDescriptor> addExports(final String rawPkg,
+                                                  final Stream<String> rawTargets,
+                                                  final Optional<PackageDirectiveModifier> modifier) {
         final String pkg = rawPkg.replace('/', '.');
-        codeModel().getNameProvider().getNamespace(pkg).ifPresent(ns -> {
-            if (exportsClauses().anyMatch(e -> e.packageName().equals(ns))) {
-                return;
+        return codeModel().getNameProvider().getNamespace(pkg).map(ns -> {
+            final var existing = exportsClauses().filter(e -> e.packageName().equals(ns)).findFirst();
+            if (existing.isPresent()) {
+                return existing.get();
             }
-            addTrait(modifier
-                .map(m -> ExportsDescriptor.of(ns, resolveModuleNames(rawTargets), m))
-                .orElseGet(() -> ExportsDescriptor.of(ns, resolveModuleNames(rawTargets))));
+            final var exportsDescriptor = modifier
+                .map(m -> ExportsDescriptor.of(codeModel(), ns, resolveModuleNames(rawTargets), m))
+                .orElseGet(() -> ExportsDescriptor.of(codeModel(), ns, resolveModuleNames(rawTargets)));
+            addTrait(exportsDescriptor);
+            return exportsDescriptor;
         });
     }
 
-    public void addOpens(final String rawPkg,
-                         final Stream<String> rawTargets,
-                         final Optional<PackageDirectiveModifier> modifier) {
+    public Optional<OpensDescriptor> addOpens(final String rawPkg,
+                                             final Stream<String> rawTargets,
+                                             final Optional<PackageDirectiveModifier> modifier) {
         final String pkg = rawPkg.replace('/', '.');
-        codeModel().getNameProvider().getNamespace(pkg).ifPresent(ns -> {
-            if (opensClauses().anyMatch(o -> o.packageName().equals(ns))) {
-                return;
+        return codeModel().getNameProvider().getNamespace(pkg).map(ns -> {
+            final var existing = opensClauses().filter(o -> o.packageName().equals(ns)).findFirst();
+            if (existing.isPresent()) {
+                return existing.get();
             }
-            addTrait(modifier
-                .map(m -> OpensDescriptor.of(ns, resolveModuleNames(rawTargets), m))
-                .orElseGet(() -> OpensDescriptor.of(ns, resolveModuleNames(rawTargets))));
+            final var opensDescriptor = modifier
+                .map(m -> OpensDescriptor.of(codeModel(), ns, resolveModuleNames(rawTargets), m))
+                .orElseGet(() -> OpensDescriptor.of(codeModel(), ns, resolveModuleNames(rawTargets)));
+            addTrait(opensDescriptor);
+            return opensDescriptor;
         });
     }
 
-    public void addProvides(final String rawService,
-                            final Stream<String> rawProviders) {
+    public ProvidesDescriptor addProvides(final String rawService,
+                                          final Stream<String> rawProviders) {
         final var service = typeUsage(rawService);
-        if (providesClauses().anyMatch(p -> p.serviceType().equals(service))) {
-            return;
+        final var existing = providesClauses().filter(p -> p.serviceType().equals(service)).findFirst();
+        if (existing.isPresent()) {
+            return existing.get();
         }
         final var impls = rawProviders.map(this::typeUsage);
-        addTrait(ProvidesDescriptor.of(service, impls));
+        final var providesDescriptor = ProvidesDescriptor.of(codeModel(), service, impls);
+        addTrait(providesDescriptor);
+        return providesDescriptor;
     }
 
-    public void addUses(final String rawService) {
+    public UsesDescriptor addUses(final String rawService) {
         final var service = typeUsage(rawService);
-        if (usesClauses().anyMatch(u -> u.serviceType().equals(service))) {
-            return;
+        final var existing = usesClauses().filter(u -> u.serviceType().equals(service)).findFirst();
+        if (existing.isPresent()) {
+            return existing.get();
         }
-        addTrait(UsesDescriptor.of(service));
+        final var usesDescriptor = UsesDescriptor.of(codeModel(), service);
+        addTrait(usesDescriptor);
+        return usesDescriptor;
     }
 
     // ---- Private utilities -----------------------------------------------

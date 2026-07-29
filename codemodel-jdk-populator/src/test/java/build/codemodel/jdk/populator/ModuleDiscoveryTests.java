@@ -2,12 +2,14 @@ package build.codemodel.jdk.populator;
 
 import build.base.compile.testing.JavaFileObjects;
 import build.codemodel.foundation.descriptor.RequiresModuleDescriptor;
+import build.codemodel.foundation.descriptor.Traitable;
 import build.codemodel.jdk.descriptor.ExportsDescriptor;
 import build.codemodel.jdk.descriptor.OpenModule;
 import build.codemodel.jdk.descriptor.OpensDescriptor;
 import build.codemodel.jdk.descriptor.ProvidesDescriptor;
 import build.codemodel.jdk.descriptor.RequiresModifier;
 import build.codemodel.jdk.descriptor.UsesDescriptor;
+import build.codemodel.jdk.populator.descriptor.SourceLocation;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -198,5 +200,42 @@ class ModuleDiscoveryTests {
         final var descriptor = codeModel.getModuleDescriptor(moduleName).orElseThrow();
 
         assertThat(descriptor.hasTrait(OpenModule.class)).isTrue();
+    }
+
+    @Test
+    void moduleDirectivesShouldEachCarryTheirOwnSourceLocation() {
+        final var source = JavaFileObjects.forSourceString("module-info", """
+            module com.example {
+                requires java.logging;
+                exports com.example.api;
+                opens com.example.impl;
+                uses com.example.spi.MyService;
+                provides com.example.spi.MyService with com.example.impl.MyServiceImpl;
+            }
+            """);
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var moduleName = codeModel.getNameProvider().getModuleName("com.example").orElseThrow();
+        final var descriptor = codeModel.getModuleDescriptor(moduleName).orElseThrow();
+
+        final var requires = descriptor.traits(RequiresModuleDescriptor.class).findFirst().orElseThrow();
+        final var exports = descriptor.traits(ExportsDescriptor.class).findFirst().orElseThrow();
+        final var opens = descriptor.traits(OpensDescriptor.class).findFirst().orElseThrow();
+        final var uses = descriptor.traits(UsesDescriptor.class).findFirst().orElseThrow();
+        final var provides = descriptor.traits(ProvidesDescriptor.class).findFirst().orElseThrow();
+
+        assertThat(requires.getTrait(SourceLocation.FilePosition.class)).isPresent();
+        assertThat(exports.getTrait(SourceLocation.FilePosition.class)).isPresent();
+        assertThat(opens.getTrait(SourceLocation.FilePosition.class)).isPresent();
+        assertThat(uses.getTrait(SourceLocation.FilePosition.class)).isPresent();
+        assertThat(provides.getTrait(SourceLocation.FilePosition.class)).isPresent();
+
+        // each directive occupies a distinct, source-order-increasing span
+        final var positions = List.<Traitable>of(requires, exports, opens, uses, provides).stream()
+            .map(d -> d.getTrait(SourceLocation.FilePosition.class).orElseThrow().startPosition())
+            .toList();
+        assertThat(positions).isSorted();
+        assertThat(positions).doesNotHaveDuplicates();
     }
 }
