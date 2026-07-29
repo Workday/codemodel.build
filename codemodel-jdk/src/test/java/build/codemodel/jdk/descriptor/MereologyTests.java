@@ -68,7 +68,7 @@ class MereologyTests {
     @Test
     void initializerBlockDescriptorPartsContainsBlock() {
         final var body = Block.of(ExpressionStatement.of(NumericLiteral.of(codeModel, 1)));
-        final var descriptor = new InitializerBlockDescriptor(true, body);
+        final var descriptor = new InitializerBlockDescriptor(codeModel, true, body);
         assertThat(descriptor.parts().toList()).containsExactly(body);
     }
 
