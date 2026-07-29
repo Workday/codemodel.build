@@ -22,6 +22,7 @@ package build.codemodel.jdk.populator;
 
 import build.base.compile.testing.JavaFileObjects;
 import build.codemodel.jdk.descriptor.ImportDeclaration;
+import build.codemodel.jdk.populator.descriptor.SourceLocation;
 import org.junit.jupiter.api.Test;
 
 import java.util.Comparator;
@@ -108,5 +109,35 @@ class ImportDiscoveryTests {
 
         assertThat(onDemand).hasSize(1);
         assertThat(onDemand.getFirst().qualifiedName()).isEqualTo("java.util");
+    }
+
+    @Test
+    void importDeclarationsShouldEachCarryDistinctSourceLocations() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Foo", """
+                package com.example;
+                import java.util.List;
+                import java.util.Map;
+                public class Foo {}
+                """);
+
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
+        final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
+
+        final var imports = descriptor.traits(ImportDeclaration.class)
+            .sorted(Comparator.comparingInt(ImportDeclaration::order))
+            .toList();
+        assertThat(imports).hasSize(2);
+
+        imports.forEach(imp -> assertThat(imp.getTrait(SourceLocation.FilePosition.class)).isPresent());
+
+        final var listPos = imports.get(0).getTrait(SourceLocation.FilePosition.class)
+            .orElseThrow().startPosition();
+        final var mapPos = imports.get(1).getTrait(SourceLocation.FilePosition.class)
+            .orElseThrow().startPosition();
+        assertThat(mapPos).isGreaterThan(listPos);
     }
 }

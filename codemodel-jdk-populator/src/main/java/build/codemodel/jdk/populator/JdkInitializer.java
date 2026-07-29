@@ -499,15 +499,15 @@ public class JdkInitializer
             final boolean isStatic = importTree.isStatic();
             final boolean isOnDemand = qualifiedId.endsWith(".*");
             final var name = isOnDemand ? qualifiedId.substring(0, qualifiedId.length() - 2) : qualifiedId;
-            if (isStatic && isOnDemand) {
-                typeDescriptor.addTrait(ImportDeclaration.ofStaticOnDemand(name, i));
-            } else if (isStatic) {
-                typeDescriptor.addTrait(ImportDeclaration.ofStatic(name, i));
-            } else if (isOnDemand) {
-                typeDescriptor.addTrait(ImportDeclaration.ofOnDemand(name, i));
-            } else {
-                typeDescriptor.addTrait(ImportDeclaration.of(name, i));
-            }
+            final var importDeclaration = isStatic && isOnDemand
+                ? ImportDeclaration.ofStaticOnDemand(codeModel, name, i)
+                : isStatic
+                  ? ImportDeclaration.ofStatic(codeModel, name, i)
+                  : isOnDemand
+                    ? ImportDeclaration.ofOnDemand(codeModel, name, i)
+                    : ImportDeclaration.of(codeModel, name, i);
+            addSourceLocation(cut, importTree, importDeclaration);
+            typeDescriptor.addTrait(importDeclaration);
         }
     }
 
@@ -797,25 +797,25 @@ public class JdkInitializer
                 case REQUIRES -> {
                     final var req = (RequiresTree) directive;
                     descriptor.addRequires(req.getModuleName().toString(), req.isTransitive(), req.isStatic(),
-                        false, false, Optional.empty())
+                            false, false, Optional.empty())
                         .ifPresent(reqDescriptor -> addSourceLocation(cut, directive, reqDescriptor));
                 }
                 case EXPORTS -> {
                     final var exp = (ExportsTree) directive;
                     descriptor.addExports(exp.getPackageName().toString(),
-                        exp.getModuleNames() == null
-                            ? Stream.empty()
-                            : exp.getModuleNames().stream().map(Object::toString),
-                        Optional.empty())
+                            exp.getModuleNames() == null
+                                ? Stream.empty()
+                                : exp.getModuleNames().stream().map(Object::toString),
+                            Optional.empty())
                         .ifPresent(expDescriptor -> addSourceLocation(cut, directive, expDescriptor));
                 }
                 case OPENS -> {
                     final var op = (OpensTree) directive;
                     descriptor.addOpens(op.getPackageName().toString(),
-                        op.getModuleNames() == null
-                            ? Stream.empty()
-                            : op.getModuleNames().stream().map(Object::toString),
-                        Optional.empty())
+                            op.getModuleNames() == null
+                                ? Stream.empty()
+                                : op.getModuleNames().stream().map(Object::toString),
+                            Optional.empty())
                         .ifPresent(opDescriptor -> addSourceLocation(cut, directive, opDescriptor));
                 }
                 case PROVIDES -> {
