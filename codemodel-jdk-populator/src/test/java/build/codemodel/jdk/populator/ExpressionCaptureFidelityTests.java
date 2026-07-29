@@ -290,6 +290,49 @@ class ExpressionCaptureFidelityTests {
     }
 
     @Test
+    void shouldCaptureAnonymousClassBody() {
+        final var source = JavaFileObjects.forSourceString(
+            "build.codemodel.jdk.example.RunnableFactory", """
+                package build.codemodel.jdk.example;
+                public class RunnableFactory {
+                    public Runnable create() {
+                        return new Runnable() {
+                            @Override
+                            public void run() {
+                            }
+                        };
+                    }
+                }
+                """);
+
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getEmptyModuleTypeName("build.codemodel.jdk.example.RunnableFactory");
+
+        final var newObject = codeModel.getTypeDescriptor(typeName).stream()
+            .flatMap(td -> td.traits(MethodDescriptor.class))
+            .map(m -> m.trait(MethodBodyDescriptor.class))
+            .flatMap(mb -> mb.composition(NewObject.class))
+            .findFirst()
+            .orElseThrow();
+
+        assertThat(newObject.instantiatedType()).isInstanceOf(NamedTypeUsage.class);
+        assertThat(((NamedTypeUsage) newObject.instantiatedType()).typeName().canonicalName())
+            .as("NewObject only models the declared supertype, never the anonymous subclass itself")
+            .isEqualTo("java.lang.Runnable");
+
+        final var anonymousClassDescriptors = codeModel.typeDescriptors()
+            .filter(td -> td.typeName().canonicalName().startsWith("build.codemodel.jdk.example.RunnableFactory."))
+            .toList();
+
+        assertThat(anonymousClassDescriptors)
+            .as("the anonymous class itself should still get its own TypeDescriptor, "
+                + "even though NewObject only models the declared supertype")
+            .isNotEmpty();
+    }
+
+    @Test
     void shouldCaptureClassLiteralOnPrimitiveType() {
         final var source = JavaFileObjects.forSourceString(
             "build.codemodel.jdk.example.PrimitiveTokens", """

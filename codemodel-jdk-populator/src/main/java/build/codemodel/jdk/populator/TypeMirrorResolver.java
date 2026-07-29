@@ -342,8 +342,22 @@ public final class TypeMirrorResolver {
         final var moduleName = resolveModuleName(typeElement);
         final var namespace = resolveNamespace(typeElement);
         final var enclosingTypeName = resolveEnclosingTypeName(typeElement);
-        final var irreducibleName = nameProvider.getIrreducibleName(typeElement.getSimpleName().toString());
+        final var simpleName = typeElement.getSimpleName().toString();
+        // Mirrors NameProvider#getTypeName(Class<?>)'s handling of anonymous/local classes: the
+        // simple name is empty for an anonymous class, so fall back to the binary name's trailing
+        // segment, "_"-prefixed since it starts with the compiler's numeric counter (e.g. "1"),
+        // which is not a valid Java identifier on its own.
+        final var effectiveSimpleName = simpleName.isEmpty()
+            ? "_" + anonymousClassSuffix(typeElement)
+            : simpleName;
+        final var irreducibleName = nameProvider.getIrreducibleName(effectiveSimpleName);
         return nameProvider.getTypeName(moduleName, namespace, enclosingTypeName, irreducibleName);
+    }
+
+    private String anonymousClassSuffix(final TypeElement typeElement) {
+        final var binaryName = elements.getBinaryName(typeElement).toString();
+        final var lastSeparator = binaryName.lastIndexOf('$');
+        return lastSeparator >= 0 ? binaryName.substring(lastSeparator + 1) : binaryName;
     }
 
     private Optional<ModuleName> resolveModuleName(final TypeElement typeElement) {
@@ -360,10 +374,15 @@ public final class TypeMirrorResolver {
     }
 
     private Optional<TypeName> resolveEnclosingTypeName(final TypeElement typeElement) {
-        return switch (typeElement.getEnclosingElement()) {
-            case TypeElement enclosing -> Optional.of(resolveTypeName(enclosing));
-            default -> Optional.empty();
-        };
+        // An anonymous or local class is enclosed by the method/constructor/initializer it's
+        // declared in, not directly by a TypeElement - walk up to the nearest one.
+        var enclosing = typeElement.getEnclosingElement();
+        while (enclosing != null && !(enclosing instanceof TypeElement)) {
+            enclosing = enclosing.getEnclosingElement();
+        }
+        return enclosing instanceof TypeElement enclosingType
+            ? Optional.of(resolveTypeName(enclosingType))
+            : Optional.empty();
     }
 
     /**

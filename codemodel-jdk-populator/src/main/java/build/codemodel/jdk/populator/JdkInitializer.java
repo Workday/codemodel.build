@@ -81,6 +81,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.NestingKind;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.tools.Diagnostic;
@@ -379,7 +380,8 @@ public class JdkInitializer
                             mirror -> resolver.resolve(mirror, null), resolver::resolveTypeName);
                         final var typeElement = (TypeElement) trees.getElement(classPath);
                         if (typeElement != null
-                            && !typeElement.getQualifiedName().toString().isEmpty()) {
+                            && (!typeElement.getQualifiedName().toString().isEmpty()
+                            || typeElement.getNestingKind() == NestingKind.ANONYMOUS)) {
                             exprConverter.setEnclosingType(resolver.resolve(typeElement.asType(), null));
                             processTypeElement(typeElement, classPath);
                         }
@@ -471,7 +473,7 @@ public class JdkInitializer
 
         final var cut = classPath.getCompilationUnit();
         addSourceLocation(cut, classPath.getLeaf(), typeDescriptor);
-        if (!(typeElement.getEnclosingElement() instanceof TypeElement)) {
+        if (typeElement.getNestingKind() == NestingKind.TOP_LEVEL) {
             addImports(typeDescriptor, cut);
         }
         addSuperTypeUsageSourceLocations(typeDescriptor, classPath, cut);
