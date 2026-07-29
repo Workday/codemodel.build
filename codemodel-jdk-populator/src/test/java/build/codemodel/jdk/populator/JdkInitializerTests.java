@@ -30,6 +30,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import javax.lang.model.element.ExecutableElement;
 import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
 import javax.tools.ToolProvider;
@@ -757,5 +758,35 @@ class JdkInitializerTests {
         assertThat(xAccessor.getTrait(MethodBodyDescriptor.class))
             .as("implicit accessor has no modeled body")
             .isEmpty();
+    }
+
+    /**
+     * Enums get the same kind of compiler-synthesized methods as records ({@code values()},
+     * {@code valueOf(String)}) that never gain a {@code MethodTree}, but {@code processMembers}
+     * only calls {@code processImplicitRecordMethods} when {@code classTree.getKind() ==
+     * Tree.Kind.RECORD} — there is no analogous {@code Tree.Kind.ENUM} branch, so these implicit
+     * members are missing entirely.
+     */
+    @Test
+    void shouldExposeImplicitEnumMembers() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Color",
+            """
+                package com.example;
+                public enum Color {
+                    RED, GREEN, BLUE;
+                }
+                """);
+        final var codeModel = runInternal(new JdkInitializer(List.of(), List.of(), List.of(source)));
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Color");
+        final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
+
+        final var methodNames = descriptor.traits(MethodDescriptor.class)
+            .map(m -> m.methodName().name().toString())
+            .toList();
+
+        assertThat(methodNames)
+            .as("implicit enum values()/valueOf() should be modeled as methods")
+            .contains("values", "valueOf");
     }
 }

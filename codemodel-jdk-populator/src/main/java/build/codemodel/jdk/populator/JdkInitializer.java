@@ -612,23 +612,24 @@ public class JdkInitializer
             }
         }
 
-        if (classTree.getKind() == Tree.Kind.RECORD) {
-            processImplicitRecordMethods(typeDescriptor, classPath, writtenMethods, memberOrder);
+        if (classTree.getKind() == Tree.Kind.RECORD || classTree.getKind() == Tree.Kind.ENUM) {
+            processImplicitMethods(typeDescriptor, classPath, writtenMethods, memberOrder);
         }
     }
 
     /**
-     * A record's component accessors and its overridden {@code toString}/{@code equals}/
-     * {@code hashCode} are synthesized directly onto the {@link TypeElement} without ever gaining
-     * a corresponding {@link MethodTree} — unlike the canonical constructor, which does get a
-     * synthetic tree. {@link #processMembers} only walks the {@link ClassTree}, so these methods
-     * are otherwise never modeled at all. This fills them in from {@code Elements} directly, with
-     * no source location or body since none was ever written.
+     * Some compiler-synthesized methods are added directly onto the {@link TypeElement} without
+     * ever gaining a corresponding {@link MethodTree} — unlike the canonical constructor, which
+     * does get a synthetic tree. This is true of a record's component accessors and its
+     * overridden {@code toString}/{@code equals}/{@code hashCode}, and of an enum's
+     * {@code values()}/{@code valueOf(String)}. {@link #processMembers} only walks the
+     * {@link ClassTree}, so these methods are otherwise never modeled at all. This fills them in
+     * from {@code Elements} directly, with no source location or body since none was ever written.
      */
-    private void processImplicitRecordMethods(final JDKTypeDescriptor typeDescriptor,
-                                              final TreePath classPath,
-                                              final Set<ExecutableElement> writtenMethods,
-                                              final int startOrder) {
+    private void processImplicitMethods(final JDKTypeDescriptor typeDescriptor,
+                                        final TreePath classPath,
+                                        final Set<ExecutableElement> writtenMethods,
+                                        final int startOrder) {
         final var typeElement = (TypeElement) trees.getElement(classPath);
         var memberOrder = startOrder;
         for (final var enclosed : typeElement.getEnclosedElements()) {
