@@ -44,6 +44,7 @@ import build.codemodel.jdk.statement.SwitchStatement;
 import build.codemodel.jdk.statement.Synchronized;
 import build.codemodel.jdk.statement.Throw;
 import build.codemodel.jdk.statement.Try;
+import build.codemodel.jdk.statement.Yield;
 import com.sun.source.tree.AssertTree;
 import com.sun.source.tree.BindingPatternTree;
 import com.sun.source.tree.BlockTree;
@@ -73,6 +74,7 @@ import com.sun.source.tree.TryTree;
 import com.sun.source.tree.UnionTypeTree;
 import com.sun.source.tree.VariableTree;
 import com.sun.source.tree.WhileLoopTree;
+import com.sun.source.tree.YieldTree;
 import com.sun.source.util.SimpleTreeVisitor;
 
 import java.util.List;
@@ -162,6 +164,11 @@ public class JdkStatementConverter
     @Override
     public Statement visitThrow(final ThrowTree t, final Void v) {
         return Throw.of(exprConverter.convert(t.getExpression()));
+    }
+
+    @Override
+    public Statement visitYield(final YieldTree t, final Void v) {
+        return Yield.of(exprConverter.convert(t.getValue()));
     }
 
     @Override
