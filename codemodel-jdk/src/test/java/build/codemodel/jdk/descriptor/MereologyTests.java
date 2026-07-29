@@ -90,7 +90,7 @@ class MereologyTests {
     @Test
     void usesDescriptorPartsContainsServiceType() {
         final var type = codeModel.getTypeUsage(Runnable.class);
-        final var descriptor = UsesDescriptor.of(type);
+        final var descriptor = UsesDescriptor.of(codeModel, type);
         assertThat(descriptor.parts().toList()).containsExactly(type);
     }
 
@@ -102,7 +102,7 @@ class MereologyTests {
     void providesDescriptorPartsContainsServiceTypeAndImplementations() {
         final var serviceType = codeModel.getTypeUsage(Runnable.class);
         final var implType = codeModel.getTypeUsage(Thread.class);
-        final var descriptor = ProvidesDescriptor.of(serviceType, Stream.of(implType));
+        final var descriptor = ProvidesDescriptor.of(codeModel, serviceType, Stream.of(implType));
         final var parts = descriptor.parts().toList();
         assertThat(parts).contains(serviceType);
         assertThat(parts).contains(implType);

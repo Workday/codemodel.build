@@ -27,8 +27,10 @@ import build.base.marshalling.Marshalling;
  * These values are only present in bytecode; they never appear in source.
  * <p>
  * This is intentionally a plain enum rather than a {@link build.codemodel.foundation.descriptor.Trait}:
- * {@link ExportsDescriptor} and {@link OpensDescriptor} are immutable records, so modifiers cannot be
- * attached via {@code addTrait()} post-construction and are instead embedded as record components.
+ * {@link ExportsDescriptor} and {@link OpensDescriptor} embed it as a constructor argument, fixed at
+ * construction time (never {@code SYNTHETIC} or {@code MANDATED} on a source-parsed directive) —
+ * unlike source-position information, which is attached post-construction via {@code addTrait()}
+ * once a directive's originating {@code Tree} is available.
  *
  * @author reed.vonredwitz
  * @since Apr-2026
