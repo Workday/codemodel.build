@@ -640,8 +640,8 @@ public final class JDKModuleDescriptor
     }
 
     public Optional<OpensDescriptor> addOpens(final String rawPkg,
-                                             final Stream<String> rawTargets,
-                                             final Optional<PackageDirectiveModifier> modifier) {
+                                              final Stream<String> rawTargets,
+                                              final Optional<PackageDirectiveModifier> modifier) {
         final String pkg = rawPkg.replace('/', '.');
         return codeModel().getNameProvider().getNamespace(pkg).map(ns -> {
             final var existing = opensClauses().filter(o -> o.packageName().equals(ns)).findFirst();

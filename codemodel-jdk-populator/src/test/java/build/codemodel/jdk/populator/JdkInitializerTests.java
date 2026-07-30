@@ -11,7 +11,16 @@ import build.codemodel.foundation.usage.SpecificTypeUsage;
 import build.codemodel.foundation.usage.TypeUsage;
 import build.codemodel.foundation.usage.UnknownTypeUsage;
 import build.codemodel.jdk.JDKCodeModel;
+import build.codemodel.jdk.descriptor.Default;
 import build.codemodel.jdk.descriptor.MethodBodyDescriptor;
+import build.codemodel.jdk.descriptor.Native;
+import build.codemodel.jdk.descriptor.NonSealed;
+import build.codemodel.jdk.descriptor.PermitsTypeDescriptor;
+import build.codemodel.jdk.descriptor.Sealed;
+import build.codemodel.jdk.descriptor.Strictfp;
+import build.codemodel.jdk.descriptor.Synchronized;
+import build.codemodel.jdk.descriptor.Transient;
+import build.codemodel.jdk.descriptor.Volatile;
 import build.codemodel.jdk.expression.NewObject;
 import build.codemodel.jdk.populator.descriptor.SourceLocation;
 import build.codemodel.jdk.statement.LocalVariableDeclaration;
@@ -788,5 +797,187 @@ class JdkInitializerTests {
         assertThat(methodNames)
             .as("implicit enum values()/valueOf() should be modeled as methods")
             .contains("values", "valueOf");
+    }
+
+    @Test
+    void shouldCaptureTransientOnField() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Foo",
+            "package com.example; public class Foo { private transient int x; private int y; }");
+        final var codeModel = runInternal(new JdkInitializer(List.of(), List.of(), List.of(source)));
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
+        final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
+        final var x = descriptor.traits(FieldDescriptor.class)
+            .filter(f -> f.fieldName().toString().equals("x"))
+            .findFirst().orElseThrow();
+        final var y = descriptor.traits(FieldDescriptor.class)
+            .filter(f -> f.fieldName().toString().equals("y"))
+            .findFirst().orElseThrow();
+
+        assertThat(x.getTrait(Transient.class))
+            .as("transient field x should carry the Transient trait")
+            .contains(Transient.TRANSIENT);
+        assertThat(y.getTrait(Transient.class))
+            .as("non-transient field y should not carry the Transient trait")
+            .isEmpty();
+    }
+
+    @Test
+    void shouldCaptureVolatileOnField() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Foo",
+            "package com.example; public class Foo { private volatile int x; private int y; }");
+        final var codeModel = runInternal(new JdkInitializer(List.of(), List.of(), List.of(source)));
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
+        final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
+        final var x = descriptor.traits(FieldDescriptor.class)
+            .filter(f -> f.fieldName().toString().equals("x"))
+            .findFirst().orElseThrow();
+        final var y = descriptor.traits(FieldDescriptor.class)
+            .filter(f -> f.fieldName().toString().equals("y"))
+            .findFirst().orElseThrow();
+
+        assertThat(x.getTrait(Volatile.class))
+            .as("volatile field x should carry the Volatile trait")
+            .contains(Volatile.VOLATILE);
+        assertThat(y.getTrait(Volatile.class))
+            .as("non-volatile field y should not carry the Volatile trait")
+            .isEmpty();
+    }
+
+    @Test
+    void shouldCaptureSynchronizedOnMethod() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Foo",
+            "package com.example; public class Foo { public synchronized void bar() {} public void baz() {} }");
+        final var codeModel = runInternal(new JdkInitializer(List.of(), List.of(), List.of(source)));
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
+        final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
+        final var bar = descriptor.traits(MethodDescriptor.class)
+            .filter(m -> m.methodName().name().toString().equals("bar"))
+            .findFirst().orElseThrow();
+        final var baz = descriptor.traits(MethodDescriptor.class)
+            .filter(m -> m.methodName().name().toString().equals("baz"))
+            .findFirst().orElseThrow();
+
+        assertThat(bar.getTrait(Synchronized.class))
+            .as("synchronized method bar() should carry the Synchronized trait")
+            .contains(Synchronized.SYNCHRONIZED);
+        assertThat(baz.getTrait(Synchronized.class))
+            .as("non-synchronized method baz() should not carry the Synchronized trait")
+            .isEmpty();
+    }
+
+    @Test
+    void shouldCaptureNativeOnMethod() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Foo",
+            "package com.example; public class Foo { public native void bar(); public void baz() {} }");
+        final var codeModel = runInternal(new JdkInitializer(List.of(), List.of(), List.of(source)));
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
+        final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
+        final var bar = descriptor.traits(MethodDescriptor.class)
+            .filter(m -> m.methodName().name().toString().equals("bar"))
+            .findFirst().orElseThrow();
+        final var baz = descriptor.traits(MethodDescriptor.class)
+            .filter(m -> m.methodName().name().toString().equals("baz"))
+            .findFirst().orElseThrow();
+
+        assertThat(bar.getTrait(Native.class))
+            .as("native method bar() should carry the Native trait")
+            .contains(Native.NATIVE);
+        assertThat(baz.getTrait(Native.class))
+            .as("non-native method baz() should not carry the Native trait")
+            .isEmpty();
+    }
+
+    @Test
+    void shouldCaptureStrictfpOnMethod() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Foo",
+            "package com.example; public class Foo { public strictfp void bar() {} public void baz() {} }");
+        final var codeModel = runInternal(new JdkInitializer(List.of(), List.of(), List.of(source)));
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
+        final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
+        final var bar = descriptor.traits(MethodDescriptor.class)
+            .filter(m -> m.methodName().name().toString().equals("bar"))
+            .findFirst().orElseThrow();
+        final var baz = descriptor.traits(MethodDescriptor.class)
+            .filter(m -> m.methodName().name().toString().equals("baz"))
+            .findFirst().orElseThrow();
+
+        assertThat(bar.getTrait(Strictfp.class))
+            .as("strictfp method bar() should carry the Strictfp trait")
+            .contains(Strictfp.STRICTFP);
+        assertThat(baz.getTrait(Strictfp.class))
+            .as("non-strictfp method baz() should not carry the Strictfp trait")
+            .isEmpty();
+    }
+
+    @Test
+    void shouldCaptureSealedAndPermitsOnType() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Foo",
+            """
+                package com.example;
+                public sealed class Foo permits Bar {}
+                final class Bar extends Foo {}
+                """);
+        final var codeModel = runInternal(new JdkInitializer(List.of(), List.of(), List.of(source)));
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
+        final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
+
+        assertThat(descriptor.getTrait(Sealed.class))
+            .as("sealed type Foo should carry the Sealed trait")
+            .contains(Sealed.SEALED);
+
+        final var permittedTypeNames = descriptor.traits(PermitsTypeDescriptor.class)
+            .map(permits -> permits.parentTypeUsage().typeName().name().toString())
+            .toList();
+
+        assertThat(permittedTypeNames)
+            .as("sealed type Foo should record Bar as a permitted subtype")
+            .containsExactly("Bar");
+    }
+
+    @Test
+    void shouldCaptureNonSealedOnType() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Foo",
+            """
+                package com.example;
+                public sealed class Foo permits Bar {}
+                non-sealed class Bar extends Foo {}
+                """);
+        final var codeModel = runInternal(new JdkInitializer(List.of(), List.of(), List.of(source)));
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Bar");
+        final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
+
+        assertThat(descriptor.getTrait(NonSealed.class))
+            .as("non-sealed type Bar should carry the NonSealed trait")
+            .contains(NonSealed.NON_SEALED);
+    }
+
+    @Test
+    void shouldCaptureDefaultOnInterfaceMethod() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Foo",
+            "package com.example; public interface Foo { default void bar() {} void baz(); }");
+        final var codeModel = runInternal(new JdkInitializer(List.of(), List.of(), List.of(source)));
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
+        final var descriptor = codeModel.getTypeDescriptor(typeName).orElseThrow();
+        final var bar = descriptor.traits(MethodDescriptor.class)
+            .filter(m -> m.methodName().name().toString().equals("bar"))
+            .findFirst().orElseThrow();
+        final var baz = descriptor.traits(MethodDescriptor.class)
+            .filter(m -> m.methodName().name().toString().equals("baz"))
+            .findFirst().orElseThrow();
+
+        assertThat(bar.getTrait(Default.class))
+            .as("default method bar() should carry the Default trait")
+            .contains(Default.DEFAULT);
+        assertThat(baz.getTrait(Default.class))
+            .as("non-default method baz() should not carry the Default trait")
+            .isEmpty();
     }
 }
