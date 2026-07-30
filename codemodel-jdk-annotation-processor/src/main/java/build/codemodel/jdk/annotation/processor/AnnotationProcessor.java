@@ -48,6 +48,7 @@ import build.codemodel.jdk.JDKCodeModel;
 import build.codemodel.jdk.TypeUsages;
 import build.codemodel.jdk.annotation.discovery.AnnotationDiscovery;
 import build.codemodel.jdk.annotation.discovery.Discoverable;
+import build.codemodel.jdk.descriptor.EnumConstantDescriptor;
 import build.codemodel.jdk.descriptor.JDKTypeDescriptor;
 import build.codemodel.jdk.populator.TypeMirrorResolver;
 import build.codemodel.jdk.populator.descriptor.SourceLocation;
@@ -449,6 +450,29 @@ public class AnnotationProcessor
     }
 
     /**
+     * Creates an {@link EnumConstantDescriptor} for the {@link TypeDescriptor} based on a
+     * {@link VariableElement} of kind {@code ENUM_CONSTANT}.
+     *
+     * @param codeModel       the {@link CodeModel}
+     * @param typeDescriptor  the {@link TypeDescriptor} in which to define the {@link EnumConstantDescriptor}
+     * @param constantElement the {@link VariableElement} for the enum constant
+     * @param order           the enum constant's ordinal position among its siblings
+     * @return an {@link EnumConstantDescriptor}
+     */
+    private EnumConstantDescriptor createEnumConstantDescriptor(final CodeModel codeModel,
+                                                                final TypeDescriptor typeDescriptor,
+                                                                final VariableElement constantElement,
+                                                                final int order) {
+        final var name = codeModel.getNameProvider().getIrreducibleName(constantElement.getSimpleName());
+        final var enumConstantDescriptor = EnumConstantDescriptor.of(codeModel, name, order);
+        enumConstantDescriptor.addTrait(SourceLocation.elementRef(constantElement));
+
+        typeDescriptor.addTrait(enumConstantDescriptor);
+
+        return enumConstantDescriptor;
+    }
+
+    /**
      * Creates a {@link ConstructorDescriptor} for the {@link TypeDescriptor} based on an {@link ExecutableElement}.
      *
      * @param codeModel          the {@link CodeModel}
@@ -551,11 +575,15 @@ public class AnnotationProcessor
             // declaration order) so the trait reflects each member's position among all members, not just
             // among its own kind
             final var memberOrder = new AtomicInteger();
+            final var enumConstantOrder = new AtomicInteger();
             for (final var enclosing : typeElement.getEnclosedElements()) {
                 switch (enclosing.getKind()) {
                     case FIELD -> createFieldDescriptor(
                         codeModel, typeDescriptor, (VariableElement) enclosing, pending,
                         memberOrder.getAndIncrement());
+                    case ENUM_CONSTANT -> createEnumConstantDescriptor(
+                        codeModel, typeDescriptor, (VariableElement) enclosing,
+                        enumConstantOrder.getAndIncrement());
                     case CONSTRUCTOR -> createConstructorDescriptor(
                         codeModel, typeDescriptor, (ExecutableElement) enclosing, pending,
                         memberOrder.getAndIncrement());
