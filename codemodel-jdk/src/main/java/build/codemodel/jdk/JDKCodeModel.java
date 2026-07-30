@@ -54,6 +54,7 @@ import build.codemodel.foundation.usage.TypeVariableUsage;
 import build.codemodel.foundation.usage.UnknownTypeUsage;
 import build.codemodel.foundation.usage.WildcardTypeUsage;
 import build.codemodel.jdk.descriptor.ConstructorType;
+import build.codemodel.jdk.descriptor.Default;
 import build.codemodel.jdk.descriptor.FieldType;
 import build.codemodel.jdk.descriptor.Final;
 import build.codemodel.jdk.descriptor.InitializerBlockDescriptor;
@@ -61,8 +62,16 @@ import build.codemodel.jdk.descriptor.JDKType;
 import build.codemodel.jdk.descriptor.JDKTypeDescriptor;
 import build.codemodel.jdk.descriptor.MethodBodyDescriptor;
 import build.codemodel.jdk.descriptor.MethodType;
+import build.codemodel.jdk.descriptor.Native;
+import build.codemodel.jdk.descriptor.NonSealed;
+import build.codemodel.jdk.descriptor.PermitsTypeDescriptor;
+import build.codemodel.jdk.descriptor.Sealed;
 import build.codemodel.jdk.descriptor.Static;
+import build.codemodel.jdk.descriptor.Strictfp;
+import build.codemodel.jdk.descriptor.Synchronized;
+import build.codemodel.jdk.descriptor.Transient;
 import build.codemodel.jdk.descriptor.Varargs;
+import build.codemodel.jdk.descriptor.Volatile;
 import build.codemodel.jdk.expression.ResolvedMethod;
 import build.codemodel.objectoriented.ObjectOrientedCodeModel;
 import build.codemodel.objectoriented.descriptor.AccessModifier;
@@ -528,6 +537,16 @@ public class JDKCodeModel
         // include the Classification
         typeDescriptor.addTrait(getClassification(classModifier));
 
+        // include the Sealed/NonSealed traits and permitted subtypes
+        if (classType.isSealed()) {
+            typeDescriptor.addTrait(Sealed.SEALED);
+            Arrays.stream(classType.getPermittedSubclasses())
+                .forEach(permitted -> getNamedTypeUsage((Type) permitted)
+                    .ifPresent(named -> typeDescriptor.addTrait(PermitsTypeDescriptor.of(named))));
+        } else if (!Modifier.isFinal(classModifier) && isDirectSubtypeOfSealed(classType)) {
+            typeDescriptor.addTrait(NonSealed.NON_SEALED);
+        }
+
         // include the generic parameter declarations on the type itself
         final TypeVariable<?>[] typeParameters = classType.getTypeParameters();
         if (typeParameters.length > 0) {
@@ -640,6 +659,22 @@ public class JDKCodeModel
             methodDescriptor.addTrait(Static.STATIC);
         }
 
+        // include the Synchronized/Native/Strictfp traits (if necessary)
+        if (Modifier.isSynchronized(methodModifiers)) {
+            methodDescriptor.addTrait(Synchronized.SYNCHRONIZED);
+        }
+        if (Modifier.isNative(methodModifiers)) {
+            methodDescriptor.addTrait(Native.NATIVE);
+        }
+        if (Modifier.isStrict(methodModifiers)) {
+            methodDescriptor.addTrait(Strictfp.STRICTFP);
+        }
+
+        // include the Default trait for interface methods declared with a body via `default`
+        if (method.isDefault()) {
+            methodDescriptor.addTrait(Default.DEFAULT);
+        }
+
         // include the AccessModifier
         getAccessModifier(methodModifiers)
             .ifPresent(methodDescriptor::addTrait);
@@ -691,6 +726,14 @@ public class JDKCodeModel
         // include the Static trait (if necessary)
         if (Modifier.isStatic(fieldModifiers)) {
             fieldDescriptor.addTrait(Static.STATIC);
+        }
+
+        // include the Transient/Volatile traits (if necessary)
+        if (Modifier.isTransient(fieldModifiers)) {
+            fieldDescriptor.addTrait(Transient.TRANSIENT);
+        }
+        if (Modifier.isVolatile(fieldModifiers)) {
+            fieldDescriptor.addTrait(Volatile.VOLATILE);
         }
 
         // include the AccessModifier
@@ -1040,6 +1083,22 @@ public class JDKCodeModel
         } else {
             return Classification.CONCRETE;
         }
+    }
+
+    /**
+     * Determines whether {@code classType} is a direct subtype of a {@code sealed} superclass or
+     * superinterface, meaning it must itself be declared {@code non-sealed} (having already ruled out
+     * {@code final} and {@code sealed}).
+     *
+     * @param classType the {@link Class} to check
+     * @return {@code true} if {@code classType} directly extends or implements a {@code sealed} type
+     */
+    private static boolean isDirectSubtypeOfSealed(final Class<?> classType) {
+        final var superclass = classType.getSuperclass();
+        if (superclass != null && superclass.isSealed()) {
+            return true;
+        }
+        return Arrays.stream(classType.getInterfaces()).anyMatch(Class::isSealed);
     }
 
     /**

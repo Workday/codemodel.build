@@ -47,6 +47,7 @@ import build.codemodel.foundation.usage.VoidTypeUsage;
 import build.codemodel.foundation.usage.WildcardTypeUsage;
 import build.codemodel.jdk.descriptor.AnnotationMemberDefaultValue;
 import build.codemodel.jdk.descriptor.AnnotationType;
+import build.codemodel.jdk.descriptor.Default;
 import build.codemodel.jdk.descriptor.EnclosingTypeDescriptor;
 import build.codemodel.jdk.descriptor.EnumType;
 import build.codemodel.jdk.descriptor.Final;
@@ -55,10 +56,18 @@ import build.codemodel.jdk.descriptor.JDKInterfaceTypeDescriptor;
 import build.codemodel.jdk.descriptor.JDKTypeDescriptor;
 import build.codemodel.jdk.descriptor.MemberTypeDescriptor;
 import build.codemodel.jdk.descriptor.MethodImplementationDescriptor;
+import build.codemodel.jdk.descriptor.Native;
+import build.codemodel.jdk.descriptor.NonSealed;
+import build.codemodel.jdk.descriptor.PermitsTypeDescriptor;
 import build.codemodel.jdk.descriptor.RecordComponentDescriptor;
 import build.codemodel.jdk.descriptor.RecordType;
+import build.codemodel.jdk.descriptor.Sealed;
 import build.codemodel.jdk.descriptor.Static;
+import build.codemodel.jdk.descriptor.Strictfp;
+import build.codemodel.jdk.descriptor.Synchronized;
+import build.codemodel.jdk.descriptor.Transient;
 import build.codemodel.jdk.descriptor.Varargs;
+import build.codemodel.jdk.descriptor.Volatile;
 import build.codemodel.jdk.populator.descriptor.SourceLocation;
 import build.codemodel.objectoriented.descriptor.AccessModifier;
 import build.codemodel.objectoriented.descriptor.Classification;
@@ -227,6 +236,21 @@ public final class TypeMirrorResolver {
                                       final Collection<? extends Modifier> modifiers) {
         if (modifiers.contains(Modifier.STATIC)) {
             descriptor.addTrait(Static.STATIC);
+        }
+        if (modifiers.contains(Modifier.SYNCHRONIZED)) {
+            descriptor.addTrait(Synchronized.SYNCHRONIZED);
+        }
+        if (modifiers.contains(Modifier.NATIVE)) {
+            descriptor.addTrait(Native.NATIVE);
+        }
+        if (modifiers.contains(Modifier.STRICTFP)) {
+            descriptor.addTrait(Strictfp.STRICTFP);
+        }
+        if (modifiers.contains(Modifier.SEALED)) {
+            descriptor.addTrait(Sealed.SEALED);
+        }
+        if (modifiers.contains(Modifier.NON_SEALED)) {
+            descriptor.addTrait(NonSealed.NON_SEALED);
         }
         getAccessModifier(modifiers).ifPresent(descriptor::addTrait);
         descriptor.addTrait(getClassification(modifiers));
@@ -433,6 +457,12 @@ public final class TypeMirrorResolver {
         if (fieldModifiers.contains(Modifier.STATIC)) {
             fieldDescriptor.addTrait(Static.STATIC);
         }
+        if (fieldModifiers.contains(Modifier.TRANSIENT)) {
+            fieldDescriptor.addTrait(Transient.TRANSIENT);
+        }
+        if (fieldModifiers.contains(Modifier.VOLATILE)) {
+            fieldDescriptor.addTrait(Volatile.VOLATILE);
+        }
         getAccessModifier(fieldModifiers).ifPresent(fieldDescriptor::addTrait);
         fieldDescriptor.addTrait(getClassification(fieldModifiers));
     }
@@ -540,8 +570,18 @@ public final class TypeMirrorResolver {
         this.addSuperclass(typeDescriptor, typeElement);
         this.addInterfaces(typeDescriptor, typeElement);
         this.addedInnerTypes(typeDescriptor, typeElement);
+        this.addPermittedSubtypes(typeDescriptor, typeElement);
 
         return typeDescriptor;
+    }
+
+    private void addPermittedSubtypes(final JDKTypeDescriptor typeDescriptor, final TypeElement typeElement) {
+        for (final var permittedMirror : typeElement.getPermittedSubclasses()) {
+            final var usage = this.resolve(permittedMirror, typeElement);
+            if (usage instanceof NamedTypeUsage named) {
+                typeDescriptor.addTrait(PermitsTypeDescriptor.of(named));
+            }
+        }
     }
 
     private void addRecordComponents(final JDKTypeDescriptor typeDescriptor,
@@ -600,6 +640,7 @@ public final class TypeMirrorResolver {
         this.addThrowables(methodElement, methodDescriptor);
         if (methodElement.isDefault()) {
             methodDescriptor.addTrait(new MethodImplementationDescriptor(methodDescriptor));
+            methodDescriptor.addTrait(Default.DEFAULT);
         }
         applyModifiers(methodDescriptor, methodElement.getModifiers());
         this.addTypeAnnotations(methodDescriptor, methodElement);

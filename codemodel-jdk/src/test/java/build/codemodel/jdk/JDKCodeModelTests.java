@@ -12,6 +12,9 @@ import build.codemodel.foundation.usage.WildcardTypeUsage;
 import build.codemodel.hierarchical.descriptor.HierarchicalTypeDescriptor;
 import build.codemodel.jdk.descriptor.Final;
 import build.codemodel.jdk.descriptor.JDKTypeDescriptor;
+import build.codemodel.jdk.descriptor.NonSealed;
+import build.codemodel.jdk.descriptor.PermitsTypeDescriptor;
+import build.codemodel.jdk.descriptor.Sealed;
 import build.codemodel.jdk.descriptor.Varargs;
 import build.codemodel.jdk.example.AbstractPerson;
 import build.codemodel.jdk.example.AnnotatedGenericContainer;
@@ -22,6 +25,9 @@ import build.codemodel.jdk.example.FinalParamExample;
 import build.codemodel.jdk.example.MultiBoundContainer;
 import build.codemodel.jdk.example.NonAbstractPerson;
 import build.codemodel.jdk.example.RawFieldContainer;
+import build.codemodel.jdk.example.SealedCircle;
+import build.codemodel.jdk.example.SealedPolygon;
+import build.codemodel.jdk.example.SealedShape;
 import build.codemodel.jdk.example.ThrowingExample;
 import build.codemodel.jdk.example.VarargsExample;
 import build.codemodel.jdk.example.WildcardContainer;
@@ -647,6 +653,72 @@ class JDKCodeModelTests {
             .map(a -> a.typeName().name().toString())
             .toList())
             .contains("NonNull");
+    }
+
+    /**
+     * Ensure a {@code sealed} type discovered via reflection carries the {@link Sealed} trait along
+     * with {@link PermitsTypeDescriptor} traits for each permitted subtype.
+     */
+    @Test
+    void shouldCaptureSealedAndPermitsOnTypeViaReflection() {
+        final var codeModel = createCodeModel();
+        final var descriptor = codeModel.getJDKTypeDescriptor(SealedShape.class).orElseThrow();
+
+        assertThat(descriptor.getTrait(Sealed.class))
+            .as("sealed type SealedShape should carry the Sealed trait")
+            .contains(Sealed.SEALED);
+
+        final var permittedTypeNames = descriptor.traits(PermitsTypeDescriptor.class)
+            .map(permits -> permits.parentTypeUsage().typeName().name().toString())
+            .toList();
+
+        assertThat(permittedTypeNames)
+            .as("sealed type SealedShape should record its permitted subtypes")
+            .containsExactlyInAnyOrder("SealedCircle", "SealedPolygon");
+    }
+
+    /**
+     * {@code java.lang.reflect.Modifier} has no bit for {@code non-sealed}, so the reflection path
+     * (see {@code JDKCodeModel#isDirectSubtypeOfSealed}) must infer the {@link NonSealed} trait by
+     * walking the class hierarchy: a non-final direct subtype of a {@code sealed} superclass or
+     * superinterface must itself be {@code non-sealed}.
+     */
+    @Test
+    void shouldCaptureNonSealedOnTypeViaReflection() {
+        final var codeModel = createCodeModel();
+        final var descriptor = codeModel.getJDKTypeDescriptor(SealedPolygon.class).orElseThrow();
+
+        assertThat(descriptor.getTrait(NonSealed.class))
+            .as("non-sealed type SealedPolygon should carry the NonSealed trait")
+            .contains(NonSealed.NON_SEALED);
+    }
+
+    /**
+     * A {@code final} permitted subtype of a {@code sealed} type must not be inferred as
+     * {@code non-sealed} — {@code isDirectSubtypeOfSealed} only applies once {@code final} has
+     * already been ruled out.
+     */
+    @Test
+    void shouldNotCaptureNonSealedOnFinalSubtypeOfSealedTypeViaReflection() {
+        final var codeModel = createCodeModel();
+        final var descriptor = codeModel.getJDKTypeDescriptor(SealedCircle.class).orElseThrow();
+
+        assertThat(descriptor.getTrait(NonSealed.class))
+            .as("final type SealedCircle should not carry the NonSealed trait")
+            .isEmpty();
+    }
+
+    /**
+     * A type unrelated to any {@code sealed} hierarchy must not be inferred as {@code non-sealed}.
+     */
+    @Test
+    void shouldNotCaptureNonSealedOnUnrelatedTypeViaReflection() {
+        final var codeModel = createCodeModel();
+        final var descriptor = codeModel.getJDKTypeDescriptor(Container.class).orElseThrow();
+
+        assertThat(descriptor.getTrait(NonSealed.class))
+            .as("Container is not a subtype of any sealed type and should not carry the NonSealed trait")
+            .isEmpty();
     }
 
     /**
