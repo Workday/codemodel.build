@@ -759,11 +759,6 @@ class JDKCodeModelTests {
             .contains("Object");
     }
 
-    /**
-     * Demonstrates a gap in the reflection path: enum constants are never modeled at all, and are
-     * instead silently dropped (they are not even surfaced as {@link FieldDescriptor}s), unlike the
-     * source-parsing path which models each one as an {@link EnumConstantDescriptor}.
-     */
     @Test
     void shouldModelEnumConstantsViaReflection() {
         final var codeModel = createCodeModel();
@@ -788,10 +783,6 @@ class JDKCodeModelTests {
             .containsExactly("label");
     }
 
-    /**
-     * Demonstrates a gap in the reflection path: a record's components are never modeled, unlike the
-     * source-parsing path which models each one as a {@link RecordComponentDescriptor}.
-     */
     @Test
     void shouldModelRecordComponentsViaReflection() {
         final var codeModel = createCodeModel();
@@ -810,10 +801,6 @@ class JDKCodeModelTests {
             .isEqualTo("int");
     }
 
-    /**
-     * Demonstrates a gap in the reflection path: member types declared inside a class are never
-     * modeled, unlike the source-parsing path which models each one as a {@link MemberTypeDescriptor}.
-     */
     @Test
     void shouldModelNestedTypesViaReflection() {
         final var codeModel = createCodeModel();
