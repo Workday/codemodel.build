@@ -29,6 +29,7 @@ import build.codemodel.dependency.injection.Context;
 import build.codemodel.dependency.injection.InjectionFramework;
 import build.codemodel.dependency.injection.MultiBinder;
 import build.codemodel.dependency.injection.ProviderResolver;
+import build.codemodel.dependency.injection.TypeLiteral;
 import build.codemodel.foundation.naming.CachingNameProvider;
 import build.codemodel.foundation.naming.NameProvider;
 import build.codemodel.foundation.naming.NonCachingNameProvider;
@@ -97,6 +98,11 @@ public class FrameworkBuilder
     @Override
     public <T> BindingBuilder<T> bind(final Class<T> bindingClass) {
         return this.context.bind(bindingClass);
+    }
+
+    @Override
+    public <T> BindingBuilder<T> bind(final TypeLiteral<T> typeLiteral) {
+        return this.context.bind(typeLiteral);
     }
 
     @Override

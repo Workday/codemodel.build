@@ -133,10 +133,30 @@ class InjectionContext
     public <T> BindingBuilder<T> bind(final Class<T> bindingClass) {
         Objects.requireNonNull(bindingClass, "The Binding Class must not be null");
 
-        final var codeModel = this.injectionFramework.codeModel();
-        final var typeUsage = codeModel.getTypeUsage(bindingClass);
+        return bind(this.injectionFramework.codeModel().getTypeUsage(bindingClass));
+    }
 
-        return new AbstractBindingBuilder<>(this.injectionFramework, typeUsage) {
+    @Override
+    public <T> BindingBuilder<T> bind(final TypeLiteral<T> typeLiteral) {
+        Objects.requireNonNull(typeLiteral, "The TypeLiteral must not be null");
+
+        return bind(this.injectionFramework.codeModel().getTypeUsage(typeLiteral.type()));
+    }
+
+    /**
+     * Creates a {@link BindingBuilder} for the specified {@link TypeUsage}, shared by both
+     * {@link #bind(Class)} and {@link #bind(TypeLiteral)}, whose only difference is how the {@link TypeUsage}
+     * key was originally derived (a raw {@link Class}, versus a fully-parameterized generic {@link java.lang.reflect.Type}
+     * captured by a {@link TypeLiteral}).
+     *
+     * @param typeUsage the {@link TypeUsage} to bind
+     * @param <T>       the type of {@link Binding}
+     * @return a new {@link BindingBuilder}
+     */
+    private <T> BindingBuilder<T> bind(final TypeUsage typeUsage) {
+        final var codeModel = this.injectionFramework.codeModel();
+
+        return new AbstractBindingBuilder<T>(this.injectionFramework, typeUsage) {
             @Override
             public Binding<T> to(final T value) {
                 final var dependency = IndependentDependency.of(
