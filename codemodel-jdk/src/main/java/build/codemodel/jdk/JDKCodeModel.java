@@ -55,16 +55,19 @@ import build.codemodel.foundation.usage.UnknownTypeUsage;
 import build.codemodel.foundation.usage.WildcardTypeUsage;
 import build.codemodel.jdk.descriptor.ConstructorType;
 import build.codemodel.jdk.descriptor.Default;
+import build.codemodel.jdk.descriptor.EnumConstantDescriptor;
 import build.codemodel.jdk.descriptor.FieldType;
 import build.codemodel.jdk.descriptor.Final;
 import build.codemodel.jdk.descriptor.InitializerBlockDescriptor;
 import build.codemodel.jdk.descriptor.JDKType;
 import build.codemodel.jdk.descriptor.JDKTypeDescriptor;
+import build.codemodel.jdk.descriptor.MemberTypeDescriptor;
 import build.codemodel.jdk.descriptor.MethodBodyDescriptor;
 import build.codemodel.jdk.descriptor.MethodType;
 import build.codemodel.jdk.descriptor.Native;
 import build.codemodel.jdk.descriptor.NonSealed;
 import build.codemodel.jdk.descriptor.PermitsTypeDescriptor;
+import build.codemodel.jdk.descriptor.RecordComponentDescriptor;
 import build.codemodel.jdk.descriptor.Sealed;
 import build.codemodel.jdk.descriptor.Static;
 import build.codemodel.jdk.descriptor.Strictfp;
@@ -585,6 +588,38 @@ public class JDKCodeModel
                 }
             });
 
+        // include EnumConstantDescriptors for the declared enum constants, ordered separately from
+        // the other members (mirroring the source-parsing path's enumConstantOrder). getEnumConstants()
+        // (backed by Enum's ordinal) is used for ordering rather than getDeclaredFields(), since the
+        // latter's order is not guaranteed by the JVM spec (see JDKCodeModelDeclarationOrderTests).
+        if (classType.isEnum()) {
+            Streams.of(classType.getEnumConstants())
+                .forEach(constant -> {
+                    final var enumConstant = (Enum<?>) constant;
+                    final var name = getNameProvider().getIrreducibleName(enumConstant.name());
+                    typeDescriptor.addTrait(EnumConstantDescriptor.of(this, name, enumConstant.ordinal()));
+                });
+        }
+
+        // include RecordComponentDescriptors for the declared record components (in declaration order)
+        if (classType.isRecord()) {
+            Streams.of(classType.getRecordComponents())
+                .forEach(component -> {
+                    final var name = getNameProvider().getIrreducibleName(component.getName());
+                    final var componentType = getStructuralTypeUsage(component.getAnnotatedType());
+                    typeDescriptor.addTrait(RecordComponentDescriptor.of(name, componentType));
+                });
+        }
+
+        // include MemberTypeDescriptors for the declared member types, and resolve each as its own
+        // JDKTypeDescriptor (mirroring how superclasses and interfaces are enqueued for resolution)
+        Streams.of(classType.getDeclaredClasses())
+            .forEach(memberType -> {
+                final var memberTypeName = getNameProvider().getTypeName(memberType);
+                typeDescriptor.addTrait(MemberTypeDescriptor.of(memberTypeName));
+                consumer.accept(memberType);
+            });
+
         // include ConstructorDescriptor, MethodDescriptor, and FieldDescriptor for the declared members,
         // sharing a single DeclarationOrder counter across all three kinds so the trait reflects each
         // member's position among all members, not just among its own kind
@@ -598,8 +633,12 @@ public class JDKCodeModel
         Streams.of(classType.getDeclaredMethods())
             .forEach(method -> populateMethod(typeDescriptor, typeName, method, memberOrder.getAndIncrement()));
 
-        // include FieldDescriptors for the declared Fields
+        // include FieldDescriptors for the declared Fields, excluding enum constants (already
+        // modeled above as EnumConstantDescriptors) and compiler-synthesized fields (e.g. an enum's
+        // $VALUES array), which have no counterpart in the source-parsing path since it only ever
+        // walks explicitly written members
         Streams.of(classType.getDeclaredFields())
+            .filter(field -> !field.isEnumConstant() && !field.isSynthetic())
             .forEach(field -> populateField(typeDescriptor, field, memberOrder.getAndIncrement()));
 
         // include the annotations on the TypeDescriptor (from the Class Type)

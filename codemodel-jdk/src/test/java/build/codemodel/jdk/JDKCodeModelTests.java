@@ -10,20 +10,26 @@ import build.codemodel.foundation.usage.NamedTypeUsage;
 import build.codemodel.foundation.usage.TypeVariableUsage;
 import build.codemodel.foundation.usage.WildcardTypeUsage;
 import build.codemodel.hierarchical.descriptor.HierarchicalTypeDescriptor;
+import build.codemodel.jdk.descriptor.EnumConstantDescriptor;
 import build.codemodel.jdk.descriptor.Final;
 import build.codemodel.jdk.descriptor.JDKTypeDescriptor;
+import build.codemodel.jdk.descriptor.MemberTypeDescriptor;
 import build.codemodel.jdk.descriptor.NonSealed;
 import build.codemodel.jdk.descriptor.PermitsTypeDescriptor;
+import build.codemodel.jdk.descriptor.RecordComponentDescriptor;
 import build.codemodel.jdk.descriptor.Sealed;
 import build.codemodel.jdk.descriptor.Varargs;
 import build.codemodel.jdk.example.AbstractPerson;
 import build.codemodel.jdk.example.AnnotatedGenericContainer;
 import build.codemodel.jdk.example.BoundedContainer;
+import build.codemodel.jdk.example.ColorExample;
 import build.codemodel.jdk.example.Container;
 import build.codemodel.jdk.example.Description;
 import build.codemodel.jdk.example.FinalParamExample;
 import build.codemodel.jdk.example.MultiBoundContainer;
 import build.codemodel.jdk.example.NonAbstractPerson;
+import build.codemodel.jdk.example.OuterExample;
+import build.codemodel.jdk.example.PointExample;
 import build.codemodel.jdk.example.RawFieldContainer;
 import build.codemodel.jdk.example.SealedCircle;
 import build.codemodel.jdk.example.SealedPolygon;
@@ -41,6 +47,8 @@ import build.codemodel.objectoriented.descriptor.MethodDescriptor;
 import build.codemodel.objectoriented.descriptor.ParameterizedTypeDescriptor;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+
+import java.util.Comparator;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -749,5 +757,80 @@ class JDKCodeModelTests {
         assertThat(wildcard.upperBound()).isPresent();
         assertThat(((NamedTypeUsage) wildcard.upperBound().orElseThrow()).typeName().toString())
             .contains("Object");
+    }
+
+    /**
+     * Demonstrates a gap in the reflection path: enum constants are never modeled at all, and are
+     * instead silently dropped (they are not even surfaced as {@link FieldDescriptor}s), unlike the
+     * source-parsing path which models each one as an {@link EnumConstantDescriptor}.
+     */
+    @Test
+    void shouldModelEnumConstantsViaReflection() {
+        final var codeModel = createCodeModel();
+        final var descriptor = codeModel.getJDKTypeDescriptor(ColorExample.class).orElseThrow();
+
+        // traits() does not guarantee insertion order (see JDKCodeModelDeclarationOrderTests), so
+        // sort by the EnumConstantDescriptor's own order() -- backed by Enum#ordinal() -- rather than
+        // relying on stream order
+        final var constantNames = descriptor.traits(EnumConstantDescriptor.class)
+            .sorted(Comparator.comparingInt(EnumConstantDescriptor::order))
+            .map(c -> c.name().toString())
+            .toList();
+
+        assertThat(constantNames)
+            .as("enum constants should be modeled as EnumConstantDescriptors, in ordinal order")
+            .containsExactly("RED", "GREEN", "BLUE");
+
+        // enum constants must not also appear as FieldDescriptors
+        assertThat(descriptor.traits(FieldDescriptor.class)
+            .map(f -> f.fieldName().toString()))
+            .as("enum constants should not be double-modeled as fields")
+            .containsExactly("label");
+    }
+
+    /**
+     * Demonstrates a gap in the reflection path: a record's components are never modeled, unlike the
+     * source-parsing path which models each one as a {@link RecordComponentDescriptor}.
+     */
+    @Test
+    void shouldModelRecordComponentsViaReflection() {
+        final var codeModel = createCodeModel();
+        final var descriptor = codeModel.getJDKTypeDescriptor(PointExample.class).orElseThrow();
+
+        final var components = descriptor.traits(RecordComponentDescriptor.class).toList();
+
+        assertThat(components.stream().map(c -> c.name().toString()))
+            .as("record components should be modeled as RecordComponentDescriptors")
+            .containsExactlyInAnyOrder("x", "y");
+
+        final var xComponent = components.stream()
+            .filter(c -> c.name().toString().equals("x"))
+            .findFirst().orElseThrow();
+        assertThat(((NamedTypeUsage) xComponent.type()).typeName().canonicalName())
+            .isEqualTo("int");
+    }
+
+    /**
+     * Demonstrates a gap in the reflection path: member types declared inside a class are never
+     * modeled, unlike the source-parsing path which models each one as a {@link MemberTypeDescriptor}.
+     */
+    @Test
+    void shouldModelNestedTypesViaReflection() {
+        final var codeModel = createCodeModel();
+        final var descriptor = codeModel.getJDKTypeDescriptor(OuterExample.class).orElseThrow();
+
+        final var memberTypeNames = descriptor.traits(MemberTypeDescriptor.class)
+            .map(m -> m.memberTypeName().canonicalName())
+            .toList();
+
+        assertThat(memberTypeNames)
+            .as("declared member types should be modeled as MemberTypeDescriptors")
+            .containsExactlyInAnyOrder(
+                OuterExample.NestedClass.class.getCanonicalName(),
+                OuterExample.NestedInterface.class.getCanonicalName());
+
+        // and the nested types themselves should be resolvable as full JDKTypeDescriptors
+        assertThat(codeModel.getJDKTypeDescriptor(OuterExample.NestedClass.class)).isPresent();
+        assertThat(codeModel.getJDKTypeDescriptor(OuterExample.NestedInterface.class)).isPresent();
     }
 }
