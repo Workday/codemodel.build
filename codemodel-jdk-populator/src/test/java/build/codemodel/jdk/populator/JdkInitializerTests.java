@@ -39,6 +39,8 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.atomic.AtomicInteger;
 import javax.lang.model.element.ExecutableElement;
 import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
@@ -979,5 +981,93 @@ class JdkInitializerTests {
         assertThat(baz.getTrait(Default.class))
             .as("non-default method baz() should not carry the Default trait")
             .isEmpty();
+    }
+
+    /**
+     * Regression test for a stability gap: {@link JdkInitializer#initialize} only resets the
+     * {@code initialized} guard when the scan fails with {@link java.io.IOException}. Any other
+     * exception raised mid-scan (an NPE/CCE, or here a listener-thrown {@link RuntimeException})
+     * leaves the guard permanently {@code true}, so a retry on the same instance wrongly hits
+     * {@link IllegalStateException} instead of re-attempting the scan the way an IOException
+     * failure would allow.
+     */
+    @Test
+    void shouldAllowRetryAfterNonIOExceptionDuringScan() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Broken",
+            """
+                package com.example;
+                public class Broken {
+                    private com.example.Missing dep;
+                }
+                """);
+        final var initializer = new JdkInitializer(List.of(), List.of(), List.of(source))
+            .withDiagnosticListener(d -> {
+                if (d.getKind() == Diagnostic.Kind.ERROR) {
+                    throw new RuntimeException("boom");
+                }
+            });
+
+        final var firstCodeModel = new JDKCodeModel(new NonCachingNameProvider());
+        assertThatThrownBy(() -> initializer.initialize(firstCodeModel))
+            .as("a non-IOException raised mid-scan should propagate out of initialize()");
+
+        final var secondCodeModel = new JDKCodeModel(new NonCachingNameProvider());
+        assertThatThrownBy(() -> initializer.initialize(secondCodeModel))
+            .as("JdkInitializer should reset its guard after ANY scan failure, not just "
+                + "IOException, the same way it already does for IOException -- today it stays "
+                + "permanently \"initialized\" and every retry hits IllegalStateException instead "
+                + "of re-attempting the scan")
+            .isNotInstanceOf(IllegalStateException.class);
+    }
+
+    /**
+     * Best-effort regression test for the non-atomic check-then-set on {@code initialized}: two
+     * threads are barrier-released together to race into {@link JdkInitializer#initialize} on the
+     * same instance. With no synchronization, both can observe {@code initialized == false} before
+     * either writes {@code true}, letting both proceed instead of exactly one winning and the
+     * other hitting {@link IllegalStateException}.
+     * <p>
+     * Note: the unsynchronized race window is a handful of bytecode instructions wide, so this
+     * test may not reliably fail against the current buggy implementation on every run/machine --
+     * it is a probabilistic detector, not a guaranteed one. Once the guard is made atomic
+     * (e.g. {@code AtomicBoolean.compareAndSet}), the invariant holds structurally and this test
+     * passes deterministically, so it remains a valid permanent regression guard either way.
+     */
+    @Test
+    void shouldAtomicallyGuardConcurrentInitializeCalls() throws InterruptedException {
+        final int iterations = 50;
+        for (int i = 0; i < iterations; i++) {
+            final var initializer = new JdkInitializer(List.of(), List.of(), List.of());
+            final var barrier = new CyclicBarrier(2);
+            final var successCount = new AtomicInteger();
+            final var illegalStateCount = new AtomicInteger();
+            final Runnable attempt = () -> {
+                try {
+                    barrier.await();
+                    initializer.initialize(new JDKCodeModel(new NonCachingNameProvider()));
+                    successCount.incrementAndGet();
+                } catch (final IllegalStateException e) {
+                    illegalStateCount.incrementAndGet();
+                } catch (final Exception e) {
+                    throw new RuntimeException(e);
+                }
+            };
+            final var t1 = new Thread(attempt);
+            final var t2 = new Thread(attempt);
+            t1.start();
+            t2.start();
+            t1.join();
+            t2.join();
+
+            assertThat(successCount.get())
+                .as("exactly one of two racing initialize() calls on the same instance should "
+                    + "succeed -- a non-atomic check-then-set guard can let both past the check "
+                    + "before either flips the flag (iteration %d)", i)
+                .isEqualTo(1);
+            assertThat(illegalStateCount.get())
+                .as("iteration %d", i)
+                .isEqualTo(1);
+        }
     }
 }

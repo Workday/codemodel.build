@@ -74,6 +74,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -119,7 +120,7 @@ public class JdkInitializer
     };
     private final List<String> extraOptions = new ArrayList<>();
 
-    private boolean initialized = false;
+    private final AtomicBoolean initialized = new AtomicBoolean(false);
 
     // Set at the start of initialize() for use by helper methods
     private CodeModel codeModel;
@@ -342,21 +343,28 @@ public class JdkInitializer
      */
     @Override
     public void initialize(final CodeModel codeModel) {
-        if (initialized) {
+        if (!initialized.compareAndSet(false, true)) {
             throw new IllegalStateException("JdkInitializer.initialize() may only be called once");
         }
-        initialized = true;
         this.codeModel = codeModel;
         this.nameProvider = codeModel.getNameProvider();
         final JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-        try (StandardJavaFileManager fileManager = compiler.getStandardFileManager(diagnosticListener, null, null)) {
+
+        // scanCompleted distinguishes a failure while scanning sources from a failure closing
+        // fileManager afterward -- a close() IOException must not be reported as a scan failure,
+        // reset the once-only guard, or discard an already fully-populated CodeModel.
+        boolean scanCompleted = false;
+        try (StandardJavaFileManager fileManager =
+                 compiler.getStandardFileManager(diagnosticListener, null, null)) {
 
             final List<JavaFileObject> combined = collectSources(fileManager);
             if (combined.isEmpty()) {
+                scanCompleted = true;
                 return;
             }
 
-            final var task = compiler.getTask(null, fileManager, diagnosticListener, buildOptions(), null, combined);
+            final var task =
+                compiler.getTask(null, fileManager, diagnosticListener, buildOptions(), null, combined);
             final var javacTask = (JavacTask) task;
             final var compilationUnits = javacTask.parse();
             javacTask.analyze();
@@ -378,8 +386,8 @@ public class JdkInitializer
                         final TreePath classPath = getCurrentPath();
                         exprConverter.setTypeContext(trees, classPath.getCompilationUnit(),
                             mirror -> resolver.resolve(mirror, null), resolver::resolveTypeName);
-                        final var typeElement = (TypeElement) trees.getElement(classPath);
-                        if (typeElement != null
+                        final var element = trees.getElement(classPath);
+                        if (element instanceof TypeElement typeElement
                             && (!typeElement.getQualifiedName().toString().isEmpty()
                             || typeElement.getNestingKind() == NestingKind.ANONYMOUS)) {
                             exprConverter.setEnclosingType(resolver.resolve(typeElement.asType(), null));
@@ -414,10 +422,20 @@ public class JdkInitializer
 
             deferredConversions.forEach(Runnable::run);
             deferredConversions.clear();
+            scanCompleted = true;
 
         } catch (final IOException e) {
-            initialized = false;
+            if (scanCompleted) {
+                // The scan itself already completed successfully; this IOException came from
+                // closing fileManager afterward. The CodeModel is fully and correctly populated,
+                // so this must not be reported as an initialization failure.
+                return;
+            }
+            initialized.set(false);
             throw new RuntimeException("Failed to initialize CodeModel from source files", e);
+        } catch (final RuntimeException e) {
+            initialized.set(false);
+            throw e;
         }
     }
 
@@ -632,7 +650,9 @@ public class JdkInitializer
                                         final TreePath classPath,
                                         final Set<ExecutableElement> writtenMethods,
                                         final int startOrder) {
-        final var typeElement = (TypeElement) trees.getElement(classPath);
+        if (!(trees.getElement(classPath) instanceof TypeElement typeElement)) {
+            return;
+        }
         var memberOrder = startOrder;
         for (final var enclosed : typeElement.getEnclosedElements()) {
             if (enclosed.getKind() == ElementKind.METHOD
