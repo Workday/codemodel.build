@@ -43,6 +43,17 @@ public interface Binder {
     <T> BindingBuilder<T> bind(Class<T> bindingClass);
 
     /**
+     * Creates a new fluent {@link BindingBuilder} for the specified {@link TypeLiteral} of {@link Binding},
+     * allowing definition, configuration and construction of a {@link Binding} keyed by a fully-parameterized
+     * generic type (e.g. {@code List<Person>}) that a raw {@link Class} cannot express.
+     *
+     * @param <T>         the type of {@link Binding}
+     * @param typeLiteral the {@link TypeLiteral} for which to create a {@link Binding}
+     * @return a new {@link BindingBuilder}
+     */
+    <T> BindingBuilder<T> bind(TypeLiteral<T> typeLiteral);
+
+    /**
      * Returns a {@link MultiBinder} for the specified element type, creating it if it does not yet exist.
      * Multiple calls for the same type (e.g. from two different {@link Module}s) accumulate into the
      * same underlying set.

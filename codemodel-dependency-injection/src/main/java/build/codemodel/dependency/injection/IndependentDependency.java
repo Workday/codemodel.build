@@ -21,9 +21,7 @@ package build.codemodel.dependency.injection;
  */
 
 import build.codemodel.foundation.descriptor.Traitable;
-import build.codemodel.foundation.naming.TypeName;
 import build.codemodel.foundation.usage.AnnotationTypeUsage;
-import build.codemodel.foundation.usage.NamedTypeUsage;
 import build.codemodel.foundation.usage.TypeUsage;
 import jakarta.inject.Qualifier;
 
@@ -48,7 +46,8 @@ public final class IndependentDependency
     private final TypeUsage typeUsage;
 
     /**
-     * The unique signature for the {@link IndependentDependency}, consisting of the {@link TypeName} and any
+     * The unique signature for the {@link IndependentDependency}, consisting of the {@link TypeUsage}'s
+     * {@link TypeUsage#canonicalName()} (recursively including any generic parameters) and any
      * {@link AnnotationTypeUsage}s that have been annotated with the {@link Qualifier} meta-annotation.
      */
     private final String signature;
@@ -65,10 +64,11 @@ public final class IndependentDependency
         this.typeUsage = Objects.requireNonNull(typeUsage, "The TypeUsage must not be null");
         Objects.requireNonNull(qualifierAnnotationExtractor, "The Qualifier Annotation Extractor must not be null");
 
-        // create a signature that includes the type usage type, name and ordered qualified annotations
-        this.signature = (typeUsage instanceof NamedTypeUsage namedTypeUsage
-            ? namedTypeUsage.typeName().canonicalName()
-            : "")
+        // create a signature that includes the type usage's full canonical name (recursively rendering any
+        // generic parameters, e.g. "java.util.List<com.example.Person>", so differently-parameterized usages
+        // of the same raw type - such as List<Person> and List<Car> - never collide) and ordered qualified
+        // annotations
+        this.signature = typeUsage.canonicalName()
             + qualifierAnnotationExtractor.apply(typeUsage)
             .sorted()
             .map(Object::toString)

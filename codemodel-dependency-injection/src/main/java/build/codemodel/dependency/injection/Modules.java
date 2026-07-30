@@ -77,6 +77,11 @@ public final class Modules {
         }
 
         @Override
+        public <T> BindingBuilder<T> bind(final TypeLiteral<T> typeLiteral) {
+            return new SuppressingBindingBuilder<>(this.delegate.bind(typeLiteral));
+        }
+
+        @Override
         public <T> MultiBinder<T> bindSet(final Class<T> type) {
             // multibindings accumulate naturally — no conflict suppression needed
             return this.delegate.bindSet(type);
