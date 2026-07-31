@@ -22,6 +22,7 @@ package build.codemodel.jdk.populator;
 
 import build.base.compile.testing.JavaFileObjects;
 import build.codemodel.expression.Cast;
+import build.codemodel.expression.NumericLiteral;
 import build.codemodel.foundation.usage.NamedTypeUsage;
 import build.codemodel.imperative.Return;
 import build.codemodel.jdk.descriptor.MethodBodyDescriptor;
@@ -29,6 +30,7 @@ import build.codemodel.jdk.expression.AssignmentOperator;
 import build.codemodel.jdk.expression.BitwiseBinary;
 import build.codemodel.jdk.expression.BitwiseOperator;
 import build.codemodel.jdk.expression.CompoundAssignment;
+import build.codemodel.jdk.expression.Identifier;
 import build.codemodel.jdk.expression.InstanceOf;
 import build.codemodel.jdk.expression.NewArray;
 import build.codemodel.jdk.expression.NewObject;
@@ -36,6 +38,8 @@ import build.codemodel.jdk.expression.PostfixOperator;
 import build.codemodel.jdk.expression.PostfixUnary;
 import build.codemodel.jdk.expression.PrefixOperator;
 import build.codemodel.jdk.expression.PrefixUnary;
+import build.codemodel.jdk.expression.Symbol;
+import build.codemodel.jdk.populator.descriptor.SourceLocation;
 import build.codemodel.jdk.statement.ExpressionStatement;
 import build.codemodel.jdk.statement.LocalVariableDeclaration;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
@@ -172,6 +176,69 @@ class ExpressionCaptureFidelityTests {
 
         assertThat(newArray.elementType()).isInstanceOf(NamedTypeUsage.class);
         assertThat(((NamedTypeUsage) newArray.elementType()).typeName().canonicalName()).isEqualTo("java.lang.String");
+    }
+
+    @Test
+    void shouldCaptureNewArrayInitializerValues() {
+        final var source = JavaFileObjects.forSourceString(
+            "build.codemodel.jdk.example.ArrayLiteralFactory", """
+                package build.codemodel.jdk.example;
+                public class ArrayLiteralFactory {
+                    public int[] create() {
+                        return new int[]{1, 2, 3};
+                    }
+                }
+                """);
+
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getEmptyModuleTypeName("build.codemodel.jdk.example.ArrayLiteralFactory");
+        final var newArray = codeModel.getTypeDescriptor(typeName).orElseThrow()
+            .composition(NewArray.class)
+            .findFirst()
+            .orElseThrow();
+
+        final var initializers = newArray.initializers().toList();
+        assertThat(initializers).hasSize(3);
+        assertThat(initializers.stream()
+            .map(expr -> (NumericLiteral) expr)
+            .map(literal -> literal.value().intValue()))
+            .containsExactly(1, 2, 3);
+
+    }
+
+    @Test
+    void shouldCaptureQualifiedInstanceCreationOuterInstance() {
+        final var source = JavaFileObjects.forSourceString(
+            "build.codemodel.jdk.example.Outer", """
+                package build.codemodel.jdk.example;
+                public class Outer {
+                    public class Inner {
+                    }
+                    public Inner create(Outer outer) {
+                        return outer.new Inner();
+                    }
+                }
+                """);
+
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getEmptyModuleTypeName("build.codemodel.jdk.example.Outer");
+        final var newObject = codeModel.getTypeDescriptor(typeName).orElseThrow()
+            .composition(NewObject.class)
+            .findFirst()
+            .orElseThrow();
+
+        assertThat(newObject.outerInstance()).isPresent();
+        final var outerIdentifier = (Identifier) newObject.outerInstance().orElseThrow();
+        assertThat(outerIdentifier.name()).isEqualTo("outer");
+
+        // the outer-instance qualifier is converted via the normal convert() dispatch, so it gets
+        // Symbol resolution and a FilePosition just like any other identifier; trait() throws if missing
+        outerIdentifier.trait(Symbol.class);
+        outerIdentifier.trait(SourceLocation.FilePosition.class);
     }
 
     @Test

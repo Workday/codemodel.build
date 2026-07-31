@@ -629,7 +629,10 @@ public class JdkExpressionConverter
             addSourceLocation(t.getIdentifier()).ifPresent(type::addTrait);
             typeArgs = List.of();
         }
-        final var newObject = NewObject.of(codeModel, type, args.stream(), typeArgs.stream());
+        final var outerInstance = t.getEnclosingExpression() == null
+            ? Optional.<Expression>empty()
+            : Optional.of(convert(t.getEnclosingExpression()));
+        final var newObject = NewObject.of(codeModel, type, args.stream(), typeArgs.stream(), outerInstance);
         addSourceLocation(t).ifPresent(newObject::addTrait);
         return newObject;
     }
@@ -639,9 +642,12 @@ public class JdkExpressionConverter
         final List<Expression> dims = t.getDimensions() == null
             ? List.of()
             : t.getDimensions().stream().map(this::convert).toList();
+        final List<Expression> initializers = t.getInitializers() == null
+            ? List.of()
+            : t.getInitializers().stream().map(this::convert).toList();
         final var type = resolveTypeUsage(t.getType());
         addSourceLocation(t.getType()).ifPresent(type::addTrait);
-        return NewArray.of(codeModel, type, dims.stream());
+        return NewArray.of(codeModel, type, dims.stream(), initializers.stream());
     }
 
     @Override

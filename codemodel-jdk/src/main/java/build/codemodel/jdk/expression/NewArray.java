@@ -20,6 +20,7 @@ package build.codemodel.jdk.expression;
  * #L%
  */
 
+import build.base.foundation.stream.Streams;
 import build.base.marshalling.Bound;
 import build.base.marshalling.Marshal;
 import build.base.marshalling.Marshalled;
@@ -59,14 +60,23 @@ public final class NewArray
      */
     private final ArrayList<Expression> dimensions;
 
+    /**
+     * The array initializer values, e.g. {@code {1, 2, 3}}.
+     */
+    private final ArrayList<Expression> initializers;
+
     private NewArray(final CodeModel codeModel,
                      final TypeUsage elementType,
-                     final Stream<Expression> dimensions) {
+                     final Stream<Expression> dimensions,
+                     final Stream<Expression> initializers) {
         super(codeModel);
         this.elementType = Objects.requireNonNull(elementType, "elementType must not be null");
         this.dimensions = dimensions == null
             ? new ArrayList<>()
             : dimensions.collect(Collectors.toCollection(ArrayList::new));
+        this.initializers = initializers == null
+            ? new ArrayList<>()
+            : initializers.collect(Collectors.toCollection(ArrayList::new));
     }
 
     @Unmarshal
@@ -74,22 +84,28 @@ public final class NewArray
                     final Marshaller marshaller,
                     final Stream<Marshalled<Trait>> traits,
                     final Marshalled<TypeUsage> elementType,
-                    final Stream<Marshalled<Expression>> dimensions) {
+                    final Stream<Marshalled<Expression>> dimensions,
+                    final Stream<Marshalled<Expression>> initializers) {
         super(codeModel, marshaller, traits);
         this.elementType = marshaller.unmarshal(elementType);
         this.dimensions = dimensions == null
             ? new ArrayList<>()
             : dimensions.map(marshaller::unmarshal).collect(Collectors.toCollection(ArrayList::new));
+        this.initializers = initializers == null
+            ? new ArrayList<>()
+            : initializers.map(marshaller::unmarshal).collect(Collectors.toCollection(ArrayList::new));
     }
 
     @Marshal
     public void destructor(final Marshaller marshaller,
                            final Out<Stream<Marshalled<Trait>>> traits,
                            final Out<Marshalled<TypeUsage>> elementType,
-                           final Out<Stream<Marshalled<Expression>>> dimensions) {
+                           final Out<Stream<Marshalled<Expression>>> dimensions,
+                           final Out<Stream<Marshalled<Expression>>> initializers) {
         super.destructor(marshaller, traits);
         elementType.set(marshaller.marshal(this.elementType));
         dimensions.set(this.dimensions.stream().map(marshaller::marshal));
+        initializers.set(this.initializers.stream().map(marshaller::marshal));
     }
 
     /**
@@ -110,9 +126,18 @@ public final class NewArray
         return this.dimensions.stream();
     }
 
+    /**
+     * Obtains the array initializer values, e.g. {@code {1, 2, 3}}.
+     *
+     * @return a {@link Stream} of initializer {@link Expression}s
+     */
+    public Stream<Expression> initializers() {
+        return this.initializers.stream();
+    }
+
     @Override
     public Stream<? extends Composite> compositeChildren() {
-        return Stream.concat(Stream.of(elementType), dimensions.stream());
+        return Streams.concat(Stream.of(elementType), dimensions.stream(), initializers.stream());
     }
 
     @Override
@@ -120,6 +145,7 @@ public final class NewArray
         return object instanceof NewArray other
             && Objects.equals(this.elementType, other.elementType)
             && Objects.equals(this.dimensions, other.dimensions)
+            && Objects.equals(this.initializers, other.initializers)
             && super.equals(other);
     }
 
@@ -134,7 +160,23 @@ public final class NewArray
     public static NewArray of(final CodeModel codeModel,
                               final TypeUsage elementType,
                               final Stream<Expression> dimensions) {
-        return new NewArray(codeModel, elementType, dimensions);
+        return new NewArray(codeModel, elementType, dimensions, null);
+    }
+
+    /**
+     * Creates a {@link NewArray} expression with initializer values.
+     *
+     * @param codeModel    the {@link CodeModel}
+     * @param elementType  the resolved element {@link TypeUsage}
+     * @param dimensions   the dimension {@link Expression}s
+     * @param initializers the array initializer value {@link Expression}s
+     * @return a new {@link NewArray}
+     */
+    public static NewArray of(final CodeModel codeModel,
+                              final TypeUsage elementType,
+                              final Stream<Expression> dimensions,
+                              final Stream<Expression> initializers) {
+        return new NewArray(codeModel, elementType, dimensions, initializers);
     }
 
     static {
