@@ -44,6 +44,7 @@ import build.codemodel.expression.Subtraction;
 import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.CallableDescriptor;
 import build.codemodel.foundation.naming.TypeName;
+import build.codemodel.foundation.usage.AnnotationTypeUsage;
 import build.codemodel.foundation.usage.NamedTypeUsage;
 import build.codemodel.foundation.usage.TypeUsage;
 import build.codemodel.foundation.usage.UnknownTypeUsage;
@@ -118,7 +119,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.BiFunction;
 import java.util.function.Function;
+import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
@@ -142,6 +145,7 @@ public class JdkExpressionConverter
     private CompilationUnitTree compilationUnit;
     private Function<TypeMirror, TypeUsage> typeResolver;
     private Function<TypeElement, TypeName> typeNameResolver;
+    private BiFunction<Element, AnnotationMirror, AnnotationTypeUsage> annotationResolver;
     private TypeUsage enclosingType;
 
     /**
@@ -229,6 +233,37 @@ public class JdkExpressionConverter
      */
     public void setEnclosingType(final TypeUsage enclosingType) {
         this.enclosingType = enclosingType;
+    }
+
+    /**
+     * Provides the function used to convert a resolved javac {@link AnnotationMirror} to an
+     * {@link AnnotationTypeUsage}, so that annotations written on local variables, lambda
+     * parameters, enhanced-for variables, and catch parameters can be captured.
+     *
+     * @param annotationResolver resolves an ({@link Element}, {@link AnnotationMirror}) pair to an
+     *                           {@link AnnotationTypeUsage}, matching
+     *                           {@code TypeMirrorResolver#createAnnotationTypeUsage}
+     */
+    public void setAnnotationResolver(
+        final BiFunction<Element, AnnotationMirror, AnnotationTypeUsage> annotationResolver) {
+        this.annotationResolver = annotationResolver;
+    }
+
+    /**
+     * Converts the annotations directly present on the {@link Element} declared by {@code tree} —
+     * a local variable, lambda parameter, enhanced-for variable, or catch parameter — to
+     * {@link AnnotationTypeUsage}s. Returns an empty list if the declaring element or annotation
+     * resolution context is unavailable.
+     */
+    List<AnnotationTypeUsage> convertAnnotations(final VariableTree tree) {
+        if (annotationResolver == null) {
+            return List.of();
+        }
+        return elementOf(tree)
+            .map(element -> element.getAnnotationMirrors().stream()
+                .map(mirror -> annotationResolver.apply(element, mirror))
+                .toList())
+            .orElseGet(List::of);
     }
 
     /**
@@ -830,6 +865,7 @@ public class JdkExpressionConverter
             .map(p -> {
                 final var param = new LambdaParameter(codeModel, resolveLambdaParameterType(p), p.getName().toString());
                 addSourceLocation(p).ifPresent(param::addTrait);
+                convertAnnotations(p).forEach(param::addTrait);
                 elementOf(p).ifPresent(element -> lambdaParameterDeclarations.put(element, param));
                 return param;
             })

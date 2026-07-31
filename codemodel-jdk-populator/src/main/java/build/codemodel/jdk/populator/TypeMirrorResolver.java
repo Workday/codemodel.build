@@ -59,6 +59,7 @@ import build.codemodel.jdk.descriptor.MethodImplementationDescriptor;
 import build.codemodel.jdk.descriptor.Native;
 import build.codemodel.jdk.descriptor.NonSealed;
 import build.codemodel.jdk.descriptor.PermitsTypeDescriptor;
+import build.codemodel.jdk.descriptor.ReceiverAnnotation;
 import build.codemodel.jdk.descriptor.RecordComponentDescriptor;
 import build.codemodel.jdk.descriptor.RecordType;
 import build.codemodel.jdk.descriptor.Sealed;
@@ -644,6 +645,7 @@ public final class TypeMirrorResolver {
         }
         applyModifiers(methodDescriptor, methodElement.getModifiers());
         this.addTypeAnnotations(methodDescriptor, methodElement);
+        this.addReceiverAnnotations(methodDescriptor, methodElement);
     }
 
     public void modifyConstructor(final ConstructorDescriptor constructorDescriptor,
@@ -653,6 +655,24 @@ public final class TypeMirrorResolver {
         getAccessModifier(constructorElement.getModifiers())
             .ifPresent(constructorDescriptor::addTrait);
         this.addTypeAnnotations(constructorDescriptor, constructorElement);
+        this.addReceiverAnnotations(constructorDescriptor, constructorElement);
+    }
+
+    /**
+     * Captures annotations written directly on {@code executableElement}'s receiver parameter
+     * (e.g. {@code @Anno} in {@code void m(@Anno MyClass this)}), as a {@link ReceiverAnnotation}
+     * trait per annotation. {@code ExecutableElement.getParameters()} deliberately excludes the
+     * receiver, so its annotations would otherwise be silently dropped.
+     */
+    private void addReceiverAnnotations(final Traitable traitable, final ExecutableElement executableElement) {
+        final var receiverType = executableElement.getReceiverType();
+        if (receiverType == null || receiverType.getKind() == TypeKind.NONE) {
+            return;
+        }
+        receiverType.getAnnotationMirrors().stream()
+            .map(mirror -> createAnnotationTypeUsage(executableElement, mirror))
+            .map(annotation -> ReceiverAnnotation.of(codeModel, annotation))
+            .forEach(traitable::addTrait);
     }
 
     public MethodName methodName(final JDKTypeDescriptor typeDescriptor,
@@ -701,7 +721,11 @@ public final class TypeMirrorResolver {
         }
 
         // Type parameters never have lower bounds (only wildcards do)
-        return TypeVariableUsage.of(codeModel, name, Optional.empty(), optUpper);
+        final var typeVariableUsage = TypeVariableUsage.of(codeModel, name, Optional.empty(), optUpper);
+        tp.getAnnotationMirrors().stream()
+            .map(mirror -> createAnnotationTypeUsage(tp, mirror))
+            .forEach(typeVariableUsage::addTrait);
+        return typeVariableUsage;
     }
 
     // --- Visitor ---

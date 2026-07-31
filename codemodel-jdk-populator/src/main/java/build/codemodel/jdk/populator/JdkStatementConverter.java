@@ -188,6 +188,7 @@ public class JdkStatementConverter
             t.getName().toString(),
             Optional.ofNullable(t.getInitializer()).map(exprConverter::convert));
         exprConverter.addSourceLocation(t).ifPresent(decl::addTrait);
+        exprConverter.convertAnnotations(t).forEach(decl::addTrait);
         exprConverter.registerLocalVariableDeclaration(t, decl);
         return decl;
     }
@@ -219,6 +220,7 @@ public class JdkStatementConverter
             t.getVariable().getName().toString(),
             exprConverter.convert(t.getExpression()));
         exprConverter.addSourceLocation(t.getVariable()).ifPresent(enhancedFor::addTrait);
+        exprConverter.convertAnnotations(t.getVariable()).forEach(enhancedFor::addTrait);
         exprConverter.registerEnhancedForVariable(t.getVariable(), enhancedFor);
         enhancedFor.completeBody(convert(t.getStatement()));
         return enhancedFor;
@@ -261,6 +263,7 @@ public class JdkStatementConverter
             types,
             c.getParameter().getName().toString());
         exprConverter.addSourceLocation(c.getParameter()).ifPresent(catchClause::addTrait);
+        exprConverter.convertAnnotations(c.getParameter()).forEach(catchClause::addTrait);
         exprConverter.registerCatchParameter(c.getParameter(), catchClause);
         catchClause.completeBody(convertBlock(c.getBlock()));
         return catchClause;
