@@ -67,6 +67,7 @@ import build.codemodel.jdk.descriptor.MethodType;
 import build.codemodel.jdk.descriptor.Native;
 import build.codemodel.jdk.descriptor.NonSealed;
 import build.codemodel.jdk.descriptor.PermitsTypeDescriptor;
+import build.codemodel.jdk.descriptor.ReceiverAnnotation;
 import build.codemodel.jdk.descriptor.RecordComponentDescriptor;
 import build.codemodel.jdk.descriptor.Sealed;
 import build.codemodel.jdk.descriptor.Static;
@@ -97,6 +98,7 @@ import java.lang.reflect.AnnotatedParameterizedType;
 import java.lang.reflect.AnnotatedType;
 import java.lang.reflect.AnnotatedWildcardType;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Executable;
 import java.lang.reflect.Field;
 import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.InvocationTargetException;
@@ -366,12 +368,15 @@ public class JDKCodeModel
             && annotatedBounds[0].getType() == Object.class;
 
         if (annotatedBounds.length == 0 || isImplicitObjectBound) {
-            return TypeVariableUsage.of(this, typeName, Optional.empty(), Optional.empty());
+            final var unboundedTypeVariableUsage = TypeVariableUsage.of(this, typeName, Optional.empty(), Optional.empty());
+            getAnnotations(typeVariable).forEach(unboundedTypeVariableUsage::addTrait);
+            return unboundedTypeVariableUsage;
         }
 
         final Lazy<TypeUsage> upperBound = Lazy.empty();
         final var typeVariableUsage =
             TypeVariableUsage.of(this, typeName, Optional.empty(), Optional.of(upperBound));
+        getAnnotations(typeVariable).forEach(typeVariableUsage::addTrait);
 
         inProgress.put(typeVariable, typeVariableUsage);
         try {
@@ -656,6 +661,9 @@ public class JDKCodeModel
         getAnnotations(constructor)
             .forEach(constructorDescriptor::addTrait);
 
+        // include the annotations on the receiver parameter (if any)
+        addReceiverAnnotations(constructorDescriptor, constructor);
+
         // include the AccessModifier
         getAccessModifier(constructor.getModifiers())
             .ifPresent(constructorDescriptor::addTrait);
@@ -724,6 +732,9 @@ public class JDKCodeModel
         // include the annotations on the MethodDescriptor
         getAnnotations(method)
             .forEach(methodDescriptor::addTrait);
+
+        // include the annotations on the receiver parameter (if any)
+        addReceiverAnnotations(methodDescriptor, method);
 
         // include the ThrowableDescriptors
         Streams.of(method.getAnnotatedExceptionTypes())
@@ -900,6 +911,19 @@ public class JDKCodeModel
             ? Stream.empty()
             : Streams.of(element.getDeclaredAnnotations())
             .map(this::getAnnotation);
+    }
+
+    /**
+     * Captures annotations written directly on {@code executable}'s receiver parameter
+     * (e.g. {@code @Anno} in {@code void m(@Anno MyClass this)}), as a {@link ReceiverAnnotation}
+     * trait per annotation. {@code Executable.getAnnotatedReceiverType()} never returns
+     * {@code null} - for a static method, or a constructor of a top-level class, it instead
+     * returns an unannotated {@link AnnotatedType}, so this is a no-op in those cases.
+     */
+    private void addReceiverAnnotations(final Traitable traitable, final Executable executable) {
+        getAnnotations(executable.getAnnotatedReceiverType())
+            .map(annotation -> ReceiverAnnotation.of(this, annotation))
+            .forEach(traitable::addTrait);
     }
 
     /**

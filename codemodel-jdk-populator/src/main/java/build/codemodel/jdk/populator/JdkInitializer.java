@@ -373,6 +373,7 @@ public class JdkInitializer
             this.exprConverter = new JdkExpressionConverter(codeModel);
             this.stmtConverter = new JdkStatementConverter(codeModel, this.exprConverter);
             this.exprConverter.setStmtConverter(this.stmtConverter);
+            this.exprConverter.setAnnotationResolver(this.resolver::createAnnotationTypeUsage);
 
             for (final var cut : compilationUnits) {
                 final var sourceUri = cut.getSourceFile().toUri();

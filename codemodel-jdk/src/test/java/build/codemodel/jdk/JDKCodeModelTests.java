@@ -16,11 +16,14 @@ import build.codemodel.jdk.descriptor.JDKTypeDescriptor;
 import build.codemodel.jdk.descriptor.MemberTypeDescriptor;
 import build.codemodel.jdk.descriptor.NonSealed;
 import build.codemodel.jdk.descriptor.PermitsTypeDescriptor;
+import build.codemodel.jdk.descriptor.ReceiverAnnotation;
 import build.codemodel.jdk.descriptor.RecordComponentDescriptor;
 import build.codemodel.jdk.descriptor.Sealed;
 import build.codemodel.jdk.descriptor.Varargs;
 import build.codemodel.jdk.example.AbstractPerson;
 import build.codemodel.jdk.example.AnnotatedGenericContainer;
+import build.codemodel.jdk.example.AnnotatedReceiverExample;
+import build.codemodel.jdk.example.AnnotatedTypeParameterExample;
 import build.codemodel.jdk.example.BoundedContainer;
 import build.codemodel.jdk.example.ColorExample;
 import build.codemodel.jdk.example.Container;
@@ -819,5 +822,74 @@ class JDKCodeModelTests {
         // and the nested types themselves should be resolvable as full JDKTypeDescriptors
         assertThat(codeModel.getJDKTypeDescriptor(OuterExample.NestedClass.class)).isPresent();
         assertThat(codeModel.getJDKTypeDescriptor(OuterExample.NestedInterface.class)).isPresent();
+    }
+
+    /**
+     * Demonstrates: an annotation written directly on a type parameter declaration
+     * ({@code <@NonNull T>}) must be preserved on the reflection path, matching the source-parsing
+     * path (see {@code AnnotationCaptureGapsTests.shouldCaptureAnnotationOnTypeParameterDeclaration}).
+     * {@code TypeVariable} is itself an {@code AnnotatedElement}, so this is distinct from the
+     * annotations on the type variable's bounds.
+     */
+    @Test
+    void shouldCaptureAnnotationOnTypeParameterDeclarationViaReflection() {
+        final var codeModel = createCodeModel();
+        final var descriptor = codeModel.getJDKTypeDescriptor(AnnotatedTypeParameterExample.class).orElseThrow();
+
+        final var typeVar = descriptor.getTrait(ParameterizedTypeDescriptor.class)
+            .orElseThrow()
+            .typeVariables()
+            .findFirst()
+            .orElseThrow();
+
+        assertThat(typeVar.traits(AnnotationTypeUsage.class)
+            .map(a -> a.typeName().name().toString())
+            .toList())
+            .containsExactly("NonNull");
+    }
+
+    /**
+     * Demonstrates: an annotation written directly on a method's receiver parameter
+     * ({@code @NonNull AnnotatedReceiverExample this}) must be captured on the reflection path,
+     * matching the source-parsing path (see
+     * {@code AnnotationCaptureGapsTests.shouldCaptureReceiverParameterAnnotationOnMethod}).
+     * {@code Method.getParameters()} excludes the receiver, so without explicitly reading
+     * {@code getAnnotatedReceiverType()} this annotation would be silently dropped.
+     */
+    @Test
+    void shouldCaptureReceiverParameterAnnotationOnMethodViaReflection() {
+        final var codeModel = createCodeModel();
+        final var descriptor = codeModel.getJDKTypeDescriptor(AnnotatedReceiverExample.class).orElseThrow();
+
+        final var runMethod = descriptor.traits(MethodDescriptor.class)
+            .filter(m -> m.methodName().name().toString().equals("run"))
+            .findFirst().orElseThrow();
+
+        assertThat(runMethod.traits(ReceiverAnnotation.class)
+            .map(ReceiverAnnotation::annotation)
+            .map(a -> a.typeName().name().toString())
+            .toList())
+            .containsExactly("NonNull");
+    }
+
+    /**
+     * Demonstrates: an annotation written on an inner class constructor's outer-instance receiver
+     * ({@code @NonNull AnnotatedReceiverExample AnnotatedReceiverExample.this}) must be captured on
+     * the reflection path, matching the source-parsing path (see
+     * {@code AnnotationCaptureGapsTests.shouldCaptureReceiverParameterAnnotationOnInnerClassConstructor}).
+     */
+    @Test
+    void shouldCaptureReceiverParameterAnnotationOnInnerClassConstructorViaReflection() {
+        final var codeModel = createCodeModel();
+        final var descriptor = codeModel.getJDKTypeDescriptor(AnnotatedReceiverExample.Inner.class).orElseThrow();
+
+        final var constructor = descriptor.traits(ConstructorDescriptor.class)
+            .findFirst().orElseThrow();
+
+        assertThat(constructor.traits(ReceiverAnnotation.class)
+            .map(ReceiverAnnotation::annotation)
+            .map(a -> a.typeName().name().toString())
+            .toList())
+            .containsExactly("NonNull");
     }
 }
