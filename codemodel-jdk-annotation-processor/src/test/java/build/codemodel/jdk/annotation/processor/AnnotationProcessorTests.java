@@ -8,6 +8,7 @@ import java.io.File;
 import java.nio.file.FileSystems;
 import java.util.Arrays;
 import java.util.Locale;
+import javax.tools.JavaFileObject;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -16,8 +17,14 @@ abstract class AnnotationProcessorTests {
     protected static Compilation compile(final AnnotationProcessor processor,
                                          final String typeName,
                                          final String source) {
-        final var compilation = makeCompiler(processor)
-            .compile(JavaFileObjects.forSourceString(typeName, source));
+        return compile(processor, JavaFileObjects.forSourceString(typeName, source));
+    }
+
+    // Like compile(String, String), but for fixtures spread across multiple top-level source files
+    // (e.g. a sealed hierarchy whose permitted subtypes each live in their own file).
+    protected static Compilation compile(final AnnotationProcessor processor,
+                                         final JavaFileObject... files) {
+        final var compilation = makeCompiler(processor).compile(files);
 
         compilation.diagnostics()
             .forEach(d -> System.out.printf("[%s] %s%n", d.getKind(), d.getMessage(Locale.ROOT)));
