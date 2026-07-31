@@ -115,6 +115,7 @@ import com.sun.source.util.SimpleTreeVisitor;
 import com.sun.source.util.TreePath;
 import com.sun.source.util.Trees;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -145,7 +146,7 @@ public class JdkExpressionConverter
     private CompilationUnitTree compilationUnit;
     private Function<TypeMirror, TypeUsage> typeResolver;
     private Function<TypeElement, TypeName> typeNameResolver;
-    private BiFunction<Element, AnnotationMirror, AnnotationTypeUsage> annotationResolver;
+    private BiFunction<Element, Collection<? extends AnnotationMirror>, List<AnnotationTypeUsage>> annotationResolver;
     private TypeUsage enclosingType;
 
     /**
@@ -240,12 +241,13 @@ public class JdkExpressionConverter
      * {@link AnnotationTypeUsage}, so that annotations written on local variables, lambda
      * parameters, enhanced-for variables, and catch parameters can be captured.
      *
-     * @param annotationResolver resolves an ({@link Element}, {@link AnnotationMirror}) pair to an
-     *                           {@link AnnotationTypeUsage}, matching
-     *                           {@code TypeMirrorResolver#createAnnotationTypeUsage}
+     * @param annotationResolver resolves an {@link Element} and its (possibly {@code @Repeatable}
+     *                           container-collapsed) {@link AnnotationMirror}s to their expanded
+     *                           {@link AnnotationTypeUsage}s, matching
+     *                           {@code TypeMirrorResolver#createAnnotationTypeUsages}
      */
     public void setAnnotationResolver(
-        final BiFunction<Element, AnnotationMirror, AnnotationTypeUsage> annotationResolver) {
+        final BiFunction<Element, Collection<? extends AnnotationMirror>, List<AnnotationTypeUsage>> annotationResolver) {
         this.annotationResolver = annotationResolver;
     }
 
@@ -260,9 +262,7 @@ public class JdkExpressionConverter
             return List.of();
         }
         return elementOf(tree)
-            .map(element -> element.getAnnotationMirrors().stream()
-                .map(mirror -> annotationResolver.apply(element, mirror))
-                .toList())
+            .map(element -> annotationResolver.apply(element, element.getAnnotationMirrors()))
             .orElseGet(List::of);
     }
 

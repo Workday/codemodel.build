@@ -91,7 +91,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import javax.lang.model.element.AnnotationMirror;
@@ -189,9 +188,7 @@ public final class TypeMirrorResolver {
                 pending.remove(pendingMirror);
             } else {
                 annotations.computeIfAbsent(pendingMirror, __ ->
-                    pendingMirror.getAnnotationMirrors().stream()
-                        .map(m -> createAnnotationTypeUsage(pendingEnclosing, m))
-                        .collect(Collectors.toCollection(ArrayList::new)));
+                    new ArrayList<>(createAnnotationTypeUsages(pendingEnclosing, pendingMirror.getAnnotationMirrors())));
 
                 pendingMirror.accept(
                     buildVisitor(pending, enclosing, resolved, annotations, pendingMirror, pendingEnclosing),
@@ -286,8 +283,7 @@ public final class TypeMirrorResolver {
             if (methodElement.isVarArgs() && i == lastIdx) {
                 pd.addTrait(Varargs.VARARGS);
             }
-            param.getAnnotationMirrors().stream()
-                .map(mirror -> createAnnotationTypeUsage(param, mirror))
+            createAnnotationTypeUsages(param, param.getAnnotationMirrors())
                 .forEach(pd::addTrait);
 
             postProcessor.accept(param, pd);
@@ -296,6 +292,19 @@ public final class TypeMirrorResolver {
     }
 
     // --- Annotation value resolution ---
+
+    /**
+     * Expands any {@code @Repeatable} containers in {@code mirrors} (see {@link #expandRepeatable})
+     * and converts each resulting mirror to an {@link AnnotationTypeUsage} via
+     * {@link #createAnnotationTypeUsage}.
+     */
+    public List<AnnotationTypeUsage> createAnnotationTypeUsages(final Element enclosing,
+                                                                final Collection<? extends AnnotationMirror> mirrors) {
+        return mirrors.stream()
+            .flatMap(this::expandRepeatable)
+            .map(mirror -> createAnnotationTypeUsage(enclosing, mirror))
+            .toList();
+    }
 
     public AnnotationTypeUsage createAnnotationTypeUsage(final Element enclosing,
                                                          final AnnotationMirror mirror) {
@@ -472,9 +481,74 @@ public final class TypeMirrorResolver {
 
     public void addTypeAnnotations(final Traitable traitable,
                                    final Element element) {
-        element.getAnnotationMirrors().stream()
-            .map(mirror -> createAnnotationTypeUsage(element, mirror))
+        createAnnotationTypeUsages(element, element.getAnnotationMirrors())
             .forEach(traitable::addTrait);
+    }
+
+    /**
+     * Expands {@code mirror} if it is a compiler-synthesized container for a {@code @Repeatable}
+     * annotation applied 2+ times (e.g. {@code @Foos({@Foo(1), @Foo(2)})} standing in for
+     * {@code @Foo(1) @Foo(2)}), yielding one element per repetition instead of the single
+     * container. Per JLS/javac semantics, {@code Element#getAnnotationMirrors()} always reports
+     * the synthesized container as the single directly-present mirror in this case - there is no
+     * API that hands back the individual repetitions directly, so callers must detect and unwrap
+     * the container themselves. Any other mirror (including a container written explicitly rather
+     * than synthesized from repetition, which is indistinguishable from the synthesized case at
+     * this level) passes through unchanged.
+     */
+    private Stream<AnnotationMirror> expandRepeatable(final AnnotationMirror mirror) {
+        return repeatableContainerElements(mirror)
+            .map(List::stream)
+            .orElseGet(() -> Stream.of(mirror));
+    }
+
+    private Optional<List<AnnotationMirror>> repeatableContainerElements(final AnnotationMirror mirror) {
+        if (!(mirror.getAnnotationType().asElement() instanceof TypeElement containerType)) {
+            return Optional.empty();
+        }
+
+        final var valueMethod = containerType.getEnclosedElements().stream()
+            .filter(e -> e.getKind() == ElementKind.METHOD)
+            .map(ExecutableElement.class::cast)
+            .filter(m -> m.getSimpleName().contentEquals("value"))
+            .findFirst();
+        if (valueMethod.isEmpty()
+            || !(valueMethod.get().getReturnType() instanceof ArrayType arrayType)
+            || !(arrayType.getComponentType() instanceof DeclaredType componentType)
+            || !(componentType.asElement() instanceof TypeElement repeatedAnnotationType)) {
+            return Optional.empty();
+        }
+
+        if (!declaresRepeatableFor(repeatedAnnotationType, containerType)) {
+            return Optional.empty();
+        }
+
+        final var explicitValue = mirror.getElementValues().entrySet().stream()
+            .filter(e -> e.getKey().getSimpleName().contentEquals("value"))
+            .findFirst()
+            .map(e -> e.getValue().getValue());
+        if (!(explicitValue.orElse(null) instanceof List<?> elements)) {
+            return Optional.empty();
+        }
+
+        return Optional.of(elements.stream()
+            .map(item -> ((javax.lang.model.element.AnnotationValue) item).getValue())
+            .filter(AnnotationMirror.class::isInstance)
+            .map(AnnotationMirror.class::cast)
+            .toList());
+    }
+
+    private boolean declaresRepeatableFor(final TypeElement repeatedAnnotationType, final TypeElement containerType) {
+        return repeatedAnnotationType.getAnnotationMirrors().stream()
+            .filter(a -> ((TypeElement) a.getAnnotationType().asElement())
+                .getQualifiedName().contentEquals("java.lang.annotation.Repeatable"))
+            .findFirst()
+            .flatMap(repeatable -> repeatable.getElementValues().values().stream().findFirst())
+            .map(javax.lang.model.element.AnnotationValue::getValue)
+            .filter(DeclaredType.class::isInstance)
+            .map(v -> ((DeclaredType) v).asElement())
+            .filter(containerType::equals)
+            .isPresent();
     }
 
     public AnnotationValue.Value resolveAnnotationValue(final Element enclosing, final Object raw) {
@@ -669,8 +743,7 @@ public final class TypeMirrorResolver {
         if (receiverType == null || receiverType.getKind() == TypeKind.NONE) {
             return;
         }
-        receiverType.getAnnotationMirrors().stream()
-            .map(mirror -> createAnnotationTypeUsage(executableElement, mirror))
+        createAnnotationTypeUsages(executableElement, receiverType.getAnnotationMirrors()).stream()
             .map(annotation -> ReceiverAnnotation.of(codeModel, annotation))
             .forEach(traitable::addTrait);
     }
@@ -722,8 +795,7 @@ public final class TypeMirrorResolver {
 
         // Type parameters never have lower bounds (only wildcards do)
         final var typeVariableUsage = TypeVariableUsage.of(codeModel, name, Optional.empty(), optUpper);
-        tp.getAnnotationMirrors().stream()
-            .map(mirror -> createAnnotationTypeUsage(tp, mirror))
+        createAnnotationTypeUsages(tp, tp.getAnnotationMirrors())
             .forEach(typeVariableUsage::addTrait);
         return typeVariableUsage;
     }
