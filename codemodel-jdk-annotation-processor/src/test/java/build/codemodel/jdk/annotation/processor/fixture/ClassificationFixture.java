@@ -26,8 +26,12 @@ import build.codemodel.jdk.annotation.discovery.Discoverable;
  * A fixture compiled/reflected/processed identically by all three member-population paths
  * ({@code JDKCodeModel}, {@code JdkInitializer}, {@code AnnotationProcessor}), used to assert
  * they agree on the traits ({@code Classification}, {@code Static}, {@code AccessModifier},
- * {@code Final}) attached to fields, constructors, and methods, and on the shape of resolved
- * {@code TypeUsage}s such as the self-referential type variable bound {@code E}.
+ * {@code Final}, {@code DeclarationOrder}) attached to fields, constructors, and methods, on the
+ * shape of resolved {@code TypeUsage}s such as the self-referential type variable bound
+ * {@code E}, and — via {@code finalMethod()}/{@code concreteMethod()}'s {@code @Deprecated()} vs
+ * {@code @Deprecated} — on {@code ExplicitAnnotationParens} between the two source-based paths
+ * ({@code JdkInitializer}, {@code AnnotationProcessor}; reflection can never recover this
+ * distinction).
  *
  * @see build.codemodel.jdk.annotation.processor.MemberPopulationParityTests
  */
@@ -45,9 +49,11 @@ public abstract class ClassificationFixture<E extends ClassificationFixture<E>> 
     public static void staticMethod() {
     }
 
+    @Deprecated()
     public final void finalMethod() {
     }
 
+    @Deprecated
     public void concreteMethod() {
     }
 
