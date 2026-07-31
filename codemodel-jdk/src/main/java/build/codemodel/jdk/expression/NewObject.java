@@ -38,6 +38,7 @@ import build.codemodel.foundation.usage.TypeUsage;
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -65,10 +66,16 @@ public final class NewObject
      */
     private final ArrayList<TypeUsage> typeArguments;
 
+    /**
+     * The outer-instance qualifier, e.g. {@code outer} in {@code outer.new Inner(args)}.
+     */
+    private final Optional<Expression> outerInstance;
+
     private NewObject(final CodeModel codeModel,
                       final TypeUsage type,
                       final Stream<Expression> args,
-                      final Stream<TypeUsage> typeArguments) {
+                      final Stream<TypeUsage> typeArguments,
+                      final Optional<Expression> outerInstance) {
         super(codeModel);
         this.type = Objects.requireNonNull(type, "type must not be null");
         this.args = args == null
@@ -77,6 +84,7 @@ public final class NewObject
         this.typeArguments = typeArguments == null
             ? new ArrayList<>()
             : typeArguments.collect(Collectors.toCollection(ArrayList::new));
+        this.outerInstance = outerInstance == null ? Optional.empty() : outerInstance;
     }
 
     @Unmarshal
@@ -85,7 +93,8 @@ public final class NewObject
                      final Stream<Marshalled<Trait>> traits,
                      final Marshalled<TypeUsage> type,
                      final Stream<Marshalled<Expression>> args,
-                     final Stream<Marshalled<TypeUsage>> typeArguments) {
+                     final Stream<Marshalled<TypeUsage>> typeArguments,
+                     final Optional<Marshalled<Expression>> outerInstance) {
         super(codeModel, marshaller, traits);
         this.type = marshaller.unmarshal(type);
         this.args = args == null
@@ -94,6 +103,9 @@ public final class NewObject
         this.typeArguments = typeArguments == null
             ? new ArrayList<>()
             : typeArguments.map(marshaller::unmarshal).collect(Collectors.toCollection(ArrayList::new));
+        this.outerInstance = outerInstance == null
+            ? Optional.empty()
+            : outerInstance.map(marshaller::unmarshal);
     }
 
     @Marshal
@@ -101,11 +113,13 @@ public final class NewObject
                            final Out<Stream<Marshalled<Trait>>> traits,
                            final Out<Marshalled<TypeUsage>> type,
                            final Out<Stream<Marshalled<Expression>>> args,
-                           final Out<Stream<Marshalled<TypeUsage>>> typeArguments) {
+                           final Out<Stream<Marshalled<TypeUsage>>> typeArguments,
+                           final Out<Optional<Marshalled<Expression>>> outerInstance) {
         super.destructor(marshaller, traits);
         type.set(marshaller.marshal(this.type));
         args.set(this.args.stream().map(marshaller::marshal));
         typeArguments.set(this.typeArguments.stream().map(marshaller::marshal));
+        outerInstance.set(this.outerInstance.map(marshaller::marshal));
     }
 
     /**
@@ -135,12 +149,22 @@ public final class NewObject
         return this.typeArguments.stream();
     }
 
+    /**
+     * Obtains the outer-instance qualifier, e.g. {@code outer} in {@code outer.new Inner(args)}.
+     *
+     * @return an {@link Optional} outer-instance {@link Expression}
+     */
+    public Optional<Expression> outerInstance() {
+        return this.outerInstance;
+    }
+
     @Override
     public Stream<? extends Composite> compositeChildren() {
         return Streams.concat(
             Stream.of(type),
             args.stream(),
-            typeArguments.stream()
+            typeArguments.stream(),
+            outerInstance.stream()
         );
     }
 
@@ -150,7 +174,27 @@ public final class NewObject
             && Objects.equals(this.type, other.type)
             && Objects.equals(this.args, other.args)
             && Objects.equals(this.typeArguments, other.typeArguments)
+            && Objects.equals(this.outerInstance, other.outerInstance)
             && super.equals(other);
+    }
+
+    /**
+     * Creates a {@link NewObject} expression with type arguments and an outer-instance qualifier.
+     *
+     * @param codeModel     the {@link CodeModel}
+     * @param type          the resolved {@link TypeUsage} of the class to instantiate
+     * @param args          the constructor argument {@link Expression}s
+     * @param typeArguments the resolved type argument {@link TypeUsage}s
+     * @param outerInstance the outer-instance qualifier {@link Expression}, e.g. {@code outer} in
+     *                      {@code outer.new Inner(args)}
+     * @return a new {@link NewObject}
+     */
+    public static NewObject of(final CodeModel codeModel,
+                               final TypeUsage type,
+                               final Stream<Expression> args,
+                               final Stream<TypeUsage> typeArguments,
+                               final Optional<Expression> outerInstance) {
+        return new NewObject(codeModel, type, args, typeArguments, outerInstance);
     }
 
     /**
@@ -166,7 +210,7 @@ public final class NewObject
                                final TypeUsage type,
                                final Stream<Expression> args,
                                final Stream<TypeUsage> typeArguments) {
-        return new NewObject(codeModel, type, args, typeArguments);
+        return new NewObject(codeModel, type, args, typeArguments, null);
     }
 
     /**
@@ -180,7 +224,7 @@ public final class NewObject
     public static NewObject of(final CodeModel codeModel,
                                final TypeUsage type,
                                final Stream<Expression> args) {
-        return new NewObject(codeModel, type, args, null);
+        return new NewObject(codeModel, type, args, null, null);
     }
 
     static {
