@@ -24,7 +24,6 @@ import build.codemodel.foundation.CodeModel;
 import build.codemodel.foundation.descriptor.FormalParameterDescriptor;
 import build.codemodel.foundation.descriptor.ThrowableDescriptor;
 import build.codemodel.foundation.descriptor.Traitable;
-import build.codemodel.foundation.descriptor.TypeDescriptor;
 import build.codemodel.foundation.naming.NameProvider;
 import build.codemodel.foundation.naming.TypeName;
 import build.codemodel.foundation.usage.AnnotationTypeUsage;
@@ -71,6 +70,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -249,89 +249,99 @@ public class JdkInitializer
     }
 
     /**
-     * Drops all descriptors sourced from {@code updatedFile} and re-analyzes it.
-     *
-     * <p>Every {@link TypeDescriptor} whose {@link SourceLocation.FilePosition}
-     * URI matches {@code updatedFile.toUri()} is evicted from {@code codeModel} and unindexed.
-     * A fresh {@link JdkInitializer} then re-populates the model from the new content.
-     *
-     * <p>Descriptors sourced from other files are not affected. Embedded {@link build.codemodel.foundation.usage.TypeUsage}
-     * references inside other descriptors that pointed to evicted types become stale and are not updated.
-     *
-     * @param codeModel   the {@link JDKCodeModel} to rescan
-     * @param updatedFile the new version of the source file to analyze
+     * Convenience overload of {@link #rescan(JDKCodeModel, List, List, List, List, List, DiagnosticListener)}.
      */
     public static void rescan(final JDKCodeModel codeModel, final JavaFileObject updatedFile) {
         rescan(codeModel, updatedFile, List.of(), List.of());
     }
 
     /**
-     * Drops all descriptors sourced from {@code updatedFile} and re-analyzes it,
-     * using the supplied {@code classpath} and {@code modulePath} for resolution.
-     *
-     * <p>Every {@link TypeDescriptor} whose {@link SourceLocation.FilePosition} URI matches
-     * {@code updatedFile.toUri()} is evicted and unindexed. A fresh {@link JdkInitializer}
-     * then re-populates the model from the new content. Callers must forward the same
-     * classpath/modulePath used during the initial {@link JdkInitializer#initialize} call;
-     * omitting them causes classpath-only types to degrade to
-     * {@link build.codemodel.foundation.usage.UnknownTypeUsage}.
-     *
-     * @param codeModel   the {@link JDKCodeModel} to rescan
-     * @param updatedFile the new version of the source file to analyze
-     * @param classpath   jars or directories to pass as {@code --class-path}
-     * @param modulePath  jars or directories to pass as {@code --module-path}
+     * Convenience overload of {@link #rescan(JDKCodeModel, List, List, List, List, List, DiagnosticListener)}.
      */
     public static void rescan(final JDKCodeModel codeModel,
                               final JavaFileObject updatedFile,
                               final List<Path> classpath,
                               final List<Path> modulePath) {
-        rescan(codeModel, updatedFile, List.of(), classpath, modulePath, d -> {
+        rescan(codeModel, updatedFile, List.of(), classpath, modulePath, List.of(), d -> {
         });
     }
 
     /**
-     * Drops all descriptors sourced from {@code updatedFile} and re-analyzes it together with
-     * any {@code contextFiles} needed for symbol resolution (e.g. {@code module-info.java}),
-     * reporting compiler diagnostics produced during the re-analysis to {@code diagnosticListener}.
-     *
-     * <p>Only descriptors whose {@link SourceLocation.FilePosition} URI matches
-     * {@code updatedFile.toUri()} are evicted. The {@code contextFiles} are compiled alongside
-     * {@code updatedFile} to give javac the module context it needs to resolve cross-module
-     * type references, but no descriptors are evicted for them.
-     *
-     * @param codeModel          the {@link JDKCodeModel} to rescan
-     * @param updatedFile        the new version of the source file to analyze
-     * @param contextFiles       additional source files to include in the compilation for resolution
-     *                           context only (not evicted; deduplicated against {@code updatedFile})
-     * @param classpath          jars or directories to pass as {@code --class-path}
-     * @param modulePath         jars or directories to pass as {@code --module-path}
-     * @param diagnosticListener receives compiler diagnostics (errors, warnings) produced while
-     *                           re-analyzing {@code updatedFile} and {@code contextFiles}
+     * Convenience overload of {@link #rescan(JDKCodeModel, List, List, List, List, List, DiagnosticListener)}.
      */
     public static void rescan(final JDKCodeModel codeModel,
                               final JavaFileObject updatedFile,
                               final List<JavaFileObject> contextFiles,
                               final List<Path> classpath,
                               final List<Path> modulePath,
+                              final List<String> compilerOptions,
                               final DiagnosticListener<JavaFileObject> diagnosticListener) {
-        final var uri = updatedFile.toUri();
+        rescan(codeModel, List.of(updatedFile), contextFiles, classpath, modulePath, compilerOptions,
+            diagnosticListener);
+    }
+
+    /**
+     * Drops all descriptors sourced from any of {@code updatedFiles} and re-analyzes them together,
+     * in one compile, along with any {@code contextFiles} needed for symbol resolution.
+     *
+     * <p>Batching matters beyond convenience: if two files that reference each other are rescanned
+     * one at a time, each rescan takes its own independent snapshot of the other file's on-disk
+     * content, and those two snapshots can disagree (a watcher can catch a sibling mid-write between
+     * the two calls, or -- as observed in practice -- a single filesystem write can itself emit a
+     * transient delete event before its create/modify event lands, so a strictly-sequential rescan
+     * can briefly see a perfectly valid sibling as deleted). Compiling every file that actually
+     * changed together, in a single pass, means there is exactly one consistent view of the whole
+     * batch and no window for one file's rescan to see another in a state that never really existed.
+     *
+     * <p>Every descriptor sourced from any of {@code updatedFiles} is evicted and the file is
+     * re-registered from this compile, whether or not it produced anything (a caller passing an
+     * empty-content {@link JavaFileObject} for a genuinely deleted file gets that file's descriptors
+     * evicted with nothing to replace them, as expected). There is no protection against evicting a
+     * still-existing file whose current on-disk content happens to be mid-edit and unparseable at
+     * the moment of rescan -- callers are expected to decide deletion explicitly (e.g. by checking
+     * the file still exists on disk) rather than relying on this method to infer it from a compile
+     * that produces nothing.
+     *
+     * @param codeModel          the {@link JDKCodeModel} to rescan
+     * @param updatedFiles       the new versions of the source files to analyze together
+     * @param contextFiles       additional source files to include in the compilation for resolution
+     *                           context only (not evicted; deduplicated against {@code updatedFiles})
+     * @param classpath          jars or directories to pass as {@code --class-path}
+     * @param modulePath         jars or directories to pass as {@code --module-path}
+     * @param compilerOptions    additional {@code javac} argument tokens, resolved from the
+     *                           project's own build configuration
+     * @param diagnosticListener receives compiler diagnostics (errors, warnings) produced while
+     *                           re-analyzing {@code updatedFiles} and {@code contextFiles}
+     */
+    public static void rescan(final JDKCodeModel codeModel,
+                              final List<JavaFileObject> updatedFiles,
+                              final List<JavaFileObject> contextFiles,
+                              final List<Path> classpath,
+                              final List<Path> modulePath,
+                              final List<String> compilerOptions,
+                              final DiagnosticListener<JavaFileObject> diagnosticListener) {
+        final var uris = updatedFiles.stream().map(JavaFileObject::toUri)
+            .collect(Collectors.toCollection(LinkedHashSet::new));
+        final var allFiles = new ArrayList<JavaFileObject>(updatedFiles);
+        contextFiles.stream().filter(f -> !uris.contains(f.toUri())).forEach(allFiles::add);
+
         codeModel.typeDescriptors()
-            .filter(d -> d.getTrait(SourceLocation.FilePosition.class)
-                .map(fp -> fp.uri().equals(uri))
-                .orElse(false))
+            .filter(d -> matchesAnyUri(d, uris))
             .forEach(codeModel::removeTypeDescriptor);
         codeModel.moduleDescriptors()
-            .filter(d -> d.getTrait(SourceLocation.FilePosition.class)
-                .map(fp -> fp.uri().equals(uri))
-                .orElse(false))
+            .filter(d -> matchesAnyUri(d, uris))
             .forEach(codeModel::removeModuleDescriptor);
-        final var allFiles = new ArrayList<JavaFileObject>(contextFiles.size() + 1);
-        allFiles.add(updatedFile);
-        contextFiles.stream().filter(f -> !f.toUri().equals(uri)).forEach(allFiles::add);
         new JdkInitializer(List.of(), List.of(), allFiles, classpath, modulePath)
-            .withRegistrationFilter(uri::equals)
+            .withOptions(compilerOptions)
+            .withRegistrationFilter(uris::contains)
             .withDiagnosticListener(diagnosticListener)
             .initialize(codeModel);
+    }
+
+    private static boolean matchesAnyUri(final Traitable traitable, final Set<URI> uris) {
+        return traitable.getTrait(SourceLocation.FilePosition.class)
+            .map(fp -> uris.contains(fp.uri()))
+            .orElse(false);
     }
 
     /**
