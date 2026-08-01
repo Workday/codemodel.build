@@ -41,6 +41,10 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.List;
+import javax.tools.Diagnostic;
+import javax.tools.DiagnosticListener;
+import javax.tools.JavaFileObject;
+import javax.tools.ToolProvider;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -48,7 +52,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Tests for incremental rescan: dropping all descriptors and traits sourced from a changed file,
  * then re-analyzing the new version of that file in isolation.
  *
- * <p>The API under test is {@link JdkInitializer#rescan(JDKCodeModel, javax.tools.JavaFileObject)}, which
+ * <p>The API under test is {@link JdkInitializer#rescan(JDKCodeModel, JavaFileObject)}, which
  * uses the {@link SourceLocation.FilePosition} URI attached to each descriptor to identify
  * which entries belong to the file being rescanned, evicts them, then re-runs source analysis
  * on the updated content.
@@ -62,7 +66,7 @@ class IncrementalRescanTests {
     // Helpers
     // ---------------------------------------------------------------------------
 
-    private static JDKCodeModel populate(final javax.tools.JavaFileObject... sources) {
+    private static JDKCodeModel populate(final JavaFileObject... sources) {
         final var codeModel = new JDKCodeModel(new NonCachingNameProvider());
         new JdkInitializer(List.of(), List.of(), List.of(sources)).initialize(codeModel);
         return codeModel;
@@ -369,7 +373,7 @@ class IncrementalRescanTests {
         final var helperSource = JavaFileObjects.forSourceString(
             "com.example.Helper",
             "package com.example; public class Helper {}");
-        final var compiler = javax.tools.ToolProvider.getSystemJavaCompiler();
+        final var compiler = ToolProvider.getSystemJavaCompiler();
         try (var fm = compiler.getStandardFileManager(null, null, null)) {
             compiler.getTask(null, fm, _ -> {
                 }, List.of("-d", classpathDir.toString()),
@@ -554,8 +558,8 @@ class IncrementalRescanTests {
      * canonical name {@code null}.
      *
      * <p>The fix passes {@code module-info.java} as a context file to
-     * {@link JDKCodeModel#rescan(javax.tools.JavaFileObject, List, List, List)} so javac can
-     * resolve the module's {@code requires} declarations during the single-file recompilation.
+     * {@link JdkInitializer#rescan(JDKCodeModel, JavaFileObject, List, List, List, List, DiagnosticListener)}
+     * so javac can resolve the module's {@code requires} declarations during the single-file recompilation.
      */
     @Test
     void genericReturnTypeOfSourceDefinedTypeRemainsResolvedAfterRescan() throws Exception {
@@ -573,7 +577,7 @@ class IncrementalRescanTests {
             package com.example.result;
             public class Result<T> {}
             """);
-        final var compiler = javax.tools.ToolProvider.getSystemJavaCompiler();
+        final var compiler = ToolProvider.getSystemJavaCompiler();
         try (var fm = compiler.getStandardFileManager(null, null, null)) {
             compiler.getTask(null, fm, _ -> {
                 },
@@ -620,7 +624,7 @@ class IncrementalRescanTests {
                 public String extra() { return null; }
             }
             """);
-        JdkInitializer.rescan(codeModel, fooV2, List.of(consumerModuleInfo), List.of(), List.of(modulePathDir), d -> {
+        JdkInitializer.rescan(codeModel, fooV2, List.of(consumerModuleInfo), List.of(), List.of(modulePathDir), List.of(), d -> {
         });
 
         final var fooV3 = JavaFileObjects.forSourceString("com.example.consumer.Foo", """
@@ -630,7 +634,7 @@ class IncrementalRescanTests {
                 public Result<String> items() { return null; }
             }
             """);
-        JdkInitializer.rescan(codeModel, fooV3, List.of(consumerModuleInfo), List.of(), List.of(modulePathDir), d -> {
+        JdkInitializer.rescan(codeModel, fooV3, List.of(consumerModuleInfo), List.of(), List.of(modulePathDir), List.of(), d -> {
         });
 
         final var itemsAfterRescan = codeModel.getJDKTypeDescriptor(fooFqn).orElseThrow()
@@ -654,7 +658,7 @@ class IncrementalRescanTests {
         final var helperSource = JavaFileObjects.forSourceString(
             "com.example.Helper",
             "package com.example; public class Helper {}");
-        final var compiler = javax.tools.ToolProvider.getSystemJavaCompiler();
+        final var compiler = ToolProvider.getSystemJavaCompiler();
         try (var fm = compiler.getStandardFileManager(null, null, null)) {
             compiler.getTask(null, fm, _ -> {
                 }, List.of("-d", classpathDir.toString()),
@@ -741,7 +745,7 @@ class IncrementalRescanTests {
                 public int extra;
             }
             """);
-        JdkInitializer.rescan(codeModel, fooV2, List.of(helperSource), List.of(), List.of(), d -> {
+        JdkInitializer.rescan(codeModel, fooV2, List.of(helperSource), List.of(), List.of(), List.of(), d -> {
         });
 
         final var depAfterRescan = codeModel.getJDKTypeDescriptor(fooName).orElseThrow()
@@ -753,9 +757,104 @@ class IncrementalRescanTests {
             .isNotInstanceOf(UnknownTypeUsage.class);
     }
 
+    // ---------------------------------------------------------------------------
+    // Regression: a doomed compile (this rescan's own file, or a sibling context file)
+    // must not evict a descriptor it can't replace
+    // ---------------------------------------------------------------------------
+
     /**
-     * The {@code diagnosticListener} passed to {@link JDKCodeModel#rescan(javax.tools.JavaFileObject,
-     * List, List, List, javax.tools.DiagnosticListener)} must receive javac diagnostics produced
+     * Regression: an unrelated compile error in a sibling {@code contextFile} must not prevent
+     * {@code updatedFile}'s own valid content from being registered. {@code contextFiles} are
+     * compiled as full units alongside {@code updatedFile} (not just referenced via classpath), so
+     * a broken sibling — e.g. mid-write during a multi-file {@code git stash pop}, or genuinely
+     * broken — must not poison the file actually being rescanned.
+     */
+    @Test
+    void siblingCompileErrorDoesNotPreventValidUpdatedFileFromBeingRegistered() {
+        final var fooSource = JavaFileObjects.forSourceString("com.example.Foo", """
+            package com.example;
+            public class Foo {
+                public int fooField;
+            }
+            """);
+        final var codeModel = populate(fooSource);
+        final var fooName = codeModel.getEmptyModuleTypeName("com.example.Foo");
+        assertThat(codeModel.getTypeDescriptor(fooName)).isPresent();
+
+        final var fooV2 = JavaFileObjects.forSourceString("com.example.Foo", """
+            package com.example;
+            public class Foo {
+                public int fooField;
+                public int addedField;
+            }
+            """);
+        // Bar is an unrelated, broken sibling passed purely as rescan context.
+        final var brokenBar = JavaFileObjects.forSourceString("com.example.Bar", """
+            package com.example;
+            public class Bar {
+                public NoSuchType broken;
+            }
+            """);
+
+        final List<Diagnostic<? extends JavaFileObject>> diagnostics
+            = new java.util.ArrayList<>();
+        JdkInitializer.rescan(codeModel, fooV2, List.of(brokenBar), List.of(), List.of(), List.of(), diagnostics::add);
+
+        assertThat(diagnostics)
+            .as("Bar's error must still be reported to the caller")
+            .anyMatch(d -> d.getKind() == Diagnostic.Kind.ERROR);
+
+        assertThat(codeModel.getTypeDescriptor(fooName))
+            .as("Foo must still be present — its own compile was clean")
+            .isPresent();
+        assertThat(codeModel.getTypeDescriptor(fooName).orElseThrow().traits(FieldDescriptor.class)
+            .map(f -> f.fieldName().toString())
+            .toList())
+            .as("Foo must pick up its own new content even though a sibling context file errors")
+            .contains("fooField", "addedField");
+    }
+
+    /**
+     * When {@code updatedFile} itself fails to produce anything registerable (not just a degraded
+     * field, but zero descriptors at all — e.g. content that doesn't parse into any class), the old
+     * descriptor is evicted with nothing to replace it. There is no safety net that keeps the old
+     * descriptor in place for this case (see the comment in {@link JdkInitializer#rescan(JDKCodeModel,
+     * List, List, List, List, List, DiagnosticListener)}); callers are expected to decide
+     * deletion explicitly (e.g. by checking the file still exists on disk) rather than relying on this
+     * method to infer it from "produced nothing".
+     */
+    @Test
+    void updatedFileProducingNothingEvictsTheOldDescriptor() {
+        final var v1 = JavaFileObjects.forSourceString("com.example.Foo", """
+            package com.example;
+            public class Foo {
+                public int value;
+            }
+            """);
+        final var codeModel = populate(v1);
+        final var fooName = codeModel.getEmptyModuleTypeName("com.example.Foo");
+        assertThat(codeModel.getTypeDescriptor(fooName)).isPresent();
+
+        // Content that doesn't parse into any package/class declaration at all.
+        final var v2 = JavaFileObjects.forSourceString("com.example.Foo", "!!! not valid java $$$ ###");
+
+        final List<Diagnostic<? extends JavaFileObject>> diagnostics
+            = new java.util.ArrayList<>();
+        JdkInitializer.rescan(codeModel, v2, List.of(), List.of(), List.of(), List.of(), diagnostics::add);
+
+        assertThat(diagnostics)
+            .as("the parse failure must still be reported to the caller")
+            .anyMatch(d -> d.getKind() == Diagnostic.Kind.ERROR);
+
+        assertThat(codeModel.getTypeDescriptor(fooName))
+            .as("with no safety net for this case, the old descriptor is evicted with nothing "
+                + "to replace it")
+            .isEmpty();
+    }
+
+    /**
+     * The {@code diagnosticListener} passed to {@link JdkInitializer#rescan(JDKCodeModel, JavaFileObject,
+     * List, List, List, List, DiagnosticListener)} must receive javac diagnostics produced
      * while re-analyzing the updated file, not just be accepted and discarded.
      */
     @Test
@@ -768,7 +867,7 @@ class IncrementalRescanTests {
             """);
         final var codeModel = populate(v1);
 
-        final List<javax.tools.Diagnostic<? extends javax.tools.JavaFileObject>> diagnostics
+        final List<Diagnostic<? extends JavaFileObject>> diagnostics
             = new java.util.ArrayList<>();
         final var v2 = JavaFileObjects.forSourceString("com.example.Foo", """
             package com.example;
@@ -776,10 +875,10 @@ class IncrementalRescanTests {
                 public int value = "not an int";
             }
             """);
-        JdkInitializer.rescan(codeModel, v2, List.of(), List.of(), List.of(), diagnostics::add);
+        JdkInitializer.rescan(codeModel, v2, List.of(), List.of(), List.of(), List.of(), diagnostics::add);
 
         final var error = diagnostics.stream()
-            .filter(d -> d.getKind() == javax.tools.Diagnostic.Kind.ERROR)
+            .filter(d -> d.getKind() == Diagnostic.Kind.ERROR)
             .findFirst()
             .orElseThrow(() -> new AssertionError("listener installed on rescan() must receive the javac error"));
         assertThat(error.getMessage(null))
@@ -852,7 +951,7 @@ class IncrementalRescanTests {
                 }
             }
             """);
-        JdkInitializer.rescan(codeModel, calleeV2, List.of(), List.of(), List.of(), d -> {
+        JdkInitializer.rescan(codeModel, calleeV2, List.of(), List.of(), List.of(), List.of(), d -> {
         });
         final var calleeTdEdited = codeModel.getJDKTypeDescriptor("com.example.Callee").orElseThrow();
 
@@ -948,7 +1047,7 @@ class IncrementalRescanTests {
                 protected int value;
             }
             """);
-        JdkInitializer.rescan(codeModel, baseV2, List.of(), List.of(), List.of(), d -> {
+        JdkInitializer.rescan(codeModel, baseV2, List.of(), List.of(), List.of(), List.of(), d -> {
         });
         final var baseTdEdited = codeModel.getJDKTypeDescriptor("com.example.Base").orElseThrow();
 
