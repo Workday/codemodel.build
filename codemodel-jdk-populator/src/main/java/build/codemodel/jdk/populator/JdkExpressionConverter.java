@@ -88,6 +88,7 @@ import com.sun.source.tree.ArrayAccessTree;
 import com.sun.source.tree.AssignmentTree;
 import com.sun.source.tree.BinaryTree;
 import com.sun.source.tree.BindingPatternTree;
+import com.sun.source.tree.ClassTree;
 import com.sun.source.tree.CompilationUnitTree;
 import com.sun.source.tree.CompoundAssignmentTree;
 import com.sun.source.tree.ConditionalExpressionTree;
@@ -400,6 +401,24 @@ public class JdkExpressionConverter
         }
         final var path = trees.getPath(compilationUnit, tree);
         return path == null ? Optional.empty() : Optional.ofNullable(trees.getElement(path));
+    }
+
+    /**
+     * Resolves the {@link TypeName} a local class/interface/enum/record declaration statement was
+     * registered under (see {@link JdkInitializer}'s {@code visitClass}), matching how
+     * {@link build.codemodel.jdk.statement.LocalTypeDeclaration} needs to reference it.
+     */
+    Optional<TypeName> resolveLocalTypeName(final ClassTree tree) {
+        if (trees == null || compilationUnit == null || typeNameResolver == null) {
+            return Optional.empty();
+        }
+        final var path = trees.getPath(compilationUnit, tree);
+        if (path == null) {
+            return Optional.empty();
+        }
+        return trees.getElement(path) instanceof TypeElement typeElement
+            ? Optional.of(typeNameResolver.apply(typeElement))
+            : Optional.empty();
     }
 
     private Optional<Symbol> resolveSymbol(final IdentifierTree t) {

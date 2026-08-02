@@ -400,7 +400,8 @@ public class JdkInitializer
                         final var element = trees.getElement(classPath);
                         if (element instanceof TypeElement typeElement
                             && (!typeElement.getQualifiedName().toString().isEmpty()
-                            || typeElement.getNestingKind() == NestingKind.ANONYMOUS)) {
+                            || typeElement.getNestingKind() == NestingKind.ANONYMOUS
+                            || typeElement.getNestingKind() == NestingKind.LOCAL)) {
                             exprConverter.setEnclosingType(resolver.resolve(typeElement.asType(), null));
                             processTypeElement(typeElement, classPath);
                         }

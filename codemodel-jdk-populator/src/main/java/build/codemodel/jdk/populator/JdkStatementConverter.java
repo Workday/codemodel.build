@@ -22,6 +22,7 @@ package build.codemodel.jdk.populator;
 
 import build.codemodel.expression.Expression;
 import build.codemodel.foundation.CodeModel;
+import build.codemodel.foundation.naming.TypeName;
 import build.codemodel.foundation.usage.TypeUsage;
 import build.codemodel.imperative.Block;
 import build.codemodel.imperative.If;
@@ -38,6 +39,7 @@ import build.codemodel.jdk.statement.EnhancedFor;
 import build.codemodel.jdk.statement.ExpressionStatement;
 import build.codemodel.jdk.statement.For;
 import build.codemodel.jdk.statement.Labeled;
+import build.codemodel.jdk.statement.LocalTypeDeclaration;
 import build.codemodel.jdk.statement.LocalVariableDeclaration;
 import build.codemodel.jdk.statement.SwitchCase;
 import build.codemodel.jdk.statement.SwitchStatement;
@@ -51,6 +53,7 @@ import com.sun.source.tree.BlockTree;
 import com.sun.source.tree.BreakTree;
 import com.sun.source.tree.CaseTree;
 import com.sun.source.tree.CatchTree;
+import com.sun.source.tree.ClassTree;
 import com.sun.source.tree.ConstantCaseLabelTree;
 import com.sun.source.tree.ContinueTree;
 import com.sun.source.tree.DeconstructionPatternTree;
@@ -365,6 +368,23 @@ public class JdkStatementConverter
     @Override
     public Statement visitEmptyStatement(final EmptyStatementTree t, final Void v) {
         return Block.empty(codeModel);
+    }
+
+    /**
+     * Converts a local class/interface/enum/record declaration statement (e.g.
+     * {@code class Foo { ... }} written inside a method body) to a
+     * {@link LocalTypeDeclaration} referencing the {@link TypeName} the declared type was already
+     * registered under, by {@link JdkInitializer}'s {@code visitClass}, before body conversion runs.
+     */
+    @Override
+    public Statement visitClass(final ClassTree t, final Void v) {
+        return exprConverter.resolveLocalTypeName(t)
+            .<Statement>map(typeName -> {
+                final var decl = LocalTypeDeclaration.of(codeModel, typeName);
+                exprConverter.addSourceLocation(t).ifPresent(decl::addTrait);
+                return decl;
+            })
+            .orElseGet(() -> Block.empty(codeModel));
     }
 
     @Override
