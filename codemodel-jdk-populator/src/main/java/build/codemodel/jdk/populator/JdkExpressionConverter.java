@@ -135,6 +135,11 @@ import javax.tools.Diagnostic;
 /**
  * Converts {@link ExpressionTree} nodes from the javac tree API to model {@link Expression} nodes.
  *
+ * <p>Not thread-safe: a single instance is shared and mutated by {@link JdkInitializer} across an
+ * entire {@code initialize()}/{@code rescan()} call (see {@link #setTypeContext}, {@link
+ * #setEnclosingType}, and {@link #currentPath}), and is intended for sequential, single-threaded use
+ * only, matching the rest of the populator pipeline.
+ *
  * @author reed.vonredwitz
  * @since Mar-2026
  */
@@ -145,6 +150,14 @@ public class JdkExpressionConverter
     private JdkStatementConverter stmtConverter;
     private Trees trees;
     private CompilationUnitTree compilationUnit;
+
+    /**
+     * The {@link TreePath} to whichever {@link Tree} is currently being converted, maintained by
+     * {@link #descend(Tree)}/{@link #ascend(TreePath)} as conversion recurses. Lookups for
+     * descendant trees (see {@link #pathTo(Tree)}) are scoped to this path rather than rescanning
+     * the whole {@link #compilationUnit} from its root on every call.
+     */
+    private TreePath currentPath;
     private Function<TypeMirror, TypeUsage> typeResolver;
     private Function<TypeElement, TypeName> typeNameResolver;
     private BiFunction<Element, Collection<? extends AnnotationMirror>, List<AnnotationTypeUsage>> annotationResolver;
@@ -225,6 +238,7 @@ public class JdkExpressionConverter
         this.compilationUnit = compilationUnit;
         this.typeResolver = typeResolver;
         this.typeNameResolver = typeNameResolver;
+        this.currentPath = null;
     }
 
     /**
@@ -277,21 +291,60 @@ public class JdkExpressionConverter
         if (tree == null) {
             return NullLiteral.of(codeModel);
         }
-        final var expr = tree.accept(this, null);
-        tagExpressionType(tree, expr);
-        return expr;
+        final var previousPath = descend(tree);
+        try {
+            final var expr = tree.accept(this, null);
+            tagExpressionType(expr);
+            return expr;
+        } finally {
+            ascend(previousPath);
+        }
     }
 
-    private void tagExpressionType(final ExpressionTree tree, final Expression expr) {
-        if (trees == null || compilationUnit == null || typeResolver == null) {
+    /**
+     * Resolves the {@link TreePath} to {@code tree}, scoped to {@link #currentPath} (the nearest
+     * already-known ancestor path) rather than rescanning {@link #compilationUnit} from its root,
+     * so repeated lookups during a single recursive conversion stay proportional to the size of the
+     * subtree currently being converted instead of the whole file.
+     */
+    private TreePath pathTo(final Tree tree) {
+        if (tree == null || trees == null || compilationUnit == null) {
+            return null;
+        }
+        if (currentPath != null && currentPath.getLeaf() == tree) {
+            return currentPath;
+        }
+        return currentPath != null ? TreePath.getPath(currentPath, tree) : TreePath.getPath(compilationUnit, tree);
+    }
+
+    /**
+     * Advances {@link #currentPath} to {@code tree}, returning the previous path so the caller can
+     * restore it (via {@link #ascend(TreePath)}) once done converting {@code tree} and its
+     * descendants. Package-private so {@link JdkStatementConverter}'s own recursive dispatch can
+     * keep {@link #currentPath} accurate across statement trees too.
+     */
+    TreePath descend(final Tree tree) {
+        final var previous = currentPath;
+        final var next = pathTo(tree);
+        if (next != null) {
+            currentPath = next;
+        }
+        return previous;
+    }
+
+    /**
+     * Restores {@link #currentPath} to a value previously returned by {@link #descend(Tree)}.
+     */
+    void ascend(final TreePath previous) {
+        currentPath = previous;
+    }
+
+    private void tagExpressionType(final Expression expr) {
+        if (trees == null || typeResolver == null || currentPath == null) {
             return;
         }
         try {
-            final var path = TreePath.getPath(compilationUnit, tree);
-            if (path == null) {
-                return;
-            }
-            final var typeMirror = trees.getTypeMirror(path);
+            final var typeMirror = trees.getTypeMirror(currentPath);
             if (typeMirror == null
                 || typeMirror.getKind() == TypeKind.ERROR
                 || typeMirror.getKind() == TypeKind.NONE
@@ -348,10 +401,7 @@ public class JdkExpressionConverter
      * @param declaration the {@link LocalVariableDeclaration} converted from {@code tree}
      */
     void registerLocalVariableDeclaration(final VariableTree tree, final LocalVariableDeclaration declaration) {
-        if (trees == null || compilationUnit == null) {
-            return;
-        }
-        final var path = trees.getPath(compilationUnit, tree);
+        final var path = pathTo(tree);
         if (path == null) {
             return;
         }
@@ -398,10 +448,7 @@ public class JdkExpressionConverter
     }
 
     private Optional<Element> elementOf(final VariableTree tree) {
-        if (trees == null || compilationUnit == null) {
-            return Optional.empty();
-        }
-        final var path = trees.getPath(compilationUnit, tree);
+        final var path = pathTo(tree);
         return path == null ? Optional.empty() : Optional.ofNullable(trees.getElement(path));
     }
 
@@ -411,10 +458,10 @@ public class JdkExpressionConverter
      * {@link build.codemodel.jdk.statement.LocalTypeDeclaration} needs to reference it.
      */
     Optional<TypeName> resolveLocalTypeName(final ClassTree tree) {
-        if (trees == null || compilationUnit == null || typeNameResolver == null) {
+        if (typeNameResolver == null) {
             return Optional.empty();
         }
-        final var path = trees.getPath(compilationUnit, tree);
+        final var path = pathTo(tree);
         if (path == null) {
             return Optional.empty();
         }
@@ -424,14 +471,11 @@ public class JdkExpressionConverter
     }
 
     private Optional<Symbol> resolveSymbol(final IdentifierTree t) {
-        if (trees == null || compilationUnit == null) {
-            return Optional.empty();
-        }
-        final var name = t.getName().toString();
-        final var path = trees.getPath(compilationUnit, t);
+        final var path = pathTo(t);
         if (path == null) {
             return Optional.empty();
         }
+        final var name = t.getName().toString();
         final var typeMirror = trees.getTypeMirror(path);
         final TypeUsage typeUsage = typeMirror != null && typeMirror.getKind() != TypeKind.ERROR
             ? typeResolver.apply(typeMirror)
@@ -518,11 +562,11 @@ public class JdkExpressionConverter
     }
 
     private Optional<ResolvedMethod> resolveMethod(final MethodInvocationTree t) {
-        if (trees == null || compilationUnit == null || typeResolver == null) {
+        if (typeResolver == null) {
             return Optional.empty();
         }
         try {
-            final var selectPath = TreePath.getPath(compilationUnit, t.getMethodSelect());
+            final var selectPath = pathTo(t.getMethodSelect());
             if (selectPath == null) {
                 return Optional.empty();
             }
@@ -534,11 +578,11 @@ public class JdkExpressionConverter
     }
 
     private Optional<ResolvedMethod> resolveMethod(final MemberReferenceTree t) {
-        if (trees == null || compilationUnit == null || typeResolver == null) {
+        if (typeResolver == null) {
             return Optional.empty();
         }
         try {
-            final var path = TreePath.getPath(compilationUnit, t);
+            final var path = pathTo(t);
             if (path == null) {
                 return Optional.empty();
             }
@@ -626,11 +670,11 @@ public class JdkExpressionConverter
     }
 
     private Optional<TypeMirror> resolveTypeMirror(final Tree tree) {
-        if (tree == null || trees == null || compilationUnit == null || typeResolver == null) {
+        if (typeResolver == null) {
             return Optional.empty();
         }
         try {
-            final var path = TreePath.getPath(compilationUnit, tree);
+            final var path = pathTo(tree);
             if (path == null) {
                 return Optional.empty();
             }
