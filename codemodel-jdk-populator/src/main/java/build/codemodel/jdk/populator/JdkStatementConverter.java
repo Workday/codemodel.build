@@ -113,7 +113,15 @@ public class JdkStatementConverter
      * Returns an empty {@link Block} for a {@code null} tree.
      */
     public Statement convert(final StatementTree tree) {
-        return tree == null ? Block.empty(codeModel) : tree.accept(this, null);
+        if (tree == null) {
+            return Block.empty(codeModel);
+        }
+        final var previousPath = exprConverter.descend(tree);
+        try {
+            return tree.accept(this, null);
+        } finally {
+            exprConverter.ascend(previousPath);
+        }
     }
 
     /**
