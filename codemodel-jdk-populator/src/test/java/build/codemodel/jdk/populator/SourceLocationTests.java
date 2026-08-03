@@ -21,8 +21,11 @@ package build.codemodel.jdk.populator;
  */
 
 import build.base.compile.testing.JavaFileObjects;
+import build.codemodel.expression.Addition;
 import build.codemodel.expression.Cast;
 import build.codemodel.expression.Expression;
+import build.codemodel.expression.Negative;
+import build.codemodel.expression.NumericLiteral;
 import build.codemodel.foundation.descriptor.ThrowableDescriptor;
 import build.codemodel.imperative.Return;
 import build.codemodel.jdk.descriptor.EnumConstantDescriptor;
@@ -30,11 +33,16 @@ import build.codemodel.jdk.descriptor.InitializerBlockDescriptor;
 import build.codemodel.jdk.descriptor.JDKTypeDescriptor;
 import build.codemodel.jdk.descriptor.MethodBodyDescriptor;
 import build.codemodel.jdk.descriptor.RecordComponentDescriptor;
+import build.codemodel.jdk.expression.ArrayAccess;
 import build.codemodel.jdk.expression.ClassLiteral;
+import build.codemodel.jdk.expression.CompoundAssignment;
 import build.codemodel.jdk.expression.InstanceOf;
 import build.codemodel.jdk.expression.Lambda;
 import build.codemodel.jdk.expression.NewArray;
 import build.codemodel.jdk.expression.NewObject;
+import build.codemodel.jdk.expression.Parenthesized;
+import build.codemodel.jdk.expression.SwitchExpression;
+import build.codemodel.jdk.expression.Ternary;
 import build.codemodel.jdk.populator.descriptor.SourceLocation;
 import build.codemodel.jdk.statement.EnhancedFor;
 import build.codemodel.jdk.statement.LocalVariableDeclaration;
@@ -833,5 +841,372 @@ class SourceLocationTests {
         final var cast = (Cast) decl.initializer().orElseThrow();
 
         assertThat(cast.targetType().getTrait(SourceLocation.FilePosition.class)).isPresent();
+    }
+
+    @Test
+    void castExpressionNodeItselfShouldCarrySourceLocation() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Foo", """
+                package com.example;
+                public class Foo {
+                    public void run(Object obj) {
+                        String s = (String) obj;
+                    }
+                }
+                """);
+
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
+        final var cast = codeModel.getTypeDescriptor(typeName).orElseThrow()
+            .composition(Cast.class)
+            .findFirst()
+            .orElseThrow();
+
+        assertThat(cast.getTrait(SourceLocation.FilePosition.class)).isPresent();
+    }
+
+    @Test
+    void literalExpressionShouldCarrySourceLocation() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Foo", """
+                package com.example;
+                public class Foo {
+                    public int run() {
+                        return 42;
+                    }
+                }
+                """);
+
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
+        final var literal = codeModel.getTypeDescriptor(typeName).orElseThrow()
+            .composition(NumericLiteral.class)
+            .findFirst()
+            .orElseThrow();
+
+        assertThat(literal.getTrait(SourceLocation.FilePosition.class)).isPresent();
+    }
+
+    @Test
+    void binaryExpressionShouldCarrySourceLocation() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Foo", """
+                package com.example;
+                public class Foo {
+                    public int run(int a, int b) {
+                        return a + b;
+                    }
+                }
+                """);
+
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
+        final var addition = codeModel.getTypeDescriptor(typeName).orElseThrow()
+            .composition(Addition.class)
+            .findFirst()
+            .orElseThrow();
+
+        assertThat(addition.getTrait(SourceLocation.FilePosition.class)).isPresent();
+    }
+
+    @Test
+    void unaryExpressionShouldCarrySourceLocation() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Foo", """
+                package com.example;
+                public class Foo {
+                    public int run(int a) {
+                        return -a;
+                    }
+                }
+                """);
+
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
+        final var negative = codeModel.getTypeDescriptor(typeName).orElseThrow()
+            .composition(Negative.class)
+            .findFirst()
+            .orElseThrow();
+
+        assertThat(negative.getTrait(SourceLocation.FilePosition.class)).isPresent();
+    }
+
+    @Test
+    void ternaryExpressionShouldCarrySourceLocation() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Foo", """
+                package com.example;
+                public class Foo {
+                    public int run(boolean cond, int a, int b) {
+                        return cond ? a : b;
+                    }
+                }
+                """);
+
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
+        final var ternary = codeModel.getTypeDescriptor(typeName).orElseThrow()
+            .composition(Ternary.class)
+            .findFirst()
+            .orElseThrow();
+
+        assertThat(ternary.getTrait(SourceLocation.FilePosition.class)).isPresent();
+    }
+
+    @Test
+    void assignmentExpressionShouldCarrySourceLocation() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Foo", """
+                package com.example;
+                public class Foo {
+                    public int run(int a) {
+                        int b;
+                        return b = a;
+                    }
+                }
+                """);
+
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
+        final var assignment = codeModel.getTypeDescriptor(typeName).orElseThrow()
+            .composition(CompoundAssignment.class)
+            .findFirst()
+            .orElseThrow();
+
+        assertThat(assignment.getTrait(SourceLocation.FilePosition.class)).isPresent();
+    }
+
+    @Test
+    void compoundAssignmentExpressionShouldCarrySourceLocation() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Foo", """
+                package com.example;
+                public class Foo {
+                    public int run(int a) {
+                        int b = 0;
+                        return b += a;
+                    }
+                }
+                """);
+
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
+        final var compoundAssignment = codeModel.getTypeDescriptor(typeName).orElseThrow()
+            .composition(CompoundAssignment.class)
+            .findFirst()
+            .orElseThrow();
+
+        assertThat(compoundAssignment.getTrait(SourceLocation.FilePosition.class)).isPresent();
+    }
+
+    @Test
+    void arrayAccessExpressionShouldCarrySourceLocation() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Foo", """
+                package com.example;
+                public class Foo {
+                    public int run(int[] arr) {
+                        return arr[0];
+                    }
+                }
+                """);
+
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
+        final var arrayAccess = codeModel.getTypeDescriptor(typeName).orElseThrow()
+            .composition(ArrayAccess.class)
+            .findFirst()
+            .orElseThrow();
+
+        assertThat(arrayAccess.getTrait(SourceLocation.FilePosition.class)).isPresent();
+    }
+
+    @Test
+    void parenthesizedExpressionShouldCarrySourceLocation() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Foo", """
+                package com.example;
+                public class Foo {
+                    public int run(int a) {
+                        return (a);
+                    }
+                }
+                """);
+
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
+        final var parenthesized = codeModel.getTypeDescriptor(typeName).orElseThrow()
+            .composition(Parenthesized.class)
+            .findFirst()
+            .orElseThrow();
+
+        assertThat(parenthesized.getTrait(SourceLocation.FilePosition.class)).isPresent();
+    }
+
+    @Test
+    void lambdaExpressionNodeItselfShouldCarrySourceLocation() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Foo", """
+                package com.example;
+                import java.util.function.Function;
+                public class Foo {
+                    public Function<Integer, Integer> run() {
+                        return x -> x + 1;
+                    }
+                }
+                """);
+
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
+        final var lambda = codeModel.getTypeDescriptor(typeName).orElseThrow()
+            .composition(Lambda.class)
+            .findFirst()
+            .orElseThrow();
+
+        assertThat(lambda.getTrait(SourceLocation.FilePosition.class)).isPresent();
+    }
+
+    @Test
+    void switchExpressionNodeItselfShouldCarrySourceLocation() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Foo", """
+                package com.example;
+                public class Foo {
+                    public int run(int a) {
+                        return switch (a) {
+                            case 1 -> 10;
+                            default -> 0;
+                        };
+                    }
+                }
+                """);
+
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
+        final var switchExpr = codeModel.getTypeDescriptor(typeName).orElseThrow()
+            .composition(SwitchExpression.class)
+            .findFirst()
+            .orElseThrow();
+
+        assertThat(switchExpr.getTrait(SourceLocation.FilePosition.class)).isPresent();
+    }
+
+    @Test
+    void instanceOfExpressionNodeItselfShouldCarrySourceLocation() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Foo", """
+                package com.example;
+                public class Foo {
+                    public boolean check(Object obj) {
+                        return obj instanceof String s;
+                    }
+                }
+                """);
+
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
+        final var instanceOf = codeModel.getTypeDescriptor(typeName).orElseThrow()
+            .composition(InstanceOf.class)
+            .findFirst()
+            .orElseThrow();
+
+        assertThat(instanceOf.getTrait(SourceLocation.FilePosition.class)).isPresent();
+    }
+
+    @Test
+    void classLiteralNodeItselfShouldCarrySourceLocation() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Foo", """
+                package com.example;
+                public class Foo {
+                    public Class<?> run() {
+                        return String.class;
+                    }
+                }
+                """);
+
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
+        final var classLiteral = codeModel.getTypeDescriptor(typeName).orElseThrow()
+            .composition(ClassLiteral.class)
+            .findFirst()
+            .orElseThrow();
+
+        assertThat(classLiteral.getTrait(SourceLocation.FilePosition.class)).isPresent();
+    }
+
+    @Test
+    void newObjectNodeItselfShouldCarrySourceLocation() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Foo", """
+                package com.example;
+                import java.util.ArrayList;
+                public class Foo {
+                    public ArrayList<String> create() {
+                        return new ArrayList<String>();
+                    }
+                }
+                """);
+
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
+        final var newObject = codeModel.getTypeDescriptor(typeName).orElseThrow()
+            .composition(NewObject.class)
+            .findFirst()
+            .orElseThrow();
+
+        assertThat(newObject.getTrait(SourceLocation.FilePosition.class)).isPresent();
+    }
+
+    @Test
+    void newArrayNodeItselfShouldCarrySourceLocation() {
+        final var source = JavaFileObjects.forSourceString(
+            "com.example.Foo", """
+                package com.example;
+                public class Foo {
+                    public String[] create(int n) {
+                        return new String[n];
+                    }
+                }
+                """);
+
+        final var codeModel = JdkInitializerTests.runInternal(
+            new JdkInitializer(List.of(), List.of(), List.of(source)));
+
+        final var typeName = codeModel.getEmptyModuleTypeName("com.example.Foo");
+        final var newArray = codeModel.getTypeDescriptor(typeName).orElseThrow()
+            .composition(NewArray.class)
+            .findFirst()
+            .orElseThrow();
+
+        assertThat(newArray.getTrait(SourceLocation.FilePosition.class)).isPresent();
     }
 }
