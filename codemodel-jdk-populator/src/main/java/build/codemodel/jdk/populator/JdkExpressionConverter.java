@@ -306,7 +306,7 @@ public class JdkExpressionConverter
 
     @Override
     public Expression visitLiteral(final LiteralTree t, final Void v) {
-        return switch (t.getKind()) {
+        final Expression literal = switch (t.getKind()) {
             case STRING_LITERAL -> StringLiteral.of(codeModel, (String) t.getValue());
             case INT_LITERAL, LONG_LITERAL, FLOAT_LITERAL, DOUBLE_LITERAL ->
                 NumericLiteral.of(codeModel, (Number) t.getValue());
@@ -315,6 +315,8 @@ public class JdkExpressionConverter
             case NULL_LITERAL -> NullLiteral.of(codeModel);
             default -> UnknownExpression.of(codeModel);
         };
+        addSourceLocation(t).ifPresent(literal::addTrait);
+        return literal;
     }
 
     @Override
@@ -604,7 +606,7 @@ public class JdkExpressionConverter
         final var invocation = MethodInvocation.of(codeModel, Optional.ofNullable(target), methodName,
             args.stream(), receiverType);
         resolveMethod(t).ifPresent(invocation::addTrait);
-        addSourceLocation(t.getMethodSelect()).ifPresent(invocation::addTrait);
+        addSourceLocation(t).ifPresent(invocation::addTrait);
         return invocation;
     }
 
@@ -650,7 +652,9 @@ public class JdkExpressionConverter
         if ("class".equals(t.getIdentifier().toString())) {
             final var type = resolveTypeUsage(t.getExpression());
             addSourceLocation(t.getExpression()).ifPresent(type::addTrait);
-            return ClassLiteral.of(codeModel, type);
+            final var classLiteral = ClassLiteral.of(codeModel, type);
+            addSourceLocation(t).ifPresent(classLiteral::addTrait);
+            return classLiteral;
         }
         final var receiverExpr = t.getExpression();
         final var fieldAccess = FieldAccess.of(
@@ -701,31 +705,39 @@ public class JdkExpressionConverter
             : t.getInitializers().stream().map(this::convert).toList();
         final var type = resolveTypeUsage(t.getType());
         addSourceLocation(t.getType()).ifPresent(type::addTrait);
-        return NewArray.of(codeModel, type, dims.stream(), initializers.stream());
+        final var newArray = NewArray.of(codeModel, type, dims.stream(), initializers.stream());
+        addSourceLocation(t).ifPresent(newArray::addTrait);
+        return newArray;
     }
 
     @Override
     public Expression visitArrayAccess(final ArrayAccessTree t, final Void v) {
         final var arrayExpr = t.getExpression();
-        return ArrayAccess.of(
+        final var arrayAccess = ArrayAccess.of(
             convert(arrayExpr),
             convert(t.getIndex()),
             resolveReceiverType(arrayExpr));
+        addSourceLocation(t).ifPresent(arrayAccess::addTrait);
+        return arrayAccess;
     }
 
     @Override
     public Expression visitConditionalExpression(final ConditionalExpressionTree t, final Void v) {
-        return Ternary.of(
+        final var ternary = Ternary.of(
             convert(t.getCondition()),
             convert(t.getTrueExpression()),
             convert(t.getFalseExpression()));
+        addSourceLocation(t).ifPresent(ternary::addTrait);
+        return ternary;
     }
 
     @Override
     public Expression visitAssignment(final AssignmentTree t, final Void v) {
-        return CompoundAssignment.of(codeModel, AssignmentOperator.ASSIGN,
+        final var assignment = CompoundAssignment.of(codeModel, AssignmentOperator.ASSIGN,
             convert(t.getVariable()),
             convert(t.getExpression()));
+        addSourceLocation(t).ifPresent(assignment::addTrait);
+        return assignment;
     }
 
     @Override
@@ -744,16 +756,18 @@ public class JdkExpressionConverter
             case UNSIGNED_RIGHT_SHIFT_ASSIGNMENT -> AssignmentOperator.UNSIGNED_RIGHT_SHIFT;
             default -> throw new IllegalArgumentException("Unexpected compound assignment kind: " + t.getKind());
         };
-        return CompoundAssignment.of(codeModel, op,
+        final var assignment = CompoundAssignment.of(codeModel, op,
             convert(t.getVariable()),
             convert(t.getExpression()));
+        addSourceLocation(t).ifPresent(assignment::addTrait);
+        return assignment;
     }
 
     @Override
     public Expression visitBinary(final BinaryTree t, final Void v) {
         final var left = convert(t.getLeftOperand());
         final var right = convert(t.getRightOperand());
-        return switch (t.getKind()) {
+        final Expression binary = switch (t.getKind()) {
             case PLUS -> Addition.of(left, right);
             case MINUS -> Subtraction.of(left, right);
             case MULTIPLY -> Multiplication.of(left, right);
@@ -775,12 +789,14 @@ public class JdkExpressionConverter
             case UNSIGNED_RIGHT_SHIFT -> BitwiseBinary.of(codeModel, BitwiseOperator.UNSIGNED_RIGHT_SHIFT, left, right);
             default -> UnknownExpression.of(codeModel);
         };
+        addSourceLocation(t).ifPresent(binary::addTrait);
+        return binary;
     }
 
     @Override
     public Expression visitUnary(final UnaryTree t, final Void v) {
         final var operand = convert(t.getExpression());
-        return switch (t.getKind()) {
+        final Expression unary = switch (t.getKind()) {
             case PREFIX_INCREMENT -> PrefixUnary.of(codeModel, PrefixOperator.INCREMENT, operand);
             case PREFIX_DECREMENT -> PrefixUnary.of(codeModel, PrefixOperator.DECREMENT, operand);
             case BITWISE_COMPLEMENT -> PrefixUnary.of(codeModel, PrefixOperator.BITWISE_COMPLEMENT, operand);
@@ -791,18 +807,24 @@ public class JdkExpressionConverter
             case LOGICAL_COMPLEMENT -> Negation.of(operand);
             default -> UnknownExpression.of(codeModel);
         };
+        addSourceLocation(t).ifPresent(unary::addTrait);
+        return unary;
     }
 
     @Override
     public Expression visitParenthesized(final ParenthesizedTree t, final Void v) {
-        return Parenthesized.of(convert(t.getExpression()));
+        final var parenthesized = Parenthesized.of(convert(t.getExpression()));
+        addSourceLocation(t).ifPresent(parenthesized::addTrait);
+        return parenthesized;
     }
 
     @Override
     public Expression visitTypeCast(final TypeCastTree t, final Void v) {
         final var type = resolveTypeUsage(t.getType());
         addSourceLocation(t.getType()).ifPresent(type::addTrait);
-        return Cast.of(type, convert(t.getExpression()));
+        final var cast = Cast.of(type, convert(t.getExpression()));
+        addSourceLocation(t).ifPresent(cast::addTrait);
+        return cast;
     }
 
     @Override
@@ -815,6 +837,7 @@ public class JdkExpressionConverter
                 .toList();
             final var instanceOf = InstanceOf.ofDeconstruction(convert(t.getExpression()), type, components);
             dp.getNestedPatterns().forEach(nested -> registerNestedPatternBindings(nested, instanceOf));
+            addSourceLocation(t).ifPresent(instanceOf::addTrait);
             return instanceOf;
         }
         final Optional<String> bindingVariable;
@@ -835,6 +858,7 @@ public class JdkExpressionConverter
         if (t.getPattern() instanceof BindingPatternTree bp) {
             registerPatternBinding(bp.getVariable(), instanceOf);
         }
+        addSourceLocation(t).ifPresent(instanceOf::addTrait);
         return instanceOf;
     }
 
@@ -897,7 +921,9 @@ public class JdkExpressionConverter
         } else {
             body = Block.empty(codeModel);
         }
-        return Lambda.of(codeModel, params, body);
+        final var lambda = Lambda.of(codeModel, params, body);
+        addSourceLocation(t).ifPresent(lambda::addTrait);
+        return lambda;
     }
 
     @Override
@@ -907,7 +933,9 @@ public class JdkExpressionConverter
         }
         final var selector = convert(t.getExpression());
         final var cases = t.getCases().stream().map(c -> stmtConverter.convertCase(c, selector)).toList();
-        return SwitchExpression.of(selector, cases.stream());
+        final var switchExpr = SwitchExpression.of(selector, cases.stream());
+        addSourceLocation(t).ifPresent(switchExpr::addTrait);
+        return switchExpr;
     }
 
     @Override

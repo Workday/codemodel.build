@@ -218,7 +218,7 @@ class ExpressionTypeResolutionTests {
         final var location = invocation.getTrait(SourceLocation.FilePosition.class).orElseThrow();
         final var expectedStart = source.indexOf("sb.length()");
         assertThat(location.startPosition()).isEqualTo(expectedStart);
-        assertThat(location.endPosition()).isEqualTo(expectedStart + "sb.length".length());
+        assertThat(location.endPosition()).isEqualTo(expectedStart + "sb.length()".length());
     }
 
     @Test
