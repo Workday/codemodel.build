@@ -1,6 +1,7 @@
 package build.codemodel.dependency.injection;
 
 import jakarta.inject.Inject;
+import jakarta.inject.Named;
 import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
@@ -83,6 +84,24 @@ class ProvidesResolverTests
         assertThat(resolver.resolve(dependency)).isEmpty();
     }
 
+    /**
+     * Verifies that two {@link Provides} methods returning the same type but distinguished by different
+     * {@code @Named} qualifiers are resolved independently, rather than the second registration being
+     * dropped or the first method's value being returned for both qualifiers.
+     */
+    @Test
+    void shouldResolveDistinctValuesForDifferentlyQualifiedProvidesMethods() {
+        final var framework = createInjectionFramework();
+
+        final var context = framework.newContext(ProvidesResolver.of(new QualifiedGreetingProvider(), framework));
+        context.bind(QualifiedGreetingService.class).to(QualifiedGreetingService.class);
+
+        final var service = context.create(QualifiedGreetingService.class);
+
+        assertThat(service.englishGreeting).isEqualTo("Hello");
+        assertThat(service.frenchGreeting).isEqualTo("Bonjour");
+    }
+
     // --- fixtures ---
 
     static class GreetingService {
@@ -122,6 +141,30 @@ class ProvidesResolverTests
         @Provides
         public void doNothing() {
             // void return type — must be silently ignored by ProvidesResolver
+        }
+    }
+
+    static class QualifiedGreetingService {
+        @Inject
+        @Named("English")
+        String englishGreeting;
+
+        @Inject
+        @Named("French")
+        String frenchGreeting;
+    }
+
+    static class QualifiedGreetingProvider {
+        @Provides
+        @Named("English")
+        public String english() {
+            return "Hello";
+        }
+
+        @Provides
+        @Named("French")
+        public String french() {
+            return "Bonjour";
         }
     }
 }
