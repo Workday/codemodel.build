@@ -83,8 +83,6 @@ public abstract class AbstractBindingBuilder<T>
                 namedTypeName,
                 AnnotationValue.of(codeModel, "value", new AnnotationValue.Value.Literal(name)));
 
-            // TODO: ensure the Name annotation isn't already added to the Trait
-
             this.typeUsage.addTrait(named);
         }
 
