@@ -54,9 +54,10 @@ public class ProvidesResolver
     private final Object providerObject;
 
     /**
-     * Map from return-type canonical name to the corresponding {@link Provides} {@link MethodDescriptor}.
+     * Map from {@link Dependency} (the return type and any qualifier annotations) to the corresponding
+     * {@link Provides} {@link MethodDescriptor}.
      */
-    private final Map<String, MethodDescriptor> methodsByTypeName;
+    private final Map<Dependency, MethodDescriptor> methodsByDependency;
 
     /**
      * Constructs a {@link ProvidesResolver}.
@@ -68,7 +69,7 @@ public class ProvidesResolver
         this.providerObject = Objects.requireNonNull(providerObject, "The provider object must not be null");
         Objects.requireNonNull(framework, "The InjectionFramework must not be null");
 
-        this.methodsByTypeName = new LinkedHashMap<>();
+        this.methodsByDependency = new LinkedHashMap<>();
 
         final var codeModel = framework.codeModel();
 
@@ -80,19 +81,19 @@ public class ProvidesResolver
                     .filter(md -> md.returnType() instanceof NamedTypeUsage ntu
                         && !ntu.typeName().canonicalName().equals("void"))
                     .forEach(md -> {
-                        final var canonicalName = ((NamedTypeUsage) md.returnType()).typeName().canonicalName();
-                        this.methodsByTypeName.putIfAbsent(canonicalName, md);
+                        final var dependency = IndependentDependency.of(md.returnType(), _ -> framework.getQualifierAnnotationTypes(md));
+                        this.methodsByDependency.putIfAbsent(dependency, md);
                     }));
     }
 
     @Override
     public Optional<? extends Binding<Object>> resolve(final Dependency dependency) {
 
-        if (!(dependency.typeUsage() instanceof NamedTypeUsage namedTypeUsage)) {
+        if (!(dependency.typeUsage() instanceof NamedTypeUsage)) {
             return Optional.empty();
         }
 
-        final var methodDescriptor = this.methodsByTypeName.get(namedTypeUsage.typeName().canonicalName());
+        final var methodDescriptor = this.methodsByDependency.get(dependency);
 
         if (methodDescriptor == null) {
             return Optional.empty();

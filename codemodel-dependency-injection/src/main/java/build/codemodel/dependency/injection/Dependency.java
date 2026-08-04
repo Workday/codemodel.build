@@ -25,6 +25,9 @@ import build.codemodel.foundation.usage.AnnotationTypeUsage;
 import build.codemodel.foundation.usage.TypeUsage;
 import jakarta.inject.Qualifier;
 
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 /**
  * Defines a {@link TypeUsage} for <i>Dependency Injection</i> with an {@link Injector}.
  *
@@ -47,4 +50,47 @@ public interface Dependency {
      * @return the <i>Signature</i> for the {@link Dependency}
      */
     String signature();
+
+    /**
+     * Computes the canonical signature for a {@link TypeUsage} and a set of qualifier {@link AnnotationTypeUsage}s,
+     * consisting of the {@link TypeUsage}'s {@link TypeUsage#canonicalName()} (recursively including any generic
+     * parameters) followed by the qualifier annotations, sorted and rendered so that the signature is stable
+     * regardless of the order in which the qualifiers were declared.
+     *
+     * <p>Anywhere two things must be recognized as the "same qualified type" (an {@link IndependentDependency}
+     * and a {@link Provides} method it may resolve to, for example) must derive their signature from this method,
+     * so the two stay comparable.
+     *
+     * @param typeUsage            the {@link TypeUsage}
+     * @param qualifierAnnotations the {@link Qualifier} {@link AnnotationTypeUsage}s
+     * @return the canonical signature
+     * @throws DuplicateQualifierException if more than one {@link AnnotationTypeUsage} of the same qualifier
+     *                                     annotation type is present, making the signature ambiguous
+     */
+    static String signatureOf(final TypeUsage typeUsage,
+                              final Stream<? extends AnnotationTypeUsage> qualifierAnnotations) {
+
+        final var sortedQualifiers = qualifierAnnotations.sorted().toList();
+
+        // reject more than one qualifier annotation of the same type (e.g. two differently-valued @Named
+        // annotations), as that would make the qualifier ambiguous
+        sortedQualifiers.stream()
+            .collect(Collectors.groupingBy(AnnotationTypeUsage::typeName))
+            .values()
+            .stream()
+            .filter(duplicates -> duplicates.size() > 1)
+            .findFirst()
+            .ifPresent(duplicates -> {
+                throw new DuplicateQualifierException(
+                    "The TypeUsage [" + typeUsage.canonicalName() + "] defines more than one ["
+                        + duplicates.getFirst().typeName() + "] qualifier: " + duplicates);
+            });
+
+        return sortedQualifiers.isEmpty()
+            ? typeUsage.canonicalName()
+            : typeUsage.canonicalName()
+              + sortedQualifiers.stream()
+            .map(Object::toString)
+            .collect(Collectors.joining(" ", " ", ""));
+    }
 }
