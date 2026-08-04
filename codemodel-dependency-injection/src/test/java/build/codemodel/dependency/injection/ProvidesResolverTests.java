@@ -102,6 +102,25 @@ class ProvidesResolverTests
         assertThat(service.frenchGreeting).isEqualTo("Bonjour");
     }
 
+    /**
+     * Verifies that a concrete method overriding an {@code abstract} {@link Provides}-annotated method is
+     * itself treated as {@link Provides}, even though it does not repeat the annotation. An {@code abstract}
+     * method can't be "opted out of" the way an {@code @Inject} method can - every concrete subclass must
+     * supply an override - so the {@link Provides} contract carries through to whichever override is
+     * actually invoked.
+     */
+    @Test
+    void shouldResolveValueFromConcreteOverrideOfAbstractProvidesMethod() {
+        final var framework = createInjectionFramework();
+
+        final var context = framework.newContext(ProvidesResolver.of(new ConcreteGreetingProvider(), framework));
+        context.bind(GreetingService.class).to(GreetingService.class);
+
+        final var service = context.create(GreetingService.class);
+
+        assertThat(service.greeting).isEqualTo("Hello from concrete override");
+    }
+
     // --- fixtures ---
 
     static class GreetingService {
@@ -141,6 +160,18 @@ class ProvidesResolverTests
         @Provides
         public void doNothing() {
             // void return type — must be silently ignored by ProvidesResolver
+        }
+    }
+
+    abstract static class AbstractGreetingProvider {
+        @Provides
+        public abstract String greeting();
+    }
+
+    static class ConcreteGreetingProvider extends AbstractGreetingProvider {
+        @Override
+        public String greeting() {
+            return "Hello from concrete override";
         }
     }
 
