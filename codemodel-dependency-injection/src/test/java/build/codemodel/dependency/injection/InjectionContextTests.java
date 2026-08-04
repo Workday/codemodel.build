@@ -83,6 +83,19 @@ class InjectionContextTests
     }
 
     /**
+     * Ensure repeated {@link BindingBuilder#as(String)} calls on the same binding are rejected with a
+     * {@link DuplicateQualifierException} when the {@link Binding} is created, since the resulting
+     * {@code @Named} qualifier would otherwise be ambiguous.
+     */
+    @Test
+    void shouldRejectRepeatedAsCallsAsDuplicateQualifier() {
+        final var context = createInjectionFramework().newContext();
+
+        assertThrows(DuplicateQualifierException.class, () ->
+            context.bind(String.class).as("first").as("second").to("value"));
+    }
+
+    /**
      * Ensure a {@link Context} can inject values from a custom {@link Resolver}.
      */
     @Test

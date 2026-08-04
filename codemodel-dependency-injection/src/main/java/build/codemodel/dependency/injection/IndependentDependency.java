@@ -64,13 +64,31 @@ public final class IndependentDependency
         this.typeUsage = Objects.requireNonNull(typeUsage, "The TypeUsage must not be null");
         Objects.requireNonNull(qualifierAnnotationExtractor, "The Qualifier Annotation Extractor must not be null");
 
+        final var qualifierAnnotations = qualifierAnnotationExtractor.apply(typeUsage)
+            .sorted()
+            .toList();
+
+        // reject a TypeUsage carrying more than one qualifier annotation of the same type (e.g. two
+        // differently-valued @Named annotations from repeated BindingBuilder#as(String) calls), as that
+        // would make the qualifier ambiguous
+        qualifierAnnotations.stream()
+            .collect(Collectors.groupingBy(AnnotationTypeUsage::typeName))
+            .values()
+            .stream()
+            .filter(duplicates -> duplicates.size() > 1)
+            .findFirst()
+            .ifPresent(duplicates -> {
+                throw new DuplicateQualifierException(
+                    "The TypeUsage [" + typeUsage.canonicalName() + "] defines more than one ["
+                        + duplicates.getFirst().typeName() + "] qualifier: " + duplicates);
+            });
+
         // create a signature that includes the type usage's full canonical name (recursively rendering any
         // generic parameters, e.g. "java.util.List<com.example.Person>", so differently-parameterized usages
         // of the same raw type - such as List<Person> and List<Car> - never collide) and ordered qualified
         // annotations
         this.signature = typeUsage.canonicalName()
-            + qualifierAnnotationExtractor.apply(typeUsage)
-            .sorted()
+            + qualifierAnnotations.stream()
             .map(Object::toString)
             .collect(Collectors.joining(" ", " ", ""));
     }
