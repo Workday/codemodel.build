@@ -37,11 +37,13 @@ import jakarta.inject.Singleton;
 
 import java.lang.annotation.Annotation;
 import java.util.ArrayDeque;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -491,7 +493,10 @@ public class InjectionFramework {
      * {@link Provides}.
      *
      * <p>This is a descriptor-level predicate intended for use when scanning a {@link JDKTypeDescriptor}
-     * to identify provider methods before constructing a {@link ProvidesResolver}.
+     * to identify provider methods before constructing a {@link ProvidesResolver}. It only recognizes a
+     * method that carries the {@link Provides} annotation itself; it does not recognize a concrete override
+     * of an {@code abstract} {@link Provides} method that omits the annotation. For that, use
+     * {@link #resolveEffectivelyProvides}, which is what {@link ProvidesResolver} uses internally.
      *
      * @param descriptor the {@link MethodDescriptor}
      * @return {@code true} if the {@link MethodDescriptor} has a {@link Provides} annotation, {@code false} otherwise
@@ -501,11 +506,55 @@ public class InjectionFramework {
             && descriptor.getTrait(Classification.class)
             .map(classification -> classification != Classification.ABSTRACT)
             .orElse(true)
-            && descriptor.traits(AnnotationTypeUsage.class)
+            && hasProvidesAnnotation(descriptor);
+    }
+
+    /**
+     * Determines if a {@link MethodDescriptor} itself carries the {@link Provides} annotation, regardless of
+     * its {@code static}/{@code abstract} classification.
+     *
+     * @param descriptor the {@link MethodDescriptor}
+     * @return {@code true} if the {@link MethodDescriptor} has a {@link Provides} annotation, {@code false} otherwise
+     */
+    private boolean hasProvidesAnnotation(final MethodDescriptor descriptor) {
+        return descriptor.traits(AnnotationTypeUsage.class)
             .anyMatch(annotationTypeUsage -> annotationTypeUsage
                 .typeName()
                 .canonicalName()
                 .equals(Provides.class.getCanonicalName()));
+    }
+
+    /**
+     * Determines the non-{@code static}, non-{@code abstract} {@link MethodDescriptor}s within
+     * {@code allMethods} that are effectively {@link Provides} methods - either because they carry the
+     * {@link Provides} annotation themselves, or because they override an {@code abstract} method elsewhere
+     * in {@code allMethods} that does.
+     *
+     * <p>An {@code abstract} method has no way to "opt out" of being overridden - unlike an {@link Inject}
+     * method, every concrete subclass is forced to supply an implementation - so requiring {@link Provides}
+     * to be repeated on every concrete override of an {@code abstract} {@link Provides} method is pure
+     * boilerplate, and forgetting to do so silently drops the provider rather than reporting an error.
+     *
+     * @param allMethods the {@link MethodDescriptor}s to inspect, typically the result of scanning a
+     *                   {@link JDKTypeDescriptor}'s hierarchy
+     * @return the {@link Stream} of effectively-{@link Provides} {@link MethodDescriptor}s
+     */
+    public Stream<MethodDescriptor> resolveEffectivelyProvides(final Collection<MethodDescriptor> allMethods) {
+
+        final var abstractProvidesOverrideKeys = allMethods.stream()
+            .filter(md -> md.getTrait(Classification.class)
+                .map(classification -> classification == Classification.ABSTRACT)
+                .orElse(false))
+            .filter(this::hasProvidesAnnotation)
+            .map(MethodDescriptor::overrideKey)
+            .collect(Collectors.toSet());
+
+        return allMethods.stream()
+            .filter(md -> md.getTrait(Static.class).isEmpty())
+            .filter(md -> md.getTrait(Classification.class)
+                .map(classification -> classification != Classification.ABSTRACT)
+                .orElse(true))
+            .filter(md -> hasProvidesAnnotation(md) || abstractProvidesOverrideKeys.contains(md.overrideKey()));
     }
 
     /**

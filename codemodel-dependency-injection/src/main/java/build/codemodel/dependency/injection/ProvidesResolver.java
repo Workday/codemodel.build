@@ -35,7 +35,11 @@ import java.util.Optional;
  *
  * <p>At construction, the provider object's type descriptor hierarchy is scanned via the
  * {@link InjectionFramework} for non-static, non-abstract, non-void, no-arg methods annotated with
- * {@link Provides}.  Each such method's return type is registered as a resolvable type.
+ * {@link Provides} - including a concrete method that overrides an {@code abstract} {@link Provides}
+ * declaration without repeating the annotation itself (see
+ * {@link InjectionFramework#resolveEffectivelyProvides}).  Each such method is registered as resolvable by
+ * its return type together with any qualifier annotations (e.g. {@code @Named}) declared on the method
+ * itself, so differently-qualified {@link Provides} methods returning the same type do not collide.
  * At resolve time, the matching method is invoked and its return value is wrapped in a {@link ValueBinding}.
  *
  * <p>Each call to {@link #resolve} invokes the {@link Provides} method afresh, giving factory-per-resolution
@@ -54,8 +58,8 @@ public class ProvidesResolver
     private final Object providerObject;
 
     /**
-     * Map from {@link Dependency} (the return type and any qualifier annotations) to the corresponding
-     * {@link Provides} {@link MethodDescriptor}.
+     * Map from a {@link Dependency} representing a {@link Provides} method's return type and qualifier
+     * annotations to the corresponding {@link Provides} {@link MethodDescriptor}.
      */
     private final Map<Dependency, MethodDescriptor> methodsByDependency;
 
@@ -74,16 +78,19 @@ public class ProvidesResolver
         final var codeModel = framework.codeModel();
 
         codeModel.getJDKTypeDescriptor(providerObject.getClass())
-            .ifPresent(typeDescriptor ->
-                codeModel.getTraitsInHierarchy(typeDescriptor, MethodDescriptor.class)
-                    .filter(framework::isProvides)
+            .ifPresent(typeDescriptor -> {
+                final var allMethods = codeModel.getTraitsInHierarchy(typeDescriptor, MethodDescriptor.class)
+                    .toList();
+
+                framework.resolveEffectivelyProvides(allMethods)
                     .filter(md -> md.formalParameters().findAny().isEmpty())
                     .filter(md -> md.returnType() instanceof NamedTypeUsage ntu
                         && !ntu.typeName().canonicalName().equals("void"))
                     .forEach(md -> {
                         final var dependency = IndependentDependency.of(md.returnType(), _ -> framework.getQualifierAnnotationTypes(md));
                         this.methodsByDependency.putIfAbsent(dependency, md);
-                    }));
+                    });
+            });
     }
 
     @Override
@@ -101,7 +108,8 @@ public class ProvidesResolver
 
         final var method = methodDescriptor.getTrait(MethodType.class)
             .map(MethodType::method)
-            .orElseThrow(() -> new InjectionException("No MethodType trait for @Provides method " + methodDescriptor));
+            .orElseThrow(() -> new InjectionException(
+                "No MethodType trait for @Provides method " + methodDescriptor));
 
         method.trySetAccessible();
 
