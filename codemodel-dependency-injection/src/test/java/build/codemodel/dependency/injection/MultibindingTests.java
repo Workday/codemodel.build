@@ -21,6 +21,8 @@ package build.codemodel.dependency.injection;
  */
 
 import jakarta.inject.Inject;
+import jakarta.inject.Named;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
@@ -29,6 +31,7 @@ import java.util.Set;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Tests for the multibinding system: {@link Binder#bindSet}, {@link MultiBinder}, and the five
@@ -195,5 +198,115 @@ class MultibindingTests
     static class CharSeqSetHolder {
         @Inject
         Set<CharSequence> values;
+    }
+
+    // ---- wildcard element types ----
+
+    static class Base {
+    }
+
+    static class Impl
+        extends Base {
+    }
+
+    static class Sibling
+        extends Base {
+    }
+
+    static class WildcardSetHolder {
+        @Inject
+        Set<? extends Base> values;
+    }
+
+    static class ConcreteSetHolder {
+        @Inject
+        Set<Impl> values;
+    }
+
+    /**
+     * {@code multiBinder(Impl.class)} contributions satisfy a wildcard-equivalent {@code Set<? extends Base>}
+     * injection point exactly as they already satisfy the concrete {@code Set<Impl>} form, since every
+     * {@code Impl} is a {@code Base}. {@link InjectionContext}'s multibinding resolver can't extract a
+     * {@link Class} from a wildcard type argument directly (a
+     * {@link build.codemodel.foundation.usage.WildcardTypeUsage} has no loadable class of its own via
+     * {@code TypeUsages.getFirstTypeParameterClass}), so it instead searches the registered element classes
+     * for one compatible with the wildcard's bound.
+     */
+    @Test
+    void shouldSatisfyWildcardCollectionFromMultiBinderContributions() {
+        final var context = createInjectionFramework().newContext();
+
+        context.bindSet(Impl.class).add(new Impl()).add(new Impl());
+
+        final var concreteHolder = context.inject(new ConcreteSetHolder());
+        assertThat(concreteHolder.values)
+            .hasSize(2);
+
+        final var wildcardHolder = context.inject(new WildcardSetHolder());
+        assertThat(wildcardHolder.values)
+            .hasSize(2);
+    }
+
+    /**
+     * When more than one registered {@code multiBinder} element type is compatible with a requested wildcard
+     * bound (here, both {@code Impl} and {@code Sibling} satisfy {@code Set<? extends Base>}), resolution
+     * must not silently pick one - there's no principled way to choose between two equally-compatible, but
+     * structurally unrelated, contributed collections.
+     */
+    @Test
+    void shouldThrowWhenMultipleMultiBinderElementTypesAreWildcardCompatible() {
+        final var context = createInjectionFramework().newContext();
+
+        context.bindSet(Impl.class).add(new Impl());
+        context.bindSet(Sibling.class).add(new Sibling());
+
+        assertThatThrownBy(() -> context.inject(new WildcardSetHolder()))
+            .isInstanceOf(InjectionException.class);
+    }
+
+    // ---- known gap: multibinding does not support qualifiers ----
+
+    static class NamedProdHolder {
+        @Inject
+        @Named("prod")
+        Set<String> values;
+    }
+
+    static class NamedDevHolder {
+        @Inject
+        @Named("dev")
+        Set<String> values;
+    }
+
+    /**
+     * KNOWN GAP: {@link Binder#bindSet} has no qualifier parameter - {@link MultiBinder} exposes no
+     * {@code with}/{@code as} to attach one - and {@link InjectionContext}'s multibinding resolution keys its
+     * element registry purely by element type, so the qualifiers on the requesting {@code Set<T>} injection
+     * point are never consulted. As a result, two differently-qualified injection points for the same element
+     * type (here {@code @Named("prod")} and {@code @Named("dev")}) both silently resolve to the very same
+     * registered set, rather than being kept independent or failing.
+     *
+     * <p>This asserts what a correct, qualifier-aware {@code bindSet} would need to support - two
+     * independently-qualified sets of {@code String} resolving separately - which the current API can't even
+     * express (there is no qualified {@code bindSet}), let alone honor. It's disabled rather than asserted as
+     * a positive expectation of today's behavior: it documents the missing capability so it isn't
+     * rediscovered by surprise, without treating either the missing API or the collision as a passing
+     * contract. Un-skip and adapt once qualified multibinding is supported.
+     */
+    @Test
+    @Disabled("multibinding does not yet support qualifiers - see Javadoc")
+    void shouldKeepDifferentlyQualifiedMultibindingsIndependent() {
+        final var context = createInjectionFramework().newContext();
+
+        // bindSet has no qualifier-attaching overload today; both calls collapse into the one
+        // unqualified String multibinding, which is exactly the gap this test documents.
+        context.bindSet(String.class).add("prod-value");
+        context.bindSet(String.class).add("dev-value");
+
+        final var prodHolder = context.inject(new NamedProdHolder());
+        final var devHolder = context.inject(new NamedDevHolder());
+
+        assertThat(prodHolder.values).containsExactly("prod-value");
+        assertThat(devHolder.values).containsExactly("dev-value");
     }
 }

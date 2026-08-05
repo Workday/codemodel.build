@@ -23,8 +23,12 @@ package build.codemodel.dependency.injection;
 import build.codemodel.foundation.naming.TypeName;
 import build.codemodel.foundation.usage.AnnotationTypeUsage;
 import build.codemodel.foundation.usage.TypeUsage;
+import build.codemodel.jdk.JDKCodeModel;
+import build.codemodel.jdk.TypeUsages;
 import jakarta.inject.Qualifier;
 
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -92,5 +96,70 @@ public interface Dependency {
               + sortedQualifiers.stream()
             .map(Object::toString)
             .collect(Collectors.joining(" ", " ", ""));
+    }
+
+    /**
+     * Looks up the value registered for {@code requested} in {@code candidates}, keyed by {@link Dependency}.
+     * An exact key match (same {@link #signature()}) always wins outright. On a miss, {@code candidates} is
+     * searched for the {@link Dependency} whose qualifiers match {@code requested}'s exactly and whose
+     * {@link #typeUsage()} is {@link TypeUsages#isCompatible(TypeUsage, TypeUsage, JDKCodeModel) compatible} -
+     * this is what lets a wildcard-bearing request (e.g. {@code Class<? extends Base>} or
+     * {@code Set<? extends Base>}) be satisfied by a registered candidate that doesn't match it exactly (e.g.
+     * {@code Class<Impl>}), without ever letting a wildcard-fallback candidate override an exact match, and
+     * without letting a differently-qualified (or unqualified) candidate silently satisfy a qualified request
+     * (e.g. an unqualified {@code JDKVersion} must never satisfy a request for {@code @System JDKVersion}).
+     *
+     * @param requested  the requested {@link Dependency}
+     * @param candidates the candidates, keyed by {@link Dependency}
+     * @param codeModel  the {@link JDKCodeModel} used to check bound assignability
+     * @param <V>        the type of value
+     * @return the resolved value, or {@link Optional#empty()} if no candidate is compatible
+     * @throws InjectionException if more than one candidate is wildcard-compatible with {@code requested}
+     */
+    static <V> Optional<V> resolve(final Dependency requested,
+                                   final Map<Dependency, V> candidates,
+                                   final JDKCodeModel codeModel) {
+
+        final var exact = candidates.get(requested);
+        if (exact != null) {
+            return Optional.of(exact);
+        }
+
+        final var requestedQualifierSignature = qualifierSignature(requested);
+
+        final var compatible = candidates.entrySet().stream()
+            .filter(entry -> qualifierSignature(entry.getKey()).equals(requestedQualifierSignature))
+            .filter(entry -> TypeUsages.isCompatible(requested.typeUsage(), entry.getKey().typeUsage(), codeModel))
+            .toList();
+
+        if (compatible.size() > 1) {
+            throw new InjectionException("Ambiguous wildcard-compatible candidates for [" + requested + "]: "
+                + compatible.stream().map(entry -> entry.getKey().toString()).toList());
+        }
+
+        return compatible.stream().findFirst().map(Map.Entry::getValue);
+    }
+
+    /**
+     * Extracts the qualifier portion of {@code dependency}'s {@link #signature()} - everything after the
+     * {@link #typeUsage()}'s {@link TypeUsage#canonicalName()} prefix that {@link #signatureOf} always builds
+     * the signature from - so two {@link Dependency}s can be compared for "same qualifiers" independently of
+     * whether their {@link TypeUsage}s are themselves an exact match (e.g. a wildcard-bearing request versus a
+     * concrete candidate).
+     *
+     * @param dependency the {@link Dependency}
+     * @return the qualifier suffix of the {@link Dependency}'s signature
+     * @throws IllegalStateException if {@code dependency}'s {@link #signature()} does not start with its own
+     *                               {@link #typeUsage()}'s {@link TypeUsage#canonicalName()}, meaning it was not
+     *                               built via {@link #signatureOf} and the qualifier suffix can't be trusted
+     */
+    private static String qualifierSignature(final Dependency dependency) {
+        final var typePrefix = dependency.typeUsage().canonicalName();
+        final var signature = dependency.signature();
+        if (!signature.startsWith(typePrefix)) {
+            throw new IllegalStateException("Dependency [" + dependency + "]'s signature [" + signature
+                + "] does not start with its own TypeUsage's canonicalName [" + typePrefix + "]");
+        }
+        return signature.substring(typePrefix.length());
     }
 }

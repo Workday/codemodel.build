@@ -8,6 +8,7 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Tests for {@link ProvidesResolver}.
@@ -103,6 +104,26 @@ class ProvidesResolverTests
     }
 
     /**
+     * A qualified request must never be satisfied by a {@link Provides} method whose qualifiers don't match,
+     * even though the two {@link build.codemodel.foundation.usage.TypeUsage}s are themselves compatible (here,
+     * identical). The wildcard-compatibility fallback in {@link Dependency#resolve} exists to let a
+     * wildcard-bearing request match a structurally different candidate - it must not let an unqualified
+     * {@code @Provides} method silently stand in for a differently-qualified request (e.g. an injection point
+     * requiring {@code @Named("French") String} must never resolve to a {@code @Provides} method returning a
+     * bare, unqualified {@code String}).
+     */
+    @Test
+    void shouldNotResolveQualifiedRequestFromUnqualifiedProvidesMethod() {
+        final var framework = createInjectionFramework();
+
+        final var context = framework.newContext(ProvidesResolver.of(new GreetingProvider(), framework));
+        context.bind(NamedGreetingService.class).to(NamedGreetingService.class);
+
+        assertThatThrownBy(() -> context.create(NamedGreetingService.class))
+            .isInstanceOf(UnsatisfiedDependencyException.class);
+    }
+
+    /**
      * Verifies that a concrete method overriding an {@code abstract} {@link Provides}-annotated method is
      * itself treated as {@link Provides}, even though it does not repeat the annotation. An {@code abstract}
      * method can't be "opted out of" the way an {@code @Inject} method can - every concrete subclass must
@@ -173,6 +194,12 @@ class ProvidesResolverTests
         public String greeting() {
             return "Hello from concrete override";
         }
+    }
+
+    static class NamedGreetingService {
+        @Inject
+        @Named("French")
+        String greeting;
     }
 
     static class QualifiedGreetingService {
