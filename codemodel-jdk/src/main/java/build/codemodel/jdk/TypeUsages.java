@@ -28,6 +28,7 @@ import build.codemodel.foundation.usage.GenericTypeUsage;
 import build.codemodel.foundation.usage.NamedTypeUsage;
 import build.codemodel.foundation.usage.SpecificTypeUsage;
 import build.codemodel.foundation.usage.TypeUsage;
+import build.codemodel.foundation.usage.WildcardTypeUsage;
 
 import java.lang.reflect.Type;
 import java.util.Map;
@@ -35,6 +36,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * Helper methods for working with JDK-based {@link TypeUsage}s.
@@ -247,5 +249,235 @@ public final class TypeUsages {
                 .flatMap(TypeUsages::getThreadContextClass);
         }
         return Optional.empty();
+    }
+
+    /**
+     * Determines if {@code candidate} is compatible with the (possibly wildcard-bearing) {@code requested}
+     * {@link TypeUsage} - i.e. whether {@code candidate} could stand in wherever {@code requested} is
+     * expected, per ordinary JLS assignability (covariant: a subtype is always compatible with its
+     * supertype).
+     *
+     * <p>This is distinct from the <i>invariant</i> rules governing {@code requested}'s own generic type
+     * arguments, if it has any - per <a href="https://docs.oracle.com/javase/specs/jls/se21/html/jls-4.html#jls-4.5.1">JLS 4.5.1</a>,
+     * a concrete type argument (no wildcard) must match exactly, since {@code List<Impl>} is never
+     * compatible with a requested {@code List<Base>} even though {@code Impl} is compatible with
+     * {@code Base} at the top level. Each type argument is compared via
+     * {@link #isArgumentCompatible(TypeUsage, TypeUsage, JDKCodeModel)}, which enforces that invariance
+     * (relaxed only where {@code requested}'s argument is itself a wildcard, or {@code candidate} supplies
+     * no type arguments at all - a raw usage, compatible with any parameterization of the same raw type).
+     *
+     * @param requested the (possibly wildcard-bearing) requested {@link TypeUsage}
+     * @param candidate the candidate {@link TypeUsage}
+     * @param codeModel the {@link JDKCodeModel} used to check bound assignability, scanning either side of the
+     *                  comparison on demand if not already present
+     * @return {@code true} if {@code candidate} is compatible with {@code requested}, {@code false} otherwise
+     * @see #isAssignable(TypeUsage, TypeUsage, JDKCodeModel)
+     */
+    public static boolean isCompatible(final TypeUsage requested,
+                                       final TypeUsage candidate,
+                                       final JDKCodeModel codeModel) {
+
+        if (requested instanceof WildcardTypeUsage wildcard) {
+            return wildcardCompatible(wildcard, candidate, codeModel);
+        }
+
+        if (candidate instanceof WildcardTypeUsage) {
+            // a wildcard can only appear on the candidate side when requested is itself a wildcard
+            // (handled above) - a wildcard can never satisfy a requested concrete or generic type
+            return false;
+        }
+
+        if (!(requested instanceof GenericTypeUsage requestedGeneric)) {
+            // requested carries no type argument for invariance to apply to - ordinary (covariant)
+            // JLS assignability governs the whole type
+            return isAssignable(candidate, requested, codeModel);
+        }
+
+        if (!(candidate instanceof NamedTypeUsage candidateNamed)) {
+            return false;
+        }
+
+        if (!requestedGeneric.typeName().equals(candidateNamed.typeName())) {
+            // candidate isn't a usage of the same generic declaration as requested, so there's no
+            // positional type argument list to compare invariantly against requested's. If candidate
+            // itself carries no reified type argument, it's a raw usage compatible with any
+            // parameterization, so ordinary raw (erasure) assignability governs; otherwise candidate is
+            // concretely parameterized down a different branch of the hierarchy (e.g. ArrayList<Impl>
+            // against a requested List<Base>) and verifying invariance would require substituting type
+            // arguments through the intervening supertypes, which isn't modeled here - conservatively
+            // treat it as incompatible rather than risk a false positive by ignoring the argument
+            // mismatch entirely
+            return (!(candidate instanceof GenericTypeUsage candidateGenericRawCheck)
+                    || candidateGenericRawCheck.parameters().findAny().isEmpty())
+                && isAssignable(candidate, requested, codeModel);
+        }
+
+        if (!(candidate instanceof GenericTypeUsage candidateGeneric)
+            || candidateGeneric.parameters().findAny().isEmpty()) {
+            // the candidate is a raw usage of the same raw type - compatible with any parameterization,
+            // since there is no reified type argument to conflict with the requested wildcard
+            return true;
+        }
+
+        return parametersCompatible(requestedGeneric, candidateGeneric, codeModel);
+    }
+
+    /**
+     * Determines if {@code requestedGeneric} and {@code candidateGeneric} - already established to share a
+     * common raw type - have the same number of type arguments, each pairwise compatible per
+     * {@link #isArgumentCompatible(TypeUsage, TypeUsage, JDKCodeModel)}.
+     */
+    private static boolean parametersCompatible(final GenericTypeUsage requestedGeneric,
+                                                final GenericTypeUsage candidateGeneric,
+                                                final JDKCodeModel codeModel) {
+
+        final var requestedParameters = requestedGeneric.parameters().toList();
+        final var candidateParameters = candidateGeneric.parameters().toList();
+
+        return requestedParameters.size() == candidateParameters.size()
+            && IntStream.range(0, requestedParameters.size())
+            .allMatch(i ->
+                isArgumentCompatible(requestedParameters.get(i), candidateParameters.get(i), codeModel));
+    }
+
+    /**
+     * Determines if {@code candidate} is compatible with {@code requested} in a generic type <i>argument</i>
+     * position, per the invariant containment rules of
+     * <a href="https://docs.oracle.com/javase/specs/jls/se21/html/jls-4.html#jls-4.5.1">JLS 4.5.1</a> - unlike
+     * {@link #isCompatible(TypeUsage, TypeUsage, JDKCodeModel)}, a concrete (non-wildcard) {@code requested}
+     * argument requires an exact match rather than mere assignability, since generic type arguments are
+     * invariant without a wildcard.
+     *
+     * @param requested the requested type argument
+     * @param candidate the candidate type argument
+     * @param codeModel the {@link JDKCodeModel} used to check wildcard bound assignability
+     * @return {@code true} if {@code candidate} is compatible with {@code requested} in argument position
+     * @see #isCompatible(TypeUsage, TypeUsage, JDKCodeModel)
+     */
+    private static boolean isArgumentCompatible(final TypeUsage requested,
+                                                final TypeUsage candidate,
+                                                final JDKCodeModel codeModel) {
+
+        if (requested instanceof WildcardTypeUsage wildcard) {
+            return wildcardCompatible(wildcard, candidate, codeModel);
+        }
+
+        if (candidate instanceof WildcardTypeUsage) {
+            return false;
+        }
+
+        if (!(requested instanceof GenericTypeUsage requestedGeneric)) {
+            // a concrete type argument is invariant per JLS 4.5.1 - matching List<Person> against
+            // List<Car> must never collide, even where Person and Car are otherwise assignable
+            return requested.canonicalName().equals(candidate.canonicalName());
+        }
+
+        if (!(candidate instanceof NamedTypeUsage candidateNamed)
+            || !requestedGeneric.typeName().equals(candidateNamed.typeName())) {
+            return false;
+        }
+
+        if (!(candidate instanceof GenericTypeUsage candidateGeneric)
+            || candidateGeneric.parameters().findAny().isEmpty()) {
+            return true;
+        }
+
+        return parametersCompatible(requestedGeneric, candidateGeneric, codeModel);
+    }
+
+    /**
+     * Determines if {@code candidate} is compatible with a {@code requested} that is itself a
+     * {@link WildcardTypeUsage}, shared between {@link #isCompatible(TypeUsage, TypeUsage, JDKCodeModel)} and
+     * {@link #isArgumentCompatible(TypeUsage, TypeUsage, JDKCodeModel)} since a wildcard {@code requested} is
+     * handled identically at the top level and in argument position - only a non-wildcard {@code requested}
+     * distinguishes covariance from invariance.
+     */
+    private static boolean wildcardCompatible(final WildcardTypeUsage wildcard,
+                                              final TypeUsage candidate,
+                                              final JDKCodeModel codeModel) {
+
+        if (candidate instanceof WildcardTypeUsage candidateWildcard) {
+            return wildcardsCompatible(wildcard, candidateWildcard, codeModel);
+        }
+
+        return wildcard.upperBound()
+                .map(bound -> isAssignable(candidate, bound, codeModel))
+                .orElse(true)
+            && wildcard.lowerBound()
+                .map(bound -> isAssignable(bound, candidate, codeModel))
+                .orElse(true);
+    }
+
+    /**
+     * Determines if {@code candidate} is <i>contained by</i> {@code requested} per the type argument
+     * containment rules of
+     * <a href="https://docs.oracle.com/javase/specs/jls/se21/html/jls-4.html#jls-4.5.1">JLS 4.5.1</a> - i.e.
+     * whether a {@code List<candidate>} usage would be assignable wherever a {@code List<requested>} usage is
+     * expected. Containment is asymmetric.
+     *
+     * <p>When {@code requested} is {@code ? super S}, only a {@code candidate} that is itself
+     * {@code ? super C} can be contained, and only when {@code S} is assignable to {@code C} (candidate's
+     * lower bound reaches at least as low as {@code S}); an {@code extends}-bounded or unbounded
+     * {@code candidate} has no guaranteed lower bound at all and can never satisfy a {@code super}
+     * requirement, per JLS - not even one with a {@code super Object} bound.
+     *
+     * <p>When {@code requested} is {@code ? extends S} - including the unbounded {@code ?}, which JLS treats
+     * as {@code ? extends Object} - containment reduces to comparing each side's <i>effective upper bound</i>:
+     * {@code S} for {@code requested}, and for {@code candidate} either its own {@code extends} bound, or
+     * {@code Object} if {@code candidate} is unbounded or only {@code super}-bounded (since neither guarantees
+     * anything tighter) - requiring {@code candidate}'s effective upper bound to be assignable to
+     * {@code requested}'s.
+     */
+    private static boolean wildcardsCompatible(final WildcardTypeUsage requested,
+                                               final WildcardTypeUsage candidate,
+                                               final JDKCodeModel codeModel) {
+
+        if (requested.lowerBound().isPresent()) {
+            final var requestedLower = requested.lowerBound().orElseThrow();
+
+            return candidate.lowerBound()
+                .map(candidateLower -> isAssignable(requestedLower, candidateLower, codeModel))
+                .orElse(false);
+        }
+
+        final var requestedUpper = requested.upperBound()
+            .orElseGet(() -> codeModel.getTypeUsage(Object.class));
+        final var candidateUpper = candidate.upperBound()
+            .orElseGet(() -> codeModel.getTypeUsage(Object.class));
+
+        return isAssignable(candidateUpper, requestedUpper, codeModel);
+    }
+
+    /**
+     * Determines if {@code from} is assignable to {@code to}, scanning either side into {@code codeModel} on
+     * demand via {@link JDKCodeModel#getJDKTypeDescriptor(TypeName)} if not already present, so callers never
+     * need to have pre-scanned the participating types themselves. Treats a type that cannot be resolved to a
+     * loadable {@link Class} at all (for example a purely source-modeled type with no corresponding runtime
+     * class) as not assignable, rather than failing the whole lookup. Identical {@link TypeName}s are treated
+     * as assignable without a model lookup, short-circuiting before either side needs to be resolved.
+     *
+     * @param from      the {@link TypeUsage} to check assignability from
+     * @param to        the {@link TypeUsage} to check assignability to
+     * @param codeModel the {@link JDKCodeModel} used to scan either side into the model on demand
+     * @return {@code true} if {@code from} is assignable to {@code to}, {@code false} otherwise
+     */
+    public static boolean isAssignable(final TypeUsage from,
+                                       final TypeUsage to,
+                                       final JDKCodeModel codeModel) {
+
+        if (!(from instanceof NamedTypeUsage fromNamed) || !(to instanceof NamedTypeUsage toNamed)) {
+            return from.canonicalName().equals(to.canonicalName());
+        }
+
+        if (fromNamed.typeName().equals(toNamed.typeName())) {
+            return true;
+        }
+
+        final var fromDescriptor = codeModel.getJDKTypeDescriptor(fromNamed.typeName());
+        final var toDescriptor = codeModel.getJDKTypeDescriptor(toNamed.typeName());
+
+        return fromDescriptor.isPresent()
+            && toDescriptor.isPresent()
+            && fromDescriptor.get().isAssignableTo(toDescriptor.get());
     }
 }
