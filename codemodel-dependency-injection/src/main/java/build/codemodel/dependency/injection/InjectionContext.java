@@ -27,7 +27,6 @@ import build.codemodel.foundation.usage.GenericTypeUsage;
 import build.codemodel.foundation.usage.NamedTypeUsage;
 import build.codemodel.foundation.usage.TypeUsage;
 import build.codemodel.jdk.JDKCodeModel;
-import build.codemodel.jdk.TypeUsages;
 import build.codemodel.jdk.descriptor.MethodType;
 import jakarta.inject.Singleton;
 
@@ -73,9 +72,9 @@ class InjectionContext
     private final ConcurrentHashMap<Dependency, Binding<?>> bindingsByDependency;
 
     /**
-     * The multibinding entries keyed by element type.
+     * The multibinding entries keyed by element {@link Dependency}.
      */
-    private final ConcurrentHashMap<Class<?>, MultiBindingEntry<?>> multiBindings;
+    private final ConcurrentHashMap<Dependency, MultiBindingEntry<?>> multiBindings;
 
     /**
      * The {@link Resolver} defined by the {@link Binding}s in this {@link Context}, so this {@link Context}
@@ -108,7 +107,8 @@ class InjectionContext
         this.chainedResolver = ChainedResolver.create();
         this.bindingGraphContributor = injectionFramework.bindingGraphContributor();
         this.resolver = ChainedResolver.create(
-            dependency -> Optional.ofNullable((Binding<Object>) this.bindingsByDependency.get(dependency)),
+            dependency -> (Optional<Binding<Object>>) (Optional<?>) Dependency.resolve(
+                dependency, this.bindingsByDependency, this.injectionFramework.codeModel()),
             dependency -> (Optional<Binding<Object>>) (Optional<?>) resolveMultiBinding(dependency),
             chainedResolver);
     }
@@ -394,7 +394,9 @@ class InjectionContext
     public <T> MultiBinder<T> bindSet(final Class<T> type) {
         Objects.requireNonNull(type, "The element type must not be null");
         final var created = new AtomicBoolean(false);
-        final var entry = (MultiBindingEntry<T>) this.multiBindings.compute(type, (_, existing) -> {
+        final var elementDependency = IndependentDependency.of(
+            this.injectionFramework.codeModel().getTypeUsage(type), _ -> Stream.empty());
+        final var entry = (MultiBindingEntry<T>) this.multiBindings.compute(elementDependency, (_, existing) -> {
             if (existing != null) {
                 return existing;
             }
@@ -450,8 +452,12 @@ class InjectionContext
             return Optional.empty();
         }
 
-        return TypeUsages.getFirstTypeParameterClass(generic)
-            .map(elementClass -> (MultiBindingEntry<Object>) this.multiBindings.get(elementClass))
+        return generic.parameters().findFirst()
+            .flatMap(elementTypeUsage -> {
+                final var elementDependency = IndependentDependency.of(elementTypeUsage, _ -> Stream.empty());
+                return (Optional<MultiBindingEntry<Object>>) (Optional<?>) Dependency.resolve(
+                    elementDependency, this.multiBindings, this.injectionFramework.codeModel());
+            })
             .map(entry -> switch (rawName) {
                 case "java.util.Set" -> ValueBinding.of(dependency, (Object) entry.buildSet());
                 case "java.util.Collection", "java.lang.Iterable" ->

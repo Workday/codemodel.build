@@ -21,6 +21,7 @@ package build.codemodel.dependency.injection;
  */
 
 import build.codemodel.foundation.usage.NamedTypeUsage;
+import build.codemodel.jdk.JDKCodeModel;
 import build.codemodel.jdk.descriptor.MethodType;
 import build.codemodel.objectoriented.descriptor.MethodDescriptor;
 
@@ -64,6 +65,11 @@ public class ProvidesResolver
     private final Map<Dependency, MethodDescriptor> methodsByDependency;
 
     /**
+     * The {@link JDKCodeModel} used to check wildcard bound assignability on resolution.
+     */
+    private final JDKCodeModel codeModel;
+
+    /**
      * Constructs a {@link ProvidesResolver}.
      *
      * @param providerObject the provider object
@@ -74,10 +80,9 @@ public class ProvidesResolver
         Objects.requireNonNull(framework, "The InjectionFramework must not be null");
 
         this.methodsByDependency = new LinkedHashMap<>();
+        this.codeModel = framework.codeModel();
 
-        final var codeModel = framework.codeModel();
-
-        codeModel.getJDKTypeDescriptor(providerObject.getClass())
+        this.codeModel.getJDKTypeDescriptor(providerObject.getClass())
             .ifPresent(typeDescriptor -> {
                 final var allMethods = codeModel.getTraitsInHierarchy(typeDescriptor, MethodDescriptor.class)
                     .toList();
@@ -100,7 +105,8 @@ public class ProvidesResolver
             return Optional.empty();
         }
 
-        final var methodDescriptor = this.methodsByDependency.get(dependency);
+        final var methodDescriptor = Dependency.resolve(dependency, this.methodsByDependency, this.codeModel)
+            .orElse(null);
 
         if (methodDescriptor == null) {
             return Optional.empty();
